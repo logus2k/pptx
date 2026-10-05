@@ -1,6 +1,6 @@
 # AI Slide Assistant: Project Specification
 
-**Version:** 0.5 (draft): file-based storage; LLM, STT and TTS consumed as services; authentication by nginx + OAuth2 Proxy
+**Version:** 0.8 (draft): the environment's shared services as Cortex uses them (agent_server, Claude, stt_server, tts_server, embeddings-server); Banco CTT logging standard; per-presentation templates, including the user's own; European Portuguese by default; no editor on phones. 0.7: sign-in and frontend components aligned with Cortex. 0.6: review fixes — deck edit lease, undo/redo, missing tools and endpoints, search by meaning, phases aligned with milestones, administration requirements
 
 **Companion document:** *AI Slide Assistant: Technical Design* (implementation details, contracts, milestones). **Status:** For review
 
@@ -37,7 +37,7 @@ The scenarios below drive the requirements and acceptance tests.
 | S7 | A user says "undo the last two changes", then downloads the final .pptx. |
 | S8 | A user creates a project "Client X proposal", uploads last year's proposal deck and a capabilities deck, and asks "build a new proposal deck reusing the case-study slides from the capabilities deck". The assistant creates a third deck in the project and copies the slides, adapting them to the new deck's template. |
 | S9 | A user returns to the project two days later and says "continue with the pricing section we discussed". The assistant recalls the earlier decisions (e.g. "prices in EUR, no discounts shown") without the user repeating them. |
-| S10 | A user tells the assistant "in this project, always call the product 'Atlas Platform', never 'Atlas'". The assistant stores this as a project instruction, shows it in the project's memory panel, and applies it in all decks and later conversations. |
+| S10 | A user tells the assistant "in this project, always call the product 'Atlas Platform', never 'Atlas'". The assistant proposes it as a project instruction, the user confirms, it appears in the project's instructions panel, and the assistant applies it in all decks and later conversations. |
 
 ## 3. Functional requirements
 
@@ -48,13 +48,14 @@ Priority uses MoSCoW: **M** must, **S** should, **C** could.
 | ID | Requirement | Pri |
 | --- | --- | --- |
 | PM-1 | Upload .pptx files into a project, up to a configurable size (default 100 MB). Reject .pptm and other macro-enabled formats with a clear message. | M |
-| PM-2 | Create a new presentation within a project from an administrator-provided template (.pptx or .potx) or from a default blank template. | M |
+| PM-2 | Create a new presentation within a project from an administrator-provided template, from a template the user provides (PM-9), or from the default blank template. | M |
 | PM-3 | Display a thumbnail strip of all slides and a large preview of the selected slide. | M |
 | PM-4 | Download the current version as .pptx. | M |
 | PM-5 | Export the current version as PDF. | S |
 | PM-6 | Keep a version history per presentation; every accepted assistant change or manual edit produces a new version. Users can view and restore any version. | M |
 | PM-7 | Allow simple manual edits without the assistant: edit text in place, reorder slides by drag-and-drop, delete slides. | S |
 | PM-8 | Persist presentations as part of their project (see 3.6); a presentation always belongs to exactly one project. | M |
+| PM-9 | Each presentation has its own template, chosen when it is created, so decks in one project can use different templates. Users can upload their own templates (.pptx or .potx, macro-free) into a project, where they are listed next to the administrators' templates and can be used for any of its decks. An uploaded .pptx is used for its masters, layouts and theme; its slides are not copied. | M |
 
 ### 3.2 Natural-language editing
 
@@ -69,7 +70,7 @@ Priority uses MoSCoW: **M** must, **S** should, **C** could.
 | NL-7 | Write and edit speaker notes. | M |
 | NL-8 | Before applying any change that affects more than one slide or deletes content, show a plan and wait for confirmation. Single-shape edits may apply directly to a pending draft (see NL-9). | M |
 | NL-9 | Present every change as a pending proposal with a before/after preview. The user accepts or rejects per slide or all at once. Nothing changes the saved version until accepted. | M |
-| NL-10 | Support undo and redo of accepted changes by voice, text or button. | M |
+| NL-10 | Support undo and redo of accepted changes and manual edits, per deck, by voice, text or button. Undo and redo apply immediately (they are themselves reversible) and each produces a new version. | M |
 | NL-11 | When a request is ambiguous, unsupported or would break the template, ask a single focused clarifying question or explain the limitation, rather than guessing. | M |
 | NL-12 | Generate a full deck or a run of slides from an outline, a document or a KB topic. | S |
 
@@ -111,25 +112,36 @@ Priority uses MoSCoW: **M** must, **S** should, **C** could.
 | ID | Requirement | Pri |
 | --- | --- | --- |
 | PJ-1 | Create, rename, archive and delete projects. A project has a name, an optional description, an owner and creation/modification dates. Deleting a project requires confirmation and removes its decks, conversations, memory and assets after a configurable grace period. | M |
-| PJ-2 | A project contains zero or more decks. Users can upload decks into a project, create new decks in it (blank or from a template), duplicate a deck, rename it, and remove it. | M |
+| PJ-2 | A project contains zero or more decks. Users can upload decks into a project, create new decks in it (blank or from a template), duplicate a deck, rename it, and remove it, from the project home or by asking the assistant. | M |
 | PJ-3 | The project home lists its decks (thumbnail, title, slide count, last change), its conversations, and its assets. Users open a deck in the editor from there. | M |
 | PJ-4 | A project can hold several conversations (threads). Conversations persist and are resumable at any time, with full history visible. Users can rename, start and delete conversations. | M |
 | PJ-5 | Within a conversation, one deck is the **active deck** (the one open in the editor), which is the default target of requests. The user can switch the active deck by opening another deck or by naming it ("in the capabilities deck…"). | M |
-| PJ-6 | The assistant can read any deck in the project and perform cross-deck operations: copy or move slides between decks, create a new deck from slides of existing decks, and apply a change consistently across several decks ("update the company logo in all decks"). Cross-deck changes follow the plan-and-confirm rule (NL-8). | M |
+| PJ-6 | The assistant can read any deck in the project and perform cross-deck operations: copy or move slides between decks (a move removes the slides from the source deck), create a new deck from slides of existing decks, and apply a change consistently across several decks ("update the company logo in all decks"). Cross-deck changes follow the plan-and-confirm rule (NL-8). | M |
 | PJ-7 | When slides are copied between decks with different templates, the assistant maps them onto the target deck's layouts and theme by default, reporting any content that could not be mapped; the user can choose to keep the source formatting instead. | S |
 | PJ-8 | **Project instructions:** free-text guidance that applies to every conversation in the project (audience, tone, terminology, language, brand rules). Editable by the user directly or added by the assistant on request (S10). | M |
 | PJ-9 | **Project memory:** the assistant records durable facts and decisions from conversations (e.g. "pricing shown in EUR", "client prefers fewer bullets"). Each item shows its origin conversation and date. Users can view, edit and delete items; the assistant only saves a memory item when the user asked it to or after briefly announcing it in the chat, so nothing is remembered silently. | M |
-| PJ-10 | The assistant can search past conversations in the same project to recall earlier discussions and decisions, and cite the conversation it drew from. It never reads conversations from other projects. | S |
-| PJ-11 | **Project assets:** images and reference documents uploaded to a project are stored once and reusable in any of its decks and conversations. Reference documents (PDF, DOCX, TXT, MD) act as a project-local knowledge source alongside the KB. | S |
+| PJ-10 | The assistant can search past conversations in the same project to recall earlier discussions and decisions, and cite the conversation it drew from. Search matches by meaning, not only by exact words, so "the pricing section we discussed" finds a discussion that never used the word "pricing". It never reads conversations from other projects. | S |
+| PJ-11 | **Project assets:** images and reference documents uploaded to a project are stored once and reusable in any of its decks and conversations. Reference documents (PDF, DOCX, TXT, MD) act as a project-local knowledge source alongside the KB, searchable by meaning like conversations (PJ-10). | S |
 | PJ-12 | **Project settings:** default template, default language, KB collections in scope, and the model to use (from the configured model services, see section 7). New decks and conversations inherit them. | M |
-| PJ-13 | Share a project with named colleagues as viewer or editor. Editors share decks, conversations, instructions and memory; each conversation shows who wrote each message. Simultaneous editing of the same deck is not supported in v1: a deck being edited is locked with a visible indicator. | S |
+| PJ-13 | Share a project with named colleagues as viewer or editor. Editors share decks, conversations, instructions and memory; each conversation shows who wrote each message. Simultaneous editing of the same deck is not supported in v1: while a member has a deck open in the editor, it is held by an edit lease shown to other members as "being edited by …", who can view it but not change it. The lease expires when the holder closes the deck or goes idle (configurable, default 10 minutes). | S |
 | PJ-14 | Export a whole project as a ZIP archive (all decks as .pptx, conversations as Markdown, instructions and memory as JSON) and import such an archive as a new project. | C |
+
+### 3.7 Administration
+
+| ID | Requirement | Pri |
+| --- | --- | --- |
+| AD-1 | Administrators are identified by a configured list of sign-in addresses (as Cortex seeds its Administrator role); no in-app role management in v1. | M |
+| AD-2 | Administrators configure, through a configuration file read at start-up, the model services (section 7), the STT, TTS, KB and search services, upload and project limits, and retention periods; secrets (API keys, the proxy's shared secret) come from the environment. | M |
+| AD-3 | Administrators provide slide templates (.pptx or .potx) with a display name and description by placing them in a configured templates directory; one is marked as the default. Users pick from this list, or from their project's own templates (PM-9), when creating a deck. Until Banco CTT's templates are supplied, the directory holds only a plain default template. | M |
+| AD-4 | A template management screen lets administrators upload, rename, retire and set the default template without touching the server. | C |
+| AD-5 | A usage screen shows, per period, active users, projects, assistant turns, proposals accepted and rejected, and model-service errors, built from the audit log. | C |
+| AD-6 | An audit log screen lets administrators list and filter (person, text, period) who changed which data and when, and export it as CSV, as Cortex's *Settings › Audit log*. | S |
 
 ## 4. Architecture
 
 ### 4.1 Components
 
-The **web frontend** is a single-page application written in plain JavaScript (ES modules, no UI framework such as React), built from encapsulated Web Components and styled exclusively with the **Banco CTT Design System**, whose Agent Skill must be used for all UI work. It contains the project home, the slide strip, slide preview, diff view, chat panel and voice controls. It never manipulates .pptx bytes directly; all document operations go through the backend, which keeps a single source of truth.
+The **web frontend** is a single-page application written in plain JavaScript (ES modules, no UI framework such as React), styled exclusively with the **Banco CTT Design System**, whose Agent Skill (`bancoctt-design`) must be used for all UI work. The design system supplies tokens (`tokens.css`), component and layout specifications and the logos, but no component library. The frontend therefore takes the same approach as **Cortex** (`~/env/assets/cortex`), the first Banco CTT application on this design system: it reuses Cortex's frontend shell (side menu, menu bar, tabs, side and right panes, status bar, dialogs, toasts and notifications, profile menu, theme switch, interface translation), copied from Cortex, and the same small vendored libraries, and builds only the slide-specific parts itself. It contains the project home, the slide strip, slide preview, diff view, chat panel and voice controls. It never manipulates .pptx bytes directly; all document operations go through the backend, which keeps a single source of truth.
 
 The **API and orchestration service** owns projects, conversations and sessions, runs the agent loop, exposes tools to the model, validates every tool call, and manages pending proposals and version history.
 
@@ -137,17 +149,17 @@ The **document engine** loads .pptx files, produces the structured slide represe
 
 **Rendering** converts a presentation to PNG images for thumbnails, diff previews and visual self-checks by the model, using headless LibreOffice called by the backend. Its rendering approximates PowerPoint's; the UI must state that previews are approximate.
 
-The **model client** calls the configured LLM service through an OpenAI-compatible chat-completions API with tool calling. Whether a model runs on-premises or remotely makes no difference to the application: both are services reached by URL.
+The **model client** uses the models the environment already provides to several applications, as Cortex does: the local model through **agent_server** (OpenAI-compatible chat completions with tool calling, where the application registers its own presets), and optionally **Claude** models through the Anthropic API when a key is configured.
 
-**Speech** is provided by existing services: STT with Whisper large-v3-turbo and TTS with Kokoro. The backend proxies both so credentials stay server-side.
+**Speech** is provided by the environment's existing services, used as Cortex uses them: STT (Whisper large-v3-turbo, `stt_server`) through the backend, which receives the microphone audio; TTS (Kokoro, `tts_server`) played by the browser, which connects to it through the domain proxy's `/tts/` route. Conversation and document search use the reranker of the environment's `embeddings-server`.
 
 The **context builder** assembles the model context for each turn from the project's instructions, memory, conversation history, decks and assets, within a token budget (see 4.4). It also writes conversation summaries.
 
-The **Knowledge Base connector** is a thin client of the Knowledge Base, which is a separate project consumed only through its published APIs. The connector maps those APIs to the KB tools in section 5 and passes the user's identity so the KB enforces its own permissions. This project does not build, index or host knowledge content.
+The **Knowledge Base connector** is a thin client of the Knowledge Base, which is **Cortex's**, consumed only through its published integration API (its Developer SDK). The connector maps those APIs to the KB tools in section 5 and passes the user's identity so the KB enforces its own permissions. This project does not build, index or host knowledge content.
 
 **Storage** is files on disk: one directory per project holding decks and their versions, conversations, memory, assets and renders, with metadata in small JSON files. No database is used.
 
-**Authentication** is handled outside the application by the existing nginx and OAuth2 Proxy. The application reads the signed-in user from the headers they set and never handles credentials.
+**Authentication** is handled outside the application, as for Cortex: the domain's nginx and an OAuth2 Proxy instance sign people in with **Microsoft Entra ID** and admit only an allow-list of addresses. nginx forwards the signed-in address and a shared secret; the application refuses any request without that secret, reads the address as the user's identity, and never handles credentials.
 
 ```mermaid
 flowchart LR
@@ -162,16 +174,18 @@ flowchart LR
   API[API + Orchestrator] --> Engine[Document engine<br/>python-pptx]
   Engine --> Render[LibreOffice<br/>subprocess]
   API --> Model[LLM API]
-  API --> Speech[STT / TTS APIs]
+  API --> Speech[STT service]
+  Mic <--> TTS[TTS service<br/>via proxy]
   API --> Ctx[Context builder<br/>instructions, memory,<br/>summaries]
   API --> KB[KB connector]
+  API --> Search[Reranking API]
   KB --> KBStore[(Knowledge Base)]
   Engine --> Store[(Files on disk)]
 ```
 
 ### 4.2 Request flow
 
-A request moves through the following steps. The frontend sends the user's text (typed or transcribed) together with the current selection (slide and shapes). The orchestrator, through the context builder, builds the model context: project instructions and relevant memory items, a summary of older turns in the conversation plus the recent turns verbatim, the list of decks in the project, a compact outline of the active deck, the full structured representation of the selected and referenced slides, a rendered image of the selected slide where useful, the template's available layouts, and the recent conversation. The model then reasons and calls tools: reads, KB searches, clarifying questions, or edit operations. Edit operations are validated and applied to a draft copy, never to the saved version. Affected slides are re-rendered; optionally the model receives the rendered images to check for overflow or overlap and may issue corrective operations, bounded to two correction rounds. The frontend displays the proposal as a before/after diff, and on acceptance the draft becomes a new version.
+A request moves through the following steps. The frontend sends the user's text (typed or transcribed) together with the current selection (slide and shapes). The orchestrator, through the context builder, builds the model context: project instructions and relevant memory items, a summary of older turns in the conversation plus the recent turns verbatim, the list of decks in the project, a compact outline of the active deck, the full structured representation of the selected and referenced slides, a rendered image of the selected slide where useful, and the template's available layouts. The model then reasons and calls tools: reads, KB searches, clarifying questions, or edit operations. Edit operations are validated and applied to a draft copy, never to the saved version. Only the affected slides are re-rendered; optionally the model receives the rendered images to check for overflow or overlap and may issue corrective operations, bounded to two correction rounds. The frontend displays the proposal as a before/after diff, and on acceptance the draft becomes a new version.
 
 ```mermaid
 sequenceDiagram
@@ -205,11 +219,11 @@ The core entities and their relationships are as follows. They are stored as fil
 | --- | --- | --- |
 | Project | id, name, description, owner, settings, instructions, created/updated | Root of all user work. |
 | ProjectMember | project_id, user_id, role (owner, editor, viewer) | Access control. |
-| Deck | id, project_id, title, template_id, current_version_id, lock_holder | Belongs to exactly one project. |
+| Deck | id, project_id, title, template_id, current_version_id, undo/redo position | Belongs to exactly one project. The edit lease (PJ-13) is held in memory, not stored. |
 | DeckVersion | id, deck_id, number, file_ref, created_by (user or assistant), proposal_id, created_at | Immutable .pptx snapshot; drafts are not versions. |
 | Conversation | id, project_id, title, summary, summary_upto_message_id, created/updated | Many per project. |
 | Message | id, conversation_id, author (user, assistant, tool), content, tool calls, active_deck_id, attachments | Ordered; tool calls and results stored for audit and replay. |
-| Proposal | id, conversation_id, status, affected decks and slides, draft refs | May span several decks of one project. |
+| Proposal | id, conversation_id, status, affected decks and slides, draft refs | May span several decks of one project. Drafts are deleted once the proposal is settled. |
 | MemoryItem | id, project_id, text, source_conversation_id, created_by, created_at | Visible and editable by members. |
 | Asset | id, project_id, kind (image, document), file_ref, hash, description, extracted text | Shared across the project's decks and conversations. |
 
@@ -228,13 +242,15 @@ The model never edits raw XML or writes code that runs against the file. It work
 | Tool | Purpose |
 | --- | --- |
 | `list_decks()` | Decks in the project with ID, title, template, slide count and last change. |
+| `list_templates()` | Templates provided by administrators (AD-3), with name, description and layouts. |
 | `create_deck(title, template?)` | Create a new empty deck in the project. |
-| `copy_slides(source_deck_id, slide_ids, target_deck_id, position, formatting)` | Copy slides between decks; `formatting` is `adapt_to_target` (default) or `keep_source`. |
+| `duplicate_deck(deck_id, title)` | Copy a deck, with its current version only, under a new title. |
+| `copy_slides(source_deck_id, slide_ids, target_deck_id, position, formatting, mode?)` | Copy or move slides between decks; `formatting` is `adapt_to_target` (default) or `keep_source`; `mode` is `copy` (default) or `move`, which also removes them from the source deck. |
 | `get_deck_outline(deck_id?)` | Slide IDs, order, layout names, titles and a one-line summary per slide. |
 | `get_slide(slide_id)` | Full structured representation of one slide (see 5.1). |
 | `render_slide(slide_id)` | Image of the slide as currently drafted, for visual inspection. |
-| `list_layouts()` | Layouts available in the template, with their placeholders. |
-| `update_text(slide_id, shape_id, content)` | Replace text in a shape. Content is a list of paragraphs with bullet level and simple run formatting. |
+| `list_layouts()` | Layouts available in the deck's template, with their placeholders. |
+| `update_text(slide_id, shape_id, paragraphs)` | Replace text in a shape: a list of paragraphs with bullet level and simple run formatting. |
 | `format_text(slide_id, shape_id, range, style)` | Apply formatting from the allowed set (size, bold, italic, theme color, alignment). |
 | `add_slide(layout, position, placeholders)` | Insert a slide from a layout and fill its placeholders. |
 | `duplicate_slide`, `delete_slide`, `move_slide` | Structural changes. |
@@ -243,12 +259,15 @@ The model never edits raw XML or writes code that runs against the file. It work
 | `insert_image(slide_id, target, image_ref, fit)` | Insert into a placeholder or at a position; `image_ref` points to an uploaded, KB or generated asset, never an arbitrary URL. |
 | `replace_image(slide_id, shape_id, image_ref)` | Swap an image keeping geometry. |
 | `set_alt_text(slide_id, shape_id, text)` | Accessibility text. |
+| `generate_image(prompt)` | Create an image asset with the configured image-generation service (IM-6); absent when none is configured. |
 | `edit_table(slide_id, shape_id, operations)` | Cell, row and column edits. |
 | `set_notes(slide_id, text)` | Speaker notes. |
-| `search_project(query, scope?)` | Search the project's reference documents and assets. |
+| `search_project(query, scope?)` | Search the project's reference documents and assets by meaning; returns passages with asset and location. |
+| `read_asset(asset_id, part?)` | Read a reference document, whole or by section or page, or get an image's description. |
 | `search_conversations(query)` | Search past conversations in this project; returns excerpts with conversation and date. |
 | `remember(text)` / `forget(memory_id)` | Add or remove a project memory item; each call is shown in the chat (PJ-9). |
 | `update_instructions(text)` | Propose a change to project instructions; applied only after user confirmation. |
+| `undo(steps?)` / `redo(steps?)` | Undo or redo accepted changes on a deck (NL-10); each step creates a new version. |
 | `kb_search(query, collection?, top_k?)` | Search the Knowledge Base. |
 | `kb_get(document_id, passage?)` | Fetch a document or passage. |
 | `ask_user(question, options?)` | Ask a clarifying question; the agent loop pauses until the user answers. |
@@ -258,7 +277,7 @@ The model never edits raw XML or writes code that runs against the file. It work
 
 `get_slide` returns JSON describing the slide's layout name, size, and for each shape its ID, type (placeholder kind, text box, picture, table, chart, group, other), name, position and size in EMU and in percentage of slide size, text content as paragraphs with bullet levels and basic formatting, image description (from the vision model, cached per image hash), alt text, and a `locked` flag for elements the engine cannot safely modify. Unsupported elements appear with type `other` and are read-only.
 
-### 5.3 Fallback for models without tool calling
+### 5.2 Fallback for models without tool calling
 
 If the configured model lacks native tool calling, the model client shall prompt it to emit a single JSON object conforming to the same tool schema and shall parse, validate and retry once on malformed output. This mode is supported but documented as lower quality.
 
@@ -268,7 +287,7 @@ The document engine shall modify only the XML elements targeted by an operation 
 
 ## 7. Model requirements and configuration
 
-The configured model must support image input, a context window of at least 32k tokens (128k recommended for large decks) and, preferably, native tool calling. Administrators configure the service URLs for the main chat model, an optional smaller model for cheap tasks (summaries, alt text, image descriptions), STT, TTS and optional image generation. Several chat models may be configured; projects choose among them.
+The application uses the environment's shared model services, as Cortex does: the local model served through agent_server (today gemma-4 with vision, 32,768 tokens per request, input and output together), and the Claude models when an Anthropic API key is configured. Projects choose among the models on offer (PJ-12). A model must support image input and tool calling; without native tool calling the fallback of 5.2 applies. The context assembled for a turn must fit the chosen model's window: the system prompt and tool definitions must leave room for the rest of the context, or the model is not offered. A smaller or cheaper model may be configured for summaries, alt text and image descriptions. Which models are offered, and the service addresses, are configuration, not code.
 
 ## 8. Non-functional requirements
 
@@ -276,22 +295,25 @@ The configured model must support image input, a context window of at least 32k 
 | --- | --- |
 | Latency | Simple single-shape edits shall show a proposal within 5 s at the 90th percentile, excluding time spent waiting on the LLM service beyond its normal response time; the UI streams progress for longer operations. Where the STT API supports streaming, partial transcripts appear within 500 ms of speech; TTS playback starts within 1.5 s of the first sentence of a response. |
 | Scale | Decks up to 200 slides; projects up to 50 decks and 100 conversations (configurable). Only the context described in 4.4 is sent to the model, so per-turn cost does not grow with project size. |
-| Authentication | Provided by nginx and OAuth2 Proxy. The application is reachable only through nginx and trusts identity headers only from it. |
+| Authentication | Microsoft Entra ID sign-in through nginx and OAuth2 Proxy, with an allow-list of addresses, as for Cortex. The application trusts the identity header only on requests carrying the proxy's shared secret, and refuses all others. Sign-out ends the Entra ID session through the proxy. |
 | Security | Uploaded files are checked for size and decompressed size (zip-bomb limit); LibreOffice runs as a subprocess with a timeout and a temporary profile. Macro-enabled files are rejected. |
 | Prompt injection | Text from slides, uploaded files and KB documents is passed to the model as clearly delimited data. Tools are allow-listed; the model has no tools that send data outside the system, fetch arbitrary URLs or execute code. Destructive multi-slide changes always require user confirmation. |
 | Privacy | Audio is processed in memory and not stored unless the user opts in. Projects, conversations, memory and documents are retained per a configurable policy and deletable by the user; deleting a project deletes all of them. |
-| Auditability | Every tool call, its arguments, the model used and the resulting version are logged with the user ID. |
-| Design system | All UI uses Banco CTT Design System components, tokens and patterns, as defined by its Agent Skill. No ad-hoc colours, fonts or spacing. |
-| Accessibility | The frontend meets WCAG 2.2 AA; all assistant actions are reachable by keyboard; voice is an addition, never the only path. |
-| Internationalisation | UI strings externalised; the assistant answers in the user's language and edits slide text in the deck's language unless asked otherwise. |
-| Licensing | Third-party components must be under licences compatible with commercial use (e.g. MIT, BSD, Apache 2.0). LibreOffice (MPL 2.0) is used unmodified as a separate process. |
+| Auditability | Every change of data is recorded with who made it and when, as Cortex records it: every successful changing request and changing realtime event, by its identifiers, never its content. Each assistant tool call, its arguments, the model used and the resulting version are kept in the project's own audit trail. Every audit record is also emitted as a log event. |
+| Logging | Banco CTT's *Centralized Logging Standard* (v1.1), as Cortex implements it: one JSON object per line on stdout with the standard's fields; OpenTelemetry logs and traces exported by OTLP to the configured collector, with W3C trace context joined and propagated; no personal data or secrets in logs (the person as a keyed pseudonym; no slide text, prompts or answers); fail-open, so telemetry never blocks a request. |
+| Design system | All UI follows the Banco CTT Design System as defined by its Agent Skill (`bancoctt-design`): its tokens, component specifications, layouts and Inter typography. No ad-hoc colours, fonts or spacing. The UI offers Light (the default), Dark and System themes. The editor works on desktop and tablet widths; on a phone only the project list and project home are offered, with a note that editing needs a larger screen. |
+| Accessibility | The frontend meets WCAG 2.2 AA in both themes; all assistant actions are reachable by keyboard; voice is an addition, never the only path. Where a design-system colour falls below AA for text, the design system's contrast rule applies (it is not used for text that must be read). |
+| Internationalisation | The interface starts in European Portuguese and can be switched to English per user. Every interface string exists in both. The assistant answers in the user's language and edits slide text in the deck's language unless asked otherwise. STT and TTS support European Portuguese and English. |
+| Licensing | Third-party components must be under licences compatible with commercial use (e.g. MIT, BSD, Apache 2.0; SIL OFL for fonts). LibreOffice (MPL 2.0) is used unmodified as a separate process. |
+| Storage growth | Proposal drafts are deleted once settled; slide renders are a cache with a size limit; deck versions are kept per the retention policy, and each project shows its storage use. |
 
 ## 9. Backend API (outline)
 
-The REST and WebSocket surface is outlined below; detailed schemas belong in a separate API document.
+The REST and socket.io surface is outlined below; detailed schemas belong in a separate API document.
 
 | Method | Endpoint | Description |
 | --- | --- | --- |
+| GET | `/templates` | Administrator templates (AD-3). A project's own templates (PM-9) are project assets of kind `template`, uploaded through `/projects/{pid}/assets`. |
 | GET, POST | `/projects` | List or create projects. |
 | GET, PATCH, DELETE | `/projects/{pid}` | Project details, settings and instructions. |
 | GET, POST, DELETE | `/projects/{pid}/members` | Sharing. |
@@ -300,29 +322,32 @@ The REST and WebSocket surface is outlined below; detailed schemas belong in a s
 | GET | `/projects/{pid}/decks/{did}/slides/{slideId}/render` | PNG of a slide (version or draft). |
 | GET | `/projects/{pid}/decks/{did}/versions` | Version history. |
 | POST | `/projects/{pid}/decks/{did}/versions/{v}/restore` | Restore a version. |
+| POST | `/projects/{pid}/decks/{did}/undo`, `/redo` | Undo or redo (NL-10). |
+| POST, DELETE | `/projects/{pid}/decks/{did}/lease` | Take, renew or release the edit lease (PJ-13). |
 | GET | `/projects/{pid}/decks/{did}/download?format=pptx\|pdf` | Export. |
 | GET, POST | `/projects/{pid}/assets` | Project images and reference documents. |
 | GET, POST, PATCH, DELETE | `/projects/{pid}/memory` | View and manage memory items. |
 | GET, POST | `/projects/{pid}/conversations` | List or start conversations. |
 | GET, PATCH, DELETE | `/projects/{pid}/conversations/{cid}` | History, rename, delete. |
-| WS | `/projects/{pid}/conversations/{cid}/chat` | Streamed assistant messages, tool progress, clarifying questions and proposals. |
+| socket.io | `/socket.io` (room per open conversation) | Streamed assistant messages, tool progress, clarifying questions and proposals. |
+| GET | `/projects/{pid}/proposals/{prid}` | Proposal details and diff. |
 | POST | `/projects/{pid}/proposals/{prid}/decision` | Accept or reject, whole, per deck or per slide. |
 | GET, POST | `/projects/{pid}/export`, `/projects/import` | Project archive export and import. |
-| WS | `/speech/stt` | Streamed audio in, partial and final transcripts out. |
-| POST | `/speech/tts` | Text in, streamed audio out. |
+| GET | `/audit`, `/audit.csv` | Audit log for administrators (AD-6). |
+| socket.io | `voice_*` events | Push-to-talk audio in; the transcript out (and partial transcripts if the STT service streams). |
 
 ## 10. Acceptance criteria
 
-Scenarios S1 to S10 shall pass end to end on the reference deployment with the configured model service. Additionally, a regression corpus of at least 50 real-world decks shall survive a load-and-save round trip with no content loss and open without repair prompts in PowerPoint. On a benchmark of at least 200 annotated editing requests, the assistant shall target the correct slide and shape in at least 95% of cases and produce text overflow in fewer than 5% of proposals after self-check. Every KB-derived slide shall carry a source in its notes. After a conversation has been summarised, the assistant shall still correctly apply at least 90% of decisions and instructions recorded earlier in the project, measured on a scripted multi-session benchmark. A red-team set of prompt-injection documents in the KB, in uploaded decks and in project documents shall cause no unconfirmed destructive action and no data leaving the system.
+Scenarios S1 to S10 shall pass end to end on the reference deployment with the configured model service. Additionally, a regression corpus of at least 50 real-world decks shall survive a load-and-save round trip with no content loss and open without repair prompts in PowerPoint. A sample of 10 of those decks, after editing, shall also open with content intact in LibreOffice, Keynote and Google Slides (import). On a benchmark of at least 200 annotated editing requests, the assistant shall target the correct slide and shape in at least 95% of cases and produce text overflow in fewer than 5% of proposals after self-check. Every KB-derived slide shall carry a source in its notes. After a conversation has been summarised, the assistant shall still correctly apply at least 90% of decisions and instructions recorded earlier in the project, measured on a scripted multi-session benchmark. A red-team set of prompt-injection documents in the KB, in uploaded decks and in project documents shall cause no unconfirmed destructive action and no data leaving the system.
 
 ## 11. Delivery phases
 
-**Phase 1 (MVP)** covers projects with multiple decks and persistent, resumable conversations, project instructions, rolling conversation summaries, upload, preview, download, text editing via chat, add/delete/move slides, image insert and replace from uploads, proposals with accept/reject, version history and undo, push-to-talk STT and TTS playback, KB search with citations, and the model client tested with at least one model endpoint.
+**Phase 1 (MVP)** covers projects with multiple decks and persistent, resumable conversations, project instructions, rolling conversation summaries, upload, preview, download, text editing via chat, add/delete/move slides, slides generated from a user-supplied outline, image insert and replace from uploads, alt text on request, proposals with accept/reject, version history with undo and redo, push-to-talk STT, TTS playback with barge-in on the mic button, KB search with citations, administrator configuration and templates from files (AD-1 to AD-3), per-presentation templates including the user's own (PM-9), logging to the bank's standard and the audit trail, and the model client tested with at least one model endpoint. Scenarios S1 to S7 and S10 pass.
 
-**Phase 2** adds project memory, cross-deck operations (copy slides, multi-deck changes), project assets and reference documents, conversation search, deck generation from outlines and KB topics, tables, hands-free voice with barge-in, alt-text automation, PDF export, the render self-check loop and manual editing in the UI.
+**Phase 2** adds project memory, cross-deck operations (copy and move slides, duplicate decks, multi-deck changes), project assets and reference documents, conversation and document search, deck generation from documents and KB topics, tables, hands-free voice, voice confirmations, alt-text automation, PDF export, the render self-check loop and manual editing in the UI. Scenarios S8 and S9 pass, and the full acceptance criteria of section 10 are met.
 
-**Phase 3** adds project sharing, project export and import, native charts, image generation, administrator analytics and template management UI.
+**Phase 3** adds project sharing with edit leases, project export and import, native charts, image generation, the template management screen (AD-4), the usage screen (AD-5) and the audit log screen (AD-6).
 
 ## 12. Open questions
 
-The following points need decisions from stakeholders. Which Knowledge Base system or systems must be supported first, and how are its permissions exposed? Which languages are required for STT and TTS at launch? Is there a mandatory brand template set, and may users bring their own? What retention period applies to conversations and versions? Should Google Slides import and export be in scope, given the round-trip limitations? In shared projects, should memory and instructions be editable by all editors or only the owner? Should a user be able to move a deck or conversation between projects, and what happens to memory that referred to it? Are there default limits on decks, conversations and storage per project?
+The following points need decisions from stakeholders. The Knowledge Base is Cortex's: which of the Cortex changes listed in the technical design (section 8: acting for the signed-in person, whole documents as text, images, document links) will be made, and when? What retention period applies to conversations and versions? Should Google Slides import and export be in scope, given the round-trip limitations? In shared projects, should memory and instructions be editable by all editors or only the owner? Should a user be able to move a deck or conversation between projects, and what happens to memory that referred to it? Are there default limits on decks, conversations and storage per project? Who supplies the 50 real-world decks for the regression corpus and the 200 annotated requests for the benchmark (section 10)? Can a deck's template be changed after it is created (re-mapping its slides onto the new template's layouts)?
