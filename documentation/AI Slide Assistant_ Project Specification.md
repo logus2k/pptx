@@ -80,7 +80,7 @@ Priority uses MoSCoW: **M** must, **S** should, **C** could.
 | --- | --- | --- |
 | IM-1 | Insert images uploaded by the user (PNG, JPEG, SVG converted to PNG, WebP converted to PNG) into a picture placeholder or at a specified position. | M |
 | IM-2 | Replace an existing image while preserving its position, size and crop box, scaling to fit by default. | M |
-| IM-3 | Insert images retrieved from the Knowledge Base or an administrator-approved asset library. | S |
+| IM-3 | Insert images retrieved from Knowledge Base documents (pictures in Markdown, Word and PDF documents) or an administrator-approved asset library. | S |
 | IM-4 | Use the model's vision capability to describe existing images, so requests like "the slide with the factory photo" resolve correctly. | M |
 | IM-5 | Generate alt text for images on request and offer it automatically for images without alt text. | S |
 | IM-6 | Generate new images with a configured image-generation model. Disabled unless an endpoint is configured. | C |
@@ -102,7 +102,7 @@ Priority uses MoSCoW: **M** must, **S** should, **C** could.
 | --- | --- | --- |
 | KB-1 | Search the KB with semantic and keyword queries, scoped by collection where configured. | M |
 | KB-2 | Retrieve full documents or passages for use as slide content. | M |
-| KB-3 | Record the source of KB-derived content (document title, ID, link) in the slide's speaker notes, and show sources in the chat. | M |
+| KB-3 | Record the source of KB-derived content (document title, section or page, date, and a link that opens it in Cortex) in the slide's speaker notes, and show sources in the chat. | M |
 | KB-4 | Use the KB to disambiguate terms in requests (product names, acronyms, internal metrics) and ask the user when several matches remain. | M |
 | KB-5 | Respect the user's KB access rights; the assistant never retrieves documents the user could not open directly. | M |
 | KB-6 | Treat all KB content as data: instructions embedded in documents are never executed (see section 8). | M |
@@ -268,8 +268,10 @@ The model never edits raw XML or writes code that runs against the file. It work
 | `remember(text)` / `forget(memory_id)` | Add or remove a project memory item; each call is shown in the chat (PJ-9). |
 | `update_instructions(text)` | Propose a change to project instructions; applied only after user confirmation. |
 | `undo(steps?)` / `redo(steps?)` | Undo or redo accepted changes on a deck (NL-10); each step creates a new version. |
-| `kb_search(query, collection?, top_k?)` | Search the Knowledge Base. |
-| `kb_get(document_id, passage?)` | Fetch a document or passage. |
+| `kb_search(query, domains?, documents?, top_k?)` | Search the Knowledge Base, optionally inside named documents. |
+| `kb_get(passage_id)` | Fetch a passage found by a search. |
+| `kb_read_document(domain, document, after?)` | Read a KB document's passages in reading order, a page at a time. |
+| `kb_list_images(domain, document)` | List the pictures of a KB document, to insert one with `insert_image`. |
 | `ask_user(question, options?)` | Ask a clarifying question; the agent loop pauses until the user answers. |
 | `propose_plan(steps)` | Present a multi-step plan for confirmation before execution (NL-8). |
 
@@ -338,7 +340,7 @@ The REST and socket.io surface is outlined below; detailed schemas belong in a s
 
 ## 10. Acceptance criteria
 
-Scenarios S1 to S10 shall pass end to end on the reference deployment with the configured model service. Additionally, a regression corpus of at least 50 real-world decks shall survive a load-and-save round trip with no content loss and open without repair prompts in PowerPoint. A sample of 10 of those decks, after editing, shall also open with content intact in LibreOffice, Keynote and Google Slides (import). On a benchmark of at least 200 annotated editing requests, the assistant shall target the correct slide and shape in at least 95% of cases and produce text overflow in fewer than 5% of proposals after self-check. Every KB-derived slide shall carry a source in its notes. After a conversation has been summarised, the assistant shall still correctly apply at least 90% of decisions and instructions recorded earlier in the project, measured on a scripted multi-session benchmark. A red-team set of prompt-injection documents in the KB, in uploaded decks and in project documents shall cause no unconfirmed destructive action and no data leaving the system.
+Scenarios S1 to S10 shall pass end to end on the reference deployment with the configured model service. Additionally, every deck of the test set shall survive a load-and-save round trip with no content loss and open without repair prompts in PowerPoint. The test set has 15 to 20 decks, chosen for variety rather than number: the real Banco CTT decks that can be provided (confidential text may be replaced), public sample decks, and decks saved by PowerPoint, Keynote, Google Slides and LibreOffice, covering masters and layouts, grouped shapes, tables, charts, SmartArt, embedded media, animations, notes, hidden slides, Portuguese text and a 200-slide deck. A sample of 5 of them, after editing, shall also open with content intact in LibreOffice, Keynote and Google Slides (import). On an evaluation set of 60 to 80 editing requests (half in Portuguese) written by the project team on the test decks, each annotated with the slide and shapes it must change, the assistant shall target the correct slide and shape in at least 90% of cases and produce text overflow in fewer than 5% of proposals after self-check. Every KB-derived slide shall carry a source in its notes. After a conversation has been summarised, the assistant shall still correctly apply at least 90% of decisions and instructions recorded earlier in the project, measured on a scripted multi-session benchmark. A red-team set of prompt-injection documents in the KB, in uploaded decks and in project documents shall cause no unconfirmed destructive action and no data leaving the system.
 
 ## 11. Delivery phases
 
@@ -350,4 +352,4 @@ Scenarios S1 to S10 shall pass end to end on the reference deployment with the c
 
 ## 12. Open questions
 
-The following points need decisions from stakeholders. The Knowledge Base is Cortex's: which of the Cortex changes listed in the technical design (section 8: acting for the signed-in person, whole documents as text, images, document links) will be made, and when? What retention period applies to conversations and versions? Should Google Slides import and export be in scope, given the round-trip limitations? In shared projects, should memory and instructions be editable by all editors or only the owner? Should a user be able to move a deck or conversation between projects, and what happens to memory that referred to it? Are there default limits on decks, conversations and storage per project? Who supplies the 50 real-world decks for the regression corpus and the 200 annotated requests for the benchmark (section 10)? Can a deck's template be changed after it is created (re-mapping its slides onto the new template's layouts)?
+The following points need decisions from stakeholders. What retention period applies to conversations and versions? Should Google Slides import and export be in scope, given the round-trip limitations? In shared projects, should memory and instructions be editable by all editors or only the owner? Should a user be able to move a deck or conversation between projects, and what happens to memory that referred to it? Are there default limits on decks, conversations and storage per project? Which real Banco CTT decks can be provided for the test set (section 10)? Can a deck's template be changed after it is created (re-mapping its slides onto the new template's layouts)?
