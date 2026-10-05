@@ -1,6 +1,6 @@
 # AI Slide Assistant: Project Specification
 
-**Version:** 0.3 (draft): adds Projects; fixes stack, speech engines, KB and design system
+**Version:** 0.5 (draft): file-based storage; LLM, STT and TTS consumed as services; authentication by nginx + OAuth2 Proxy
 
 **Companion document:** *AI Slide Assistant: Technical Design* (implementation details, contracts, milestones). **Status:** For review
 
@@ -8,13 +8,13 @@
 
 This document specifies a web application in which users load existing PowerPoint presentations, or start new ones, and modify them through a conversational AI assistant. Users speak or type requests in natural language ("make the title on slide 3 shorter", "add a slide comparing our two pricing tiers", "replace this photo with something from the product library"), and the assistant applies the changes to a real, editable .pptx file. Text, images, tables and layouts remain native PowerPoint objects, not rendered pictures.
 
-The assistant runs on a multi-modal language model that may be self-hosted or provided by a public API. It supports speech-to-text (STT) for input and text-to-speech (TTS) for responses, and it can query an organizational Knowledge Base (KB) both to source domain-specific content for slides and to resolve ambiguous terms in user requests.
+The assistant uses a multi-modal language model consumed as a service. It supports speech-to-text (STT) for input and text-to-speech (TTS) for responses, and it can query an organizational Knowledge Base (KB) both to source domain-specific content for slides and to resolve ambiguous terms in user requests.
 
 All work happens inside **Projects**. A project groups one or more slide decks, uploaded or created in the project, together with the assistant's conversations, the assistant's accumulated project knowledge, and project settings. Returning to a project restores everything, so the assistant continues where the user left off and can work across all of the project's decks.
 
 ### 1.1 Goals
 
-The system shall let a non-technical user produce and revise a presentation without opening PowerPoint, while guaranteeing that the downloaded file opens cleanly in PowerPoint, Keynote, LibreOffice and Google Slides with all content editable. Every change made by the assistant shall be visible, reviewable and reversible. Work spanning days and several related decks shall not require the user to re-explain context to the assistant. The choice of model (local or hosted) shall be a deployment setting, not a code change.
+The system shall let a non-technical user produce and revise a presentation without opening PowerPoint, while guaranteeing that the downloaded file opens cleanly in PowerPoint, Keynote, LibreOffice and Google Slides with all content editable. Every change made by the assistant shall be visible, reviewable and reversible. Work spanning days and several related decks shall not require the user to re-explain context to the assistant. Which model service is used shall be configuration, not code.
 
 ### 1.2 Non-goals for version 1
 
@@ -121,7 +121,7 @@ Priority uses MoSCoW: **M** must, **S** should, **C** could.
 | PJ-9 | **Project memory:** the assistant records durable facts and decisions from conversations (e.g. "pricing shown in EUR", "client prefers fewer bullets"). Each item shows its origin conversation and date. Users can view, edit and delete items; the assistant only saves a memory item when the user asked it to or after briefly announcing it in the chat, so nothing is remembered silently. | M |
 | PJ-10 | The assistant can search past conversations in the same project to recall earlier discussions and decisions, and cite the conversation it drew from. It never reads conversations from other projects. | S |
 | PJ-11 | **Project assets:** images and reference documents uploaded to a project are stored once and reusable in any of its decks and conversations. Reference documents (PDF, DOCX, TXT, MD) act as a project-local knowledge source alongside the KB. | S |
-| PJ-12 | **Project settings:** default template, default language, KB collections in scope, model endpoint and confidentiality level (which constrains the allowed endpoints, see section 7). New decks and conversations inherit them. | M |
+| PJ-12 | **Project settings:** default template, default language, KB collections in scope, and the model to use (from the configured model services, see section 7). New decks and conversations inherit them. | M |
 | PJ-13 | Share a project with named colleagues as viewer or editor. Editors share decks, conversations, instructions and memory; each conversation shows who wrote each message. Simultaneous editing of the same deck is not supported in v1: a deck being edited is locked with a visible indicator. | S |
 | PJ-14 | Export a whole project as a ZIP archive (all decks as .pptx, conversations as Markdown, instructions and memory as JSON) and import such an archive as a new project. | C |
 
@@ -135,17 +135,19 @@ The **API and orchestration service** owns projects, conversations and sessions,
 
 The **document engine** loads .pptx files, produces the structured slide representation the model sees, and applies edit operations. The reference implementation is python-pptx (MIT licence), with direct Open XML manipulation for features python-pptx lacks.
 
-The **render service** converts a presentation or a single slide to PNG for thumbnails, diff previews and visual self-checks by the model. The reference implementation is headless LibreOffice running as an isolated process. Its rendering approximates PowerPoint's; the UI must state that previews are approximate.
+**Rendering** converts a presentation to PNG images for thumbnails, diff previews and visual self-checks by the model, using headless LibreOffice called by the backend. Its rendering approximates PowerPoint's; the UI must state that previews are approximate.
 
-The **model gateway** presents one internal interface over local and hosted multi-modal models. It speaks an OpenAI-compatible chat-completions API with tool calling, which covers self-hosted servers such as vLLM and Ollama as well as most hosted providers, with provider-specific adapters where needed.
+The **model client** calls the configured LLM service through an OpenAI-compatible chat-completions API with tool calling. Whether a model runs on-premises or remotely makes no difference to the application: both are services reached by URL.
 
-The **speech services** provide STT with Whisper large-v3-turbo and TTS with Kokoro-82M, both self-hosted behind a streaming interface.
+**Speech** is provided by existing services: STT with Whisper large-v3-turbo and TTS with Kokoro. The backend proxies both so credentials stay server-side.
 
-The **context manager** assembles the model context for each turn from the project's instructions, memory, conversation history, decks and assets, within a token budget (see 4.4). It also writes conversation summaries and maintains a search index over the project's conversations and reference documents.
+The **context builder** assembles the model context for each turn from the project's instructions, memory, conversation history, decks and assets, within a token budget (see 4.4). It also writes conversation summaries.
 
 The **Knowledge Base connector** is a thin client of the Knowledge Base, which is a separate project consumed only through its published APIs. The connector maps those APIs to the KB tools in section 5 and passes the user's identity so the KB enforces its own permissions. This project does not build, index or host knowledge content.
 
-**Storage** holds original uploads, versions, rendered images and audit logs in object storage, with metadata in a relational database.
+**Storage** is files on disk: one directory per project holding decks and their versions, conversations, memory, assets and renders, with metadata in small JSON files. No database is used.
+
+**Authentication** is handled outside the application by the existing nginx and OAuth2 Proxy. The application reads the signed-in user from the headers they set and never handles credentials.
 
 ```mermaid
 flowchart LR
@@ -156,22 +158,20 @@ flowchart LR
   end
   UI --> API
   Chat --> API
-  Mic <--> Speech[STT / TTS service]
+  Mic <--> API
   API[API + Orchestrator] --> Engine[Document engine<br/>python-pptx]
-  API --> Render[Render service<br/>LibreOffice headless]
-  API --> Gateway[Model gateway]
-  Gateway --> Local[Local model<br/>vLLM / Ollama]
-  Gateway --> Hosted[Hosted model API]
-  API --> Ctx[Context manager<br/>instructions, memory,<br/>summaries, project index]
+  Engine --> Render[LibreOffice<br/>subprocess]
+  API --> Model[LLM API]
+  API --> Speech[STT / TTS APIs]
+  API --> Ctx[Context builder<br/>instructions, memory,<br/>summaries]
   API --> KB[KB connector]
   KB --> KBStore[(Knowledge Base)]
-  Engine --> Store[(Object storage + DB)]
-  Render --> Store
+  Engine --> Store[(Files on disk)]
 ```
 
 ### 4.2 Request flow
 
-A request moves through the following steps. The frontend sends the user's text (typed or transcribed) together with the current selection (slide and shapes). The orchestrator, through the context manager, builds the model context: project instructions and relevant memory items, a summary of older turns in the conversation plus the recent turns verbatim, the list of decks in the project, a compact outline of the active deck, the full structured representation of the selected and referenced slides, a rendered image of the selected slide where useful, the template's available layouts, and the recent conversation. The model then reasons and calls tools: reads, KB searches, clarifying questions, or edit operations. Edit operations are validated and applied to a draft copy, never to the saved version. Affected slides are re-rendered; optionally the model receives the rendered images to check for overflow or overlap and may issue corrective operations, bounded to two correction rounds. The frontend displays the proposal as a before/after diff, and on acceptance the draft becomes a new version.
+A request moves through the following steps. The frontend sends the user's text (typed or transcribed) together with the current selection (slide and shapes). The orchestrator, through the context builder, builds the model context: project instructions and relevant memory items, a summary of older turns in the conversation plus the recent turns verbatim, the list of decks in the project, a compact outline of the active deck, the full structured representation of the selected and referenced slides, a rendered image of the selected slide where useful, the template's available layouts, and the recent conversation. The model then reasons and calls tools: reads, KB searches, clarifying questions, or edit operations. Edit operations are validated and applied to a draft copy, never to the saved version. Affected slides are re-rendered; optionally the model receives the rendered images to check for overflow or overlap and may issue corrective operations, bounded to two correction rounds. The frontend displays the proposal as a before/after diff, and on acceptance the draft becomes a new version.
 
 ```mermaid
 sequenceDiagram
@@ -199,7 +199,7 @@ sequenceDiagram
 
 ### 4.3 Data model
 
-The core entities and their relationships are as follows.
+The core entities and their relationships are as follows. They are stored as files; the technical design defines the layout.
 
 | Entity | Key fields | Notes |
 | --- | --- | --- |
@@ -260,7 +260,7 @@ The model never edits raw XML or writes code that runs against the file. It work
 
 ### 5.3 Fallback for models without tool calling
 
-If the configured model lacks native tool calling, the gateway shall prompt it to emit a single JSON object conforming to the same tool schema and shall parse, validate and retry once on malformed output. This mode is supported but documented as lower quality.
+If the configured model lacks native tool calling, the model client shall prompt it to emit a single JSON object conforming to the same tool schema and shall parse, validate and retry once on malformed output. This mode is supported but documented as lower quality.
 
 ## 6. Document fidelity rules
 
@@ -268,22 +268,23 @@ The document engine shall modify only the XML elements targeted by an operation 
 
 ## 7. Model requirements and configuration
 
-The configured model must support image input, a context window of at least 32k tokens (128k recommended for large decks) and, preferably, native tool calling. Administrators configure separate endpoints for the main chat model, an optional smaller model for cheap tasks (summaries, alt text, intent classification), STT, TTS and optional image generation. Each endpoint has a flag stating whether data sent to it leaves the organisation's infrastructure; the UI shows this status to users, and administrators can block hosted endpoints for documents marked confidential.
+The configured model must support image input, a context window of at least 32k tokens (128k recommended for large decks) and, preferably, native tool calling. Administrators configure the service URLs for the main chat model, an optional smaller model for cheap tasks (summaries, alt text, image descriptions), STT, TTS and optional image generation. Several chat models may be configured; projects choose among them.
 
 ## 8. Non-functional requirements
 
 | Area | Requirement |
 | --- | --- |
-| Latency | Simple single-shape edits shall show a proposal within 5 s at the 90th percentile with a hosted model; the UI streams progress for longer operations. STT partial transcripts appear within 500 ms of speech; TTS starts within 1.5 s of response completion. |
+| Latency | Simple single-shape edits shall show a proposal within 5 s at the 90th percentile, excluding time spent waiting on the LLM service beyond its normal response time; the UI streams progress for longer operations. Where the STT API supports streaming, partial transcripts appear within 500 ms of speech; TTS playback starts within 1.5 s of the first sentence of a response. |
 | Scale | Decks up to 200 slides; projects up to 50 decks and 100 conversations (configurable). Only the context described in 4.4 is sent to the model, so per-turn cost does not grow with project size. |
-| Security | Uploaded files are parsed in a sandboxed worker with size and zip-bomb limits; the render service runs isolated without network access. Macro-enabled files are rejected. |
+| Authentication | Provided by nginx and OAuth2 Proxy. The application is reachable only through nginx and trusts identity headers only from it. |
+| Security | Uploaded files are checked for size and decompressed size (zip-bomb limit); LibreOffice runs as a subprocess with a timeout and a temporary profile. Macro-enabled files are rejected. |
 | Prompt injection | Text from slides, uploaded files and KB documents is passed to the model as clearly delimited data. Tools are allow-listed; the model has no tools that send data outside the system, fetch arbitrary URLs or execute code. Destructive multi-slide changes always require user confirmation. |
 | Privacy | Audio is processed in memory and not stored unless the user opts in. Projects, conversations, memory and documents are retained per a configurable policy and deletable by the user; deleting a project deletes all of them. |
 | Auditability | Every tool call, its arguments, the model used and the resulting version are logged with the user ID. |
 | Design system | All UI uses Banco CTT Design System components, tokens and patterns, as defined by its Agent Skill. No ad-hoc colours, fonts or spacing. |
 | Accessibility | The frontend meets WCAG 2.2 AA; all assistant actions are reachable by keyboard; voice is an addition, never the only path. |
 | Internationalisation | UI strings externalised; the assistant answers in the user's language and edits slide text in the deck's language unless asked otherwise. |
-| Licensing | Third-party components must be under licences compatible with commercial use (e.g. MIT, BSD, Apache 2.0). LibreOffice (MPL 2.0) is used as an unmodified separate process. Each speech and model component's licence, including model weights, must be verified before adoption. |
+| Licensing | Third-party components must be under licences compatible with commercial use (e.g. MIT, BSD, Apache 2.0). LibreOffice (MPL 2.0) is used unmodified as a separate process. |
 
 ## 9. Backend API (outline)
 
@@ -312,11 +313,11 @@ The REST and WebSocket surface is outlined below; detailed schemas belong in a s
 
 ## 10. Acceptance criteria
 
-Scenarios S1 to S10 shall pass end to end on the reference deployment with both one local and one hosted model. Additionally, a regression corpus of at least 50 real-world decks shall survive a load-and-save round trip with no content loss and open without repair prompts in PowerPoint. On a benchmark of at least 200 annotated editing requests, the assistant shall target the correct slide and shape in at least 95% of cases and produce text overflow in fewer than 5% of proposals after self-check. Every KB-derived slide shall carry a source in its notes. After a conversation has been summarised, the assistant shall still correctly apply at least 90% of decisions and instructions recorded earlier in the project, measured on a scripted multi-session benchmark. A red-team set of prompt-injection documents in the KB, in uploaded decks and in project documents shall cause no unconfirmed destructive action and no data leaving the system.
+Scenarios S1 to S10 shall pass end to end on the reference deployment with the configured model service. Additionally, a regression corpus of at least 50 real-world decks shall survive a load-and-save round trip with no content loss and open without repair prompts in PowerPoint. On a benchmark of at least 200 annotated editing requests, the assistant shall target the correct slide and shape in at least 95% of cases and produce text overflow in fewer than 5% of proposals after self-check. Every KB-derived slide shall carry a source in its notes. After a conversation has been summarised, the assistant shall still correctly apply at least 90% of decisions and instructions recorded earlier in the project, measured on a scripted multi-session benchmark. A red-team set of prompt-injection documents in the KB, in uploaded decks and in project documents shall cause no unconfirmed destructive action and no data leaving the system.
 
 ## 11. Delivery phases
 
-**Phase 1 (MVP)** covers projects with multiple decks and persistent, resumable conversations, project instructions, rolling conversation summaries, upload, preview, download, text editing via chat, add/delete/move slides, image insert and replace from uploads, proposals with accept/reject, version history and undo, push-to-talk STT and TTS playback, KB search with citations, and the model gateway with one local and one hosted provider.
+**Phase 1 (MVP)** covers projects with multiple decks and persistent, resumable conversations, project instructions, rolling conversation summaries, upload, preview, download, text editing via chat, add/delete/move slides, image insert and replace from uploads, proposals with accept/reject, version history and undo, push-to-talk STT and TTS playback, KB search with citations, and the model client tested with at least one model endpoint.
 
 **Phase 2** adds project memory, cross-deck operations (copy slides, multi-deck changes), project assets and reference documents, conversation search, deck generation from outlines and KB topics, tables, hands-free voice with barge-in, alt-text automation, PDF export, the render self-check loop and manual editing in the UI.
 
@@ -324,4 +325,4 @@ Scenarios S1 to S10 shall pass end to end on the reference deployment with both 
 
 ## 12. Open questions
 
-The following points need decisions from stakeholders. Which Knowledge Base system or systems must be supported first, and how are its permissions exposed? Which languages are required for STT and TTS at launch? Is there a mandatory brand template set, and may users bring their own? What retention period applies to conversations and versions? Is a hosted model acceptable for any document classification, or must certain deployments be fully on-premises? Should Google Slides import and export be in scope, given the round-trip limitations? In shared projects, should memory and instructions be editable by all editors or only the owner? Should a user be able to move a deck or conversation between projects, and what happens to memory that referred to it? Are there default limits on decks, conversations and storage per project?
+The following points need decisions from stakeholders. Which Knowledge Base system or systems must be supported first, and how are its permissions exposed? Which languages are required for STT and TTS at launch? Is there a mandatory brand template set, and may users bring their own? What retention period applies to conversations and versions? Should Google Slides import and export be in scope, given the round-trip limitations? In shared projects, should memory and instructions be editable by all editors or only the owner? Should a user be able to move a deck or conversation between projects, and what happens to memory that referred to it? Are there default limits on decks, conversations and storage per project?
