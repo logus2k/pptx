@@ -29,6 +29,7 @@ TOOLS_DIR = REPO_DIR / "contracts" / "tools"
 EDITING = (
     "update_text",
     "fill_slide",
+    "add_slides",
     "duplicate_shape",
     "connect_shapes",
     "fit_text",
@@ -183,7 +184,7 @@ def _for_model(node):
 
 TEXT_EDITS = (
     "update_text", "edit_paragraphs", "add_slide", "add_shape", "duplicate_shape", "format_text", "change_layout", "edit_table",
-    "fit_text", "fill_slide",
+    "fit_text", "fill_slide", "add_slides",
 )  # fmt: skip
 
 # what the context already gives (the decks, the layouts) or another tool returns (kb_search: the passages' text):
@@ -342,6 +343,17 @@ class Executor:
             out[k] = sid
         return out
 
+    def _missing_slide(self, t: Turn, args: dict) -> bool:
+        """Is the slide fill_slide names absent from the deck (by number or ID)?"""
+        try:
+            data = self._bytes(t, self._deck_id(t, args))
+        except (NotFound, ToolError):
+            return False
+        ids = [o["slide_id"] for o in read.outline(read.open_deck(data))]
+        sid = int(args.get("slide_id") or 0)
+        start = t.start_order.get(self._deck_id(t, args)) or ids
+        return (sid < 256 and not 1 <= sid <= len(start)) or (sid >= 256 and sid not in ids)
+
     async def _cite(self, t: Turn, did: str, sid: int | None, content: dict) -> None:
         """A slide written from the knowledge base gets its sources in its notes (spec KB-3: "Fonte: <title>, <section
         or p. N>, <date> - <link>"): the documents the content names, as this turn read them; when it names none it
@@ -440,6 +452,24 @@ class Executor:
                 said = f"{name} was already called with these arguments."
                 return {"error": {"code": "ALREADY_READ", "message": said, "hint": hint}}
             t.read_calls.add(key)
+            if name == "fill_slide" and self._missing_slide(t, args):
+                # a slide that is not there yet: written, it is made (measured: on an empty deck the model called
+                # fill_slide for "slide 1" 30 times, told each time to use add_slide)
+                data = self._bytes(t, self._deck_id(t, args))
+                prs = read.open_deck(data)
+                lay = ops._layout_for_content(prs, args["content"])
+                if args.get("layout"):
+                    try:
+                        lay = ops._layout(prs, args["layout"])
+                    except ops.OpError:
+                        pass
+                new = {"layout": lay.name, "content": args["content"]}
+                if args.get("deck_id"):
+                    new["deck_id"] = args["deck_id"]
+                made = await self._edit(t, "add_slide", new)
+                if "error" not in made:
+                    made["note"] += f" There was no slide {args['slide_id']}: a new slide was made with this content."
+                return made
             if name in EDITING:
                 return await self._edit(t, name, args)
             return await getattr(self, f"t_{name}")(t, args)
@@ -482,6 +512,9 @@ class Executor:
         t.read_calls.clear()  # the deck changed: reading it again is new
         if name in ("add_slide", "fill_slide") and (args.get("content") or {}) and "error" not in result:
             await self._cite(t, did, (result.get("new_slide_ids") or result.get("slides") or [None])[0], args["content"])
+        if name == "add_slides" and "error" not in result:
+            for sid, item in zip(result.get("new_slide_ids") or [], args.get("slides") or [], strict=False):
+                await self._cite(t, did, sid, item)
         out = {"ok": True, "deck_id": did, **result, "note": "Applied to the draft; the person reviews it before it is saved."}
         if result.get("unmatched"):
             out["note"] += " Text that had no place in the new layout was kept as a text box: mention it."

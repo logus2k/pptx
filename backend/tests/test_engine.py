@@ -1043,3 +1043,18 @@ def test_placed_content_is_fitted_to_its_box():
     data, made = ops.apply(ctt, "add_slide", {"layout": "1_Texto", "content": {"title": long_title, "points": ["a", "b"]}})
     title = next(sh for sh in get(data, made["slides"][0])["shapes"] if (sh.get("placeholder") or {}).get("idx") == 0)
     assert title["overflow"] is False
+
+
+def test_add_slides_makes_a_slide_for_each_item_on_the_layout_its_content_fits():
+    ctt = (REPO / "templates" / "bancoctt.pptx").read_bytes()
+    items = [
+        {"title": "Contexto"}, {"title": "Objetivos", "points": ["Um", "Dois", "Três"]}, {"title": "Capa", "subtitle": "Outubro"},
+    ]  # fmt: skip
+    data, res = ops.apply(ctt, "add_slides", {"slides": items})
+    prs = read.open_deck(data)
+    assert [o["slide_id"] for o in read.outline(prs)] == res["new_slide_ids"] and len(res["new_slide_ids"]) == 3
+    layouts = [o["layout"] for o in read.outline(prs)]
+    assert layouts[1] != layouts[0] and layouts[2] in ("1_Capa C/ Imagem", "2_Capa S/Imagem")  # 3 points; a cover
+    texts = [" / ".join(" ".join(r.get("text", "") for r in p.get("runs", [])) for sh in read.slide(prs, sid)["shapes"]
+                        for p in (sh.get("paragraphs") or [])) for sid in res["new_slide_ids"]]  # fmt: skip
+    assert texts[0] == "Contexto" and texts[1].startswith("Objetivos") and "Três" in texts[1] and "Outubro" in texts[2]

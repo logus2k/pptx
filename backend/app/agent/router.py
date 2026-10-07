@@ -20,7 +20,7 @@ GROUPS: dict[str, list[str]] = {
     "notes": ["set_notes"],
     "images": ["insert_image", "replace_image", "set_alt_text", "render_slide", "kb_list_images"],
     "structure": ["add_slide", "duplicate_slide", "delete_slide", "move_slide", "change_layout", "add_shape",
-                  "move_resize_shape", "delete_shape", "duplicate_shape", "connect_shapes"],
+                  "move_resize_shape", "delete_shape", "duplicate_shape", "connect_shapes", "add_slides"],
     "decks": ["create_deck", "duplicate_deck", "copy_slides", "change_template", "list_templates"],
     "knowledge": ["kb_search", "kb_read_document", "search_project"],
     "memory": ["remember", "search_conversations", "update_instructions"],

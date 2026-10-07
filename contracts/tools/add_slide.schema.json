@@ -27,7 +27,7 @@
    "items": {
     "type": "object",
     "additionalProperties": false,
-    "description": "A placeholder of the layout and its text: by idx, or by type - title, subtitle, body (the main content placeholder) or a type list_layouts gives.",
+    "description": "A particular placeholder by idx and its text (\\n between lines). For what the slide says, use content.",
     "properties": {
      "idx": {
       "type": "integer"
@@ -117,7 +117,8 @@
          ]
         }
        ]
-      }
+      },
+      "x-hidden": true
      }
     }
    }

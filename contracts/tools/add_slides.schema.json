@@ -1,0 +1,85 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "tools/add_slides",
+ "title": "add_slides",
+ "description": "Insert SEVERAL new slides at once, one for each item, in order: a slide for each point of an outline, a section's slides. Each item is what that slide says; the application places it in its layout.",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "slides"
+ ],
+ "properties": {
+  "deck_id": {
+   "type": "string",
+   "description": "Left out: the active deck."
+  },
+  "slides": {
+   "type": "array",
+   "minItems": 1,
+   "maxItems": 20,
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "description": "One slide: what it says (as add_slide's content), and its layout when you choose it.",
+    "properties": {
+     "title": {
+      "type": "string",
+      "maxLength": 300
+     },
+     "subtitle": {
+      "type": "string",
+      "maxLength": 300
+     },
+     "points": {
+      "type": "array",
+      "maxItems": 30,
+      "description": "The slide's points, in order: a text, or {heading, text} for a point with a heading of its own (a column, a phase).",
+      "items": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 1000
+        },
+        {
+         "type": "object",
+         "additionalProperties": false,
+         "properties": {
+          "heading": {
+           "type": "string",
+           "maxLength": 200
+          },
+          "text": {
+           "type": "string",
+           "maxLength": 1000
+          }
+         }
+        }
+       ]
+      }
+     },
+     "sources": {
+      "type": "array",
+      "maxItems": 10,
+      "items": {
+       "type": "string",
+       "maxLength": 300
+      },
+      "description": "The titles of the knowledge-base documents its text comes from: the application writes their citations in the slide's notes."
+     },
+     "layout": {
+      "type": "string",
+      "description": "A layout of this deck. Left out: the one its content fits."
+     }
+    }
+   }
+  },
+  "layout": {
+   "type": "string",
+   "description": "The layout for every slide that names none. Left out: each the one its content fits."
+  },
+  "after_slide_id": {
+   "type": "integer",
+   "description": "Put them after this slide (its number or ID). Left out: at the end."
+  }
+ }
+}

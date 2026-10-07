@@ -104,6 +104,7 @@ window.CORTEX_PT = {
  "Connecting shapes": "A ligar formas",
  "Fitting text to its box": "A ajustar o texto à caixa",
  "Writing a slide": "A escrever um diapositivo",
+ "Adding slides": "A acrescentar diapositivos",
  // hands-free (assistant.js, spec VO-2)
  "Hands-free": "Mãos livres",
  "Hands-free: speak without pressing anything": "Mãos livres: fale sem carregar em nada",

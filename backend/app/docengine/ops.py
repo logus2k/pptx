@@ -567,6 +567,45 @@ def _best_layout(prs, points: int):
     return best and best[1]
 
 
+def _layout_for_content(prs, content: dict):
+    """The layout content fits: for points, the one with the closest number of boxes (_best_layout); for a title and a
+    subtitle alone, the first with a heading, a subtitle and no text boxes (a cover); else the first with a heading."""
+    from . import layouts
+
+    points = len([p for p in content.get("points") or [] if any(_point_text(p))])
+    if points:
+        found = _best_layout(prs, points)
+        if found is not None:
+            return found
+    plain = []  # a heading and only text: no picture, table, chart or diagram left empty on the slide
+    for lay in prs.slide_layouts:
+        where = layouts.slots(lay, prs.slide_width, prs.slide_height)
+        roles = [x["role"] for x in layouts.placeholders(lay, prs.slide_width, prs.slide_height)]
+        if where["heading"] is None or any(r in ("picture", "table", "chart", "diagram", "media") for r in roles):
+            continue
+        if content.get("subtitle") and where["subtitle"] is not None and not where["items"]:
+            return lay
+        plain.append((len(roles), lay))
+    return min(plain, key=lambda x: x[0])[1] if plain else prs.slide_layouts[0]
+
+
+def add_slides(prs, slides: list[dict], layout: str | None = None, after_slide_id: int | None = None, deck_id=None) -> dict:
+    """Several new slides, one for each item ({title, subtitle, points, layout?}), in order, each on its layout or the
+    one its content fits (measured: "a slide for each of these points" made one slide listing them, 2 runs in 2)."""
+    made = []
+    after = after_slide_id
+    for item in slides:
+        name = item.get("layout") or layout
+        try:
+            lay = _layout(prs, name) if name else _layout_for_content(prs, item)
+        except OpError:
+            lay = _layout_for_content(prs, item)
+        content = {k: item[k] for k in ("title", "subtitle", "points", "sources") if item.get(k)}
+        made += add_slide(prs, lay.name, after_slide_id=after, content=content)
+        after = made[-1]
+    return {"slides": made, "new_slide_ids": made}
+
+
 def fill_slide(prs, slide_id: int, content: dict, layout: str | None = None, deck_id=None) -> dict:
     """A slide's content put in its layout's places (_place_content); the text it had there is replaced. On `layout`
     when given; when its layout has no place for the points, on the layout that fits them best (measured: told the
@@ -577,7 +616,10 @@ def fill_slide(prs, slide_id: int, content: dict, layout: str | None = None, dec
     moved = None
     points = len([p for p in content.get("points") or [] if any(_point_text(p))])
     if layout:
-        lay = _layout(prs, layout)
+        try:
+            lay = _layout(prs, layout)
+        except OpError:  # measured: "Layouts of this deck" (a heading of the context) sent as the layout
+            lay = _layout_for_content(prs, content)
         if lay.name != s.slide_layout.name:
             _relayout(s, lay)
             moved = lay.name
@@ -1435,6 +1477,7 @@ OPERATIONS = {
     "format_text": format_text,
     "add_slide": add_slide,
     "fill_slide": fill_slide,
+    "add_slides": add_slides,
     "duplicate_shape": duplicate_shape,
     "fit_text": fit_text,
     "connect_shapes": connect_shapes,

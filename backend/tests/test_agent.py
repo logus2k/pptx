@@ -480,8 +480,9 @@ def test_a_model_too_small_is_refused_on_exact_counts_only():
     model = {"id": "fake", "provider": "local"}
     with pytest.raises(context.ModelTooSmall):
         context.budget(FakeModels(window=8192, estimating=False), model, defs)
-    room, answer = context.budget(FakeModels(window=32000, estimating=True), model, defs)  # over 30%, under 50%
-    assert answer == int(32000 * context.ANSWER_SHARE) and room > 0
+    # by the fake's count every tool is 30-50% of windows from 31 800 to 52 900 (measured 2026-10-07)
+    room, answer = context.budget(FakeModels(window=40000, estimating=True), model, defs)  # over 30%, under 50%
+    assert answer == int(40000 * context.ANSWER_SHARE) and room > 0
     with pytest.raises(context.ModelTooSmall):  # an estimate past half the window: refused all the same
         context.budget(FakeModels(window=8192, estimating=True), model, defs)
 
@@ -762,9 +763,9 @@ def test_with_no_route_and_every_tool_too_big_the_usual_groups_are_offered(serve
     from app.agent import router
 
     pid, _, cid = setup(server)
-    # by the fake's count (2.5 characters a token), the usual groups fit 30% of windows above 34 200, and the tools this
-    # project is offered do not fit 35 000 (measured 2026-10-07; the real model: 29.8% and 21.5% of 32 768)
-    fake_model._window, fake_model._estimating = 35000, False
+    # by the fake's count (2.5 characters a token), the usual groups fit 30% of windows above 39 600, and the tools this
+    # project is offered do not fit 42 000 (measured 2026-10-07; the real model: 32.9% and 24.6% of 32 768)
+    fake_model._window, fake_model._estimating = 42000, False
     fake_model.routes = [{"intent": "-"}]  # an answer with no groups: no route
     fake_model.script = [{"text": "Feito."}]
     chat = Chat(server, pid, cid)
