@@ -6,7 +6,7 @@ presentation's defaults, the theme's fonts), and words wrapped line by line as P
 It predicts where the glyphs land - what a person sees - not the lines' boxes: measured against LibreOffice's renders
 of real decks (tests/eval: Banco CTT's Dev.AI and Squad Model, with their fonts), a character-count estimate raised
 185 false alarms in 825 shapes, among them every agenda number that sat inside its box (a 36 pt "01" in a 40 pt box).
-PITCH and INK are fitted to those renders (docs/decisions.md)."""
+PITCH, TOP and BASE are fitted to those renders (docs/decisions.md)."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ EMU_PT = 12700
 # (7 false alarms, 2 missed) where a character count was wrong 186 times; fitted on Dev.AI alone, the same values,
 # which on the Squad Model gave 0 false alarms (it had given 134)
 PITCH = 1.15  # a line's pitch in ems at 100% line spacing
-INK = 0.8  # the glyphs' height in ems, from the top of the tallest to the bottom of the lowest
+BASE = 0.8  # ems from the top of a line's box to its baseline; below it, the line's own glyphs' descent (from the font)
 TOP = 0.05  # ems between the top of a line's box and the top of its glyphs
 TOL_PT = 2.0  # what a person does not see as outside the box
 DEFAULT_INS = {"lIns": 91440, "tIns": 45720, "rIns": 91440, "bIns": 45720}
@@ -209,18 +209,22 @@ def measure(sh) -> dict | None:
         defaults = [c.find(f"{A}defRPr") for c in chain if c.find(f"{A}defRPr") is not None]
         size = float(_first(defaults, "", "sz") or 1800) / 100 * body["font_scale"]
         bold = (_first(defaults, "", "b") or "0") in ("1", "true")
+        italic = (_first(defaults, "", "i") or "0") in ("1", "true")
         face = _first(defaults, f"{A}latin", "typeface") or "+mn-lt"
-        pieces: list[tuple[str, float, str, bool]] = []
+        spc = float(_first(defaults, "", "spc") or 0) / 100
+        # each run as it is set: (text, size, face, bold, italic, letter spacing in points); measured: a paragraph
+        # measured in its first run's bold wrapped onto one line more than LibreOffice did
+        pieces: list[tuple[str, float, str, bool, bool, float]] = []
         for r in runs:
             if r.tag == f"{A}br":
-                pieces.append(("\n", size, face, bold))
+                pieces.append(("\n", size, face, bold, italic, spc))
                 continue
-            rpr = r.find(f"{A}rPr")
-            s = float(rpr.get("sz")) / 100 * body["font_scale"] if rpr is not None and rpr.get("sz") else size
-            b = (rpr.get("b") in ("1", "true")) if rpr is not None and rpr.get("b") is not None else bold
-            f = rpr.find(f"{A}latin").get("typeface") if rpr is not None and rpr.find(f"{A}latin") is not None else face
-            pieces.append(("".join(t.text or "" for t in r.findall(f"{A}t")), s, f, b))
+            style = _run_style(r.find(f"{A}rPr"), size, face, bold, italic, spc, body["font_scale"])
+            pieces.append(("".join(t.text or "" for t in r.findall(f"{A}t")), *style))
         text = "".join(t for t, *_ in pieces)
+        end_rpr = p.find(f"{A}endParaRPr")
+        if not text.strip() and end_rpr is not None and end_rpr.get("sz"):  # an empty line is as tall as its mark
+            size = float(end_rpr.get("sz")) / 100 * body["font_scale"]  # (measured: 18 pt taken for 14 pt lines)
         big = max((s for t, s, *_ in pieces if t.strip()), default=size)  # (sizes already scaled)
         before = _spacing(_first_node(chain, "spcBef"), big) if i else 0.0
         after = _spacing(_first_node(chain, "spcAft"), big)
@@ -228,17 +232,13 @@ def measure(sh) -> dict | None:
         pitch = _spacing(line_spc, big) if line_spc is not None else PITCH * big
         indent = sum(int(_first(chain, "", k) or 0) for k in ("marL",)) / EMU_PT
         room = max(width - indent, 1.0)
-        n = 0
-        for part in text.split("\n"):
-            n += _lines(part, pieces, room, body["wrap"] != "none", major, minor)
-        n = max(n, 1)
+        n = _lines(pieces, room, body["wrap"] != "none", major, minor)
         y += before
         if text.strip():
-            # a line's glyphs sit at the bottom of its box: spacing above or below a single line's moves them (measured
-            # in LibreOffice: at 150% the first line 0.6 em lower, at 80% 0.24 em higher, in every typeface)
-            lift = pitch - PITCH * big
-            first_top = y + lift + TOP * big
-            last_bottom = y + (n - 1) * pitch + lift + (TOP + INK) * big
+            first_top = y + TOP * big
+            # the last line's ink: its baseline, then as deep as its own letters go (measured: a 71 pt title's "p"
+            # and "y" passed the box by 9 pt where a fixed glyph height had it inside)
+            last_bottom = y + (n - 1) * pitch + BASE * big + _descent(pieces, major, minor)
             top_ink = first_top if top_ink is None else min(top_ink, first_top)
             bottom_ink = last_bottom if bottom_ink is None else max(bottom_ink, last_bottom)
             start = y if start is None else start
@@ -272,25 +272,63 @@ def _resolve(face: str, major: str, minor: str) -> str:
     return major if face.startswith("+mj") else minor if face.startswith("+mn") else face
 
 
-def _lines(text: str, pieces, room: float, wraps: bool, major: str, minor: str) -> int:
-    """How many lines `text` takes in `room` points, wrapped between words as PowerPoint does; measured in the
-    paragraph's first run's face and size (a paragraph's runs rarely change size mid-line)."""
-    if not text.strip():
-        return 1
-    _, size, face, bold = next(((t, s, f, b) for t, s, f, b in pieces if t.strip()), pieces[0])
-    family = _resolve(face, major, minor)
-    if not wraps:
-        return 1
-    space = width_pt(" ", family, size, bold) or size * 0.25
-    lines, used = 1, 0.0
-    for word in text.split(" "):
-        w = width_pt(word, family, size, bold)
-        if w is None:
-            w = len(word) * 0.5 * size
-        if used and used + space + w > room:
-            lines, used = lines + 1, w
+def _descent(pieces, major: str, minor: str) -> float:
+    """How far below the baseline a paragraph's letters reach, in points (0 for text that does not)."""
+    out = 0.0
+    for text, size, face, bold, italic, _ in pieces:
+        path = font_file(_resolve(face, major, minor), bold, italic) if text.strip() else None
+        if path:
+            try:
+                out = max(out, _font(path, max(1, round(size * 10))).getbbox(text.strip(), anchor="ls")[3] / 10)
+            except OSError:
+                continue
+    return out
+
+
+def _run_style(rpr, size, face, bold, italic, spc, scale) -> tuple[float, str, bool, bool, float]:
+    """A run's (size, face, bold, italic, letter spacing), its own properties over the paragraph's."""
+    if rpr is None:
+        return size, face, bold, italic, spc
+    latin = rpr.find(f"{A}latin")
+    return (
+        float(rpr.get("sz")) / 100 * scale if rpr.get("sz") else size,
+        latin.get("typeface") if latin is not None and latin.get("typeface") else face,
+        rpr.get("b") in ("1", "true") if rpr.get("b") is not None else bold,
+        rpr.get("i") in ("1", "true") if rpr.get("i") is not None else italic,
+        float(rpr.get("spc")) / 100 if rpr.get("spc") is not None else spc,
+    )
+
+
+def _width(text: str, style, major: str, minor: str) -> float:
+    size, face, bold, italic, spc = style
+    w = width_pt(text, _resolve(face, major, minor), size, bold, italic)
+    return (w if w is not None else len(text) * 0.5 * size) + spc * len(text)
+
+
+def _lines(pieces, room: float, wraps: bool, major: str, minor: str) -> int:
+    """How many lines a paragraph's runs take in `room` points, wrapped between words as PowerPoint does, each part
+    of a word measured in its own run's face, size, weight and letter spacing; a line break starts a line."""
+    lines, used, word, gap = 1, 0.0, 0.0, 0.0  # the line so far, the word being read, the space before it
+
+    def place():
+        nonlocal lines, used
+        if not wraps or not used or used + gap + word <= room:
+            used = used + (gap if used else 0) + word
         else:
-            used = used + (space if used else 0) + w
+            lines, used = lines + 1, word
+
+    for text, *style in pieces:
+        if text == "\n":
+            place()
+            lines, used, word, gap = lines + 1, 0.0, 0.0, 0.0
+            continue
+        for k, chunk in enumerate(text.split(" ")):
+            if k:  # a space ends the word
+                place()
+                word, gap = 0.0, _width(" ", style, major, minor)
+            if chunk:
+                word += _width(chunk, style, major, minor)
+    place()
     return lines
 
 

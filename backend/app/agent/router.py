@@ -119,6 +119,9 @@ def prompt(request: str, deck: str, count: int = 0) -> str:
         "- A value that is in a table (see the deck) is table.\n"
         "- Facts the request says come from documents, the knowledge base or policies need knowledge; content "
         "written from it onto slides also needs text or structure, and notes for the source.\n"
+        "- New content about a subject of the organisation (a product, a service, a process, a policy, a topic), "
+        "whose words the request does not give, needs knowledge: it is written from the organisation's documents. "
+        "Text the request dictates, or a change to text already on the slides, does not.\n"
         '- "Here" and "this" mean what the person has selected.\n'
         "- kind: change (something must change: choose its groups), question (only an answer: no groups), unclear "
         '(too vague to know what to change, like "change it": no groups).\n'

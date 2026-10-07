@@ -7,7 +7,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.base
-    image: slides-base:lo-1
+    image: slides-base:lo-2
 
   slides:
     restart: unless-stopped

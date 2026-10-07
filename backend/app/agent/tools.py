@@ -312,6 +312,13 @@ class Executor:
         order = start or now
         out = dict(args)
         for k in keys:
+            if k != "slide_id" and (not now or (k == "after_slide_id" and args[k] == 0)):
+                # an empty deck has one place for a new slide; "after slide 0" is the first place (measured: a new deck
+                # from a template, empty, refused "add a slide" five times with "the deck has slides 1 to 0")
+                del out[k]
+                if now:
+                    out["before_slide_id"] = now[0]
+                continue
             if not 1 <= args[k] <= len(order):
                 hint = "New slides are named by their ID." if start else "Use a slide number or ID from the deck map."
                 raise ToolError("SLIDE_NOT_FOUND", f"The deck has slides 1 to {len(order)}.", hint)

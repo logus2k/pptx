@@ -1,0 +1,157 @@
+{
+ "id": "first-use-index-from-kb",
+ "about": "The first test a person made (2026-10-07): a new deck from the Banco CTT template, empty; 'Cria um slide' was refused five times (an empty deck has no slide 0), then a table of contents from the knowledge base ended in a plan approved and nothing written.",
+ "turns": [
+  {
+   "say": "Cria um slide",
+   "status": "done",
+   "seconds": 4.7,
+   "waits": [],
+   "replies": [
+    "Adicionei um novo slide após o slide 18, utilizando o layout \"1_Texto\", com o título \"Novo Slide\" e o corpo \"Este é o conteúdo do novo slide.\"."
+   ],
+   "tools": [
+    "add_slide"
+   ],
+   "errors": [],
+   "proposal": {
+    "status": "pending",
+    "accepted": true
+   },
+   "deck": [
+    {
+     "slide_id": 256,
+     "layout": "1_Texto",
+     "shapes": [
+      {
+       "shape_id": 2,
+       "kind": "title",
+       "lines": [
+        "Novo Slide"
+       ]
+      },
+      {
+       "shape_id": 3,
+       "kind": "body",
+       "lines": [
+        "Este é o conteúdo do novo slide."
+       ]
+      }
+     ],
+     "empty_placeholders": [
+      "body",
+      "body",
+      "body",
+      "body",
+      "body"
+     ],
+     "overflowing": [],
+     "notes": ""
+    }
+   ]
+  },
+  {
+   "say": "Escreve um índice com base nos tópicos de crédito à habitação",
+   "status": "done",
+   "seconds": 2.6,
+   "waits": [],
+   "replies": [
+    "Para criar um índice com base nos tópicos de crédito à habitação, preciso de mais informação, pois o índice deve refletir o conteúdo do seu projeto. Poderia, por favor, fornecer os tópicos de crédito à habitação que devo usar para criar o índice?"
+   ],
+   "tools": [
+    "get_deck_outline"
+   ],
+   "errors": [],
+   "proposal": null,
+   "deck": [
+    {
+     "slide_id": 256,
+     "layout": "1_Texto",
+     "shapes": [
+      {
+       "shape_id": 2,
+       "kind": "title",
+       "lines": [
+        "Novo Slide"
+       ]
+      },
+      {
+       "shape_id": 3,
+       "kind": "body",
+       "lines": [
+        "Este é o conteúdo do novo slide."
+       ]
+      }
+     ],
+     "empty_placeholders": [
+      "body",
+      "body",
+      "body",
+      "body",
+      "body"
+     ],
+     "overflowing": [],
+     "notes": ""
+    }
+   ]
+  }
+ ],
+ "checks": [
+  {
+   "turn": 1,
+   "ok": true,
+   "check": "the turn ended done (done)"
+  },
+  {
+   "turn": 1,
+   "ok": true,
+   "check": "the deck has 1 slides (1)"
+  },
+  {
+   "turn": 1,
+   "ok": true,
+   "check": "the turn changed the deck"
+  },
+  {
+   "turn": 2,
+   "ok": true,
+   "check": "the turn ended done (done)"
+  },
+  {
+   "turn": 2,
+   "ok": false,
+   "check": "slide 1 has at least 4 lines of text (2)"
+  },
+  {
+   "turn": 2,
+   "ok": false,
+   "check": "slide 1 mentions one of ['habitação', 'crédito']"
+  },
+  {
+   "turn": 2,
+   "ok": false,
+   "check": "the assistant used kb_search (['get_deck_outline'])"
+  },
+  {
+   "turn": 2,
+   "ok": false,
+   "check": "the turn changed the deck"
+  },
+  {
+   "turn": "end",
+   "ok": true,
+   "check": "the deck has at least 1 slides (1)"
+  },
+  {
+   "turn": "end",
+   "ok": false,
+   "check": "no slide left with empty placeholders (prompt text on show) [(1, ['body', 'body', 'body', 'body', 'body'])]"
+  },
+  {
+   "turn": "end",
+   "ok": true,
+   "check": "no text past its box []"
+  }
+ ],
+ "passed": false
+}

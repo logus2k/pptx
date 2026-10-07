@@ -8,6 +8,7 @@ import json
 import threading
 import time
 
+import pytest
 import requests
 import socketio
 from PIL import Image
@@ -602,7 +603,8 @@ def test_a_turn_resumed_after_an_approved_deletion_goes_on_with_the_same_request
     assert sum(1 for m in fake_model.sent if m[0]["role"] == "user") == routed  # not routed again
     now = fake_model.sent[-1][0]["content"]
     assert "The person wants: Delete the agenda" in now and "Done in this turn: delete_slide on slide " in now
-    assert fake_model.offered[-1] and "delete_slide" in fake_model.offered[-1] and "kb_search" not in fake_model.offered[-1]
+    # the same route, not every tool: no memory tools (the knowledge tools come with every change: loop._route)
+    assert fake_model.offered[-1] and "delete_slide" in fake_model.offered[-1] and "remember" not in fake_model.offered[-1]
     p = chat.last("proposal_updated")
     assert [s["state"] for s in p["decks"][did]["slides"]] == ["removed"]  # one slide, once
     chat.close()
@@ -655,13 +657,42 @@ def test_the_words_a_request_names_are_found_in_the_deck():
     assert router.locate(paragraphs, "no") == []  # too short to mean anything
 
 
-def test_layouts_are_shown_with_an_example_slide_s_placeholders():
+def test_layouts_are_described_by_what_their_placeholders_are_for():
+    """Measured: Banco CTT's layouts type their heading "body" and are named "10_Texto"; in an empty deck the model
+    chose four columns for "create a slide" and wrote nothing. Each layout as drawn (rendered and looked at)."""
+    from pptx import Presentation
+
     from app.agent import context
-    from app.docengine import read
+    from app.docengine import layouts, read
 
     text = context.layouts_text(read.open_deck((REPO / "fixtures" / "eval" / "report.pptx").read_bytes()))
-    assert "Title and Content (as slide 2): idx 0 (title) «Agenda»; idx 1 (object)" in text
-    assert "Other layouts: Blank" in text
+    assert "- Title and Content: heading [0] (32 pt); text large, 32 pt: [1] (as slide 2)" in text
+    assert "- Two Content: heading [0] (32 pt); 2 side by side" in text  # its columns are not a subtitle
+    assert "- Blank: no placeholders" in text
+    ctt = Presentation(str(REPO / "templates" / "bancoctt.pptx"))
+    by = {lay.name: layouts.describe(lay, ctt.slide_width, ctt.slide_height) for lay in ctt.slide_layouts}
+    assert by["10_Texto"] == (
+        "heading [19] (24 pt); subtitle [20]; 4 side by side, text, 18 pt bold: [30] [32] [34] [36]; "
+        "4 side by side, text large, 12 pt: [12] [31] [33] [35]"
+    )
+    assert by["2_Capa S/Imagem"] == "heading [11] (48 pt); subtitle [12]"
+    assert by["3_Agenda"].startswith("heading [0] (60 pt); 4 side by side, number, 36 pt bold: [47] [48] [49] [50]")
+    lay = next(x for x in ctt.slide_layouts if x.name == "1_Tabela")
+    size = (ctt.slide_width, ctt.slide_height)
+    assert (layouts.heading(lay, *size), layouts.subtitle(lay, *size)) == (26, 25)
+
+
+def test_a_title_goes_to_the_heading_of_a_layout_whose_heading_is_typed_body():
+    from pptx import Presentation
+
+    from app.docengine import ops
+
+    ctt = io.BytesIO((REPO / "templates" / "bancoctt.pptx").read_bytes())
+    spec = {"layout": "10_Texto", "placeholders": [{"type": "title", "text": "Índice"}, {"type": "subtitle", "text": "Crédito"}]}
+    data, made = ops.apply(ctt.getvalue(), "add_slide", spec)
+    s = Presentation(io.BytesIO(data)).slides.get(made["slides"][0])
+    texts = {ph.placeholder_format.idx: ph.text_frame.text for ph in s.placeholders if ph.has_text_frame}
+    assert texts[19] == "Índice" and texts[20] == "Crédito"
 
 
 def test_every_tool_accepts_paragraphs_as_the_model_writes_them():
@@ -730,7 +761,9 @@ def test_with_no_route_and_every_tool_too_big_the_usual_groups_are_offered(serve
     from app.agent import router
 
     pid, _, cid = setup(server)
-    fake_model._window, fake_model._estimating = 30000, False  # every tool over 30% of it, counted exactly
+    # by the fake's count (2.5 characters a token), every tool is over 30% of windows below 47 500 and the usual
+    # groups under it above 34 200 (measured 2026-10-07; the real model: 29.8% and 21.5% of 32 768)
+    fake_model._window, fake_model._estimating = 40000, False
     fake_model.routes = [{"intent": "-"}]  # an answer with no groups: no route
     fake_model.script = [{"text": "Feito."}]
     chat = Chat(server, pid, cid)
@@ -739,3 +772,25 @@ def test_with_no_route_and_every_tool_too_big_the_usual_groups_are_offered(serve
     assert chat.last("turn_ended")["status"] == "done"  # not refused
     assert offered == router.tools_of(router.FALLBACK) & offered and "update_text" in offered and "kb_search" not in offered
     chat.close()
+
+
+def test_a_new_slide_has_a_place_in_an_empty_deck_and_after_slide_0_is_the_first():
+    """Measured: a new deck from a template (no slides) refused "add a slide" five times: "after slide 0" and "after
+    slide 1" were "not found" in a deck of slides 1 to 0."""
+    from pptx import Presentation
+
+    from app.agent.tools import Executor
+    from app.docengine import ops
+
+    empty = io.BytesIO()
+    Presentation().save(empty)
+    for after in (0, 1, 3):
+        assert Executor._positions({"layout": "Blank", "after_slide_id": after}, empty.getvalue()) == {"layout": "Blank"}
+    assert Executor._positions({"before_slide_id": 1}, empty.getvalue()) == {}
+    first_args = Executor._positions({"layout": "Blank", "after_slide_id": 0}, empty.getvalue())
+    data, made = ops.apply(empty.getvalue(), "add_slide", first_args)
+    first = made["slides"][0]
+    data, second = ops.apply(data, "add_slide", Executor._positions({"layout": "Blank", "after_slide_id": 0}, data))
+    assert [o["slide_id"] for o in outline(data)] == [second["slides"][0], first]  # "after slide 0": at the start
+    with pytest.raises(Exception, match="slides 1 to 2"):
+        Executor._positions({"slide_id": 3}, data)  # a slide that is not there is still refused

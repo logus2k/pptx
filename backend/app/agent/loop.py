@@ -42,6 +42,14 @@ FAILED_NUDGE = (
     "(A note from the application, not from the person.) Nothing has changed yet: your edits failed. If the error tells "
     "you what to do, call the tool again now, as your answer says; if it cannot be done, tell the person why."
 )
+# tools that only read: a turn that called only these has changed nothing
+READS = {"get_slide", "get_deck_outline", "render_slide", "list_decks", "list_layouts", "list_templates", "kb_search",
+         "kb_get", "kb_read_document", "kb_list_images", "search_project", "search_conversations", "draft_outline"}  # fmt: skip
+UNDONE_NUDGE = (
+    "(A note from the application, not from the person.) The person asked for a change and nothing has changed yet: "
+    "{intent}. Make it now with the tools, from what you have read or found (every change is reviewed before it is "
+    "saved): do not describe it, propose it or ask for approval in words. If it cannot be done, say why."
+)
 NUDGE = (
     "(A note from the application, not from the person.) Your answer called no tool, so nothing has happened yet. "
     "If the person asked for a change, it is made only by calling the tool: call it now (for a deletion or a change "
@@ -272,6 +280,7 @@ class Agent:
                 room, answer_tokens = await asyncio.to_thread(context.budget, self.app.models, model, t.tool_defs)
             t.result_chars = int(room * 0.15 * 3)  # a tool result: a sixth of the room, at ~3 characters a token
             started, model_calls, tool_calls, failed_nudged, overflow_nudged = time.monotonic(), 0, 0, False, False
+            undone_nudged, called = False, set()  # the tools called this turn
             await self.emit("turn_started", {"model": model["label"]}, cid)
             while True:
                 if cid in self._cancel:
@@ -308,6 +317,16 @@ class Agent:
                     text, calls = await self._complete(model, retry, answer_tokens, cid, tools=t.tool_defs)
                     model_calls += 1
                     log.info("every edit had failed: asked again", extra={"actedOnRetry": bool(calls)})
+                if (not calls and called and called <= READS and t.kind == "change" and not t.failed_edits
+                        and not undone_nudged and self.nudge and not self._declined(t)):  # fmt: skip
+                    # measured (tests/scenarios, first use): after kb_search found the topics, the answer described
+                    # the slide, or "proposed a plan" in words, or said it was done, and the turn ended unchanged (3 in 3)
+                    undone_nudged = True
+                    note = UNDONE_NUDGE.format(intent=t.intent or "what the person asked")
+                    retry = [*messages, {"role": "assistant", "content": text}, {"role": "user", "content": note}]
+                    text, calls = await self._complete(model, retry, answer_tokens, cid, tools=t.tool_defs)
+                    model_calls += 1
+                    log.info("a change was asked and none made: asked again", extra={"actedOnRetry": bool(calls)})
                 if not calls and t.overflowing and not overflow_nudged and self.nudge:
                     # measured (renders of real decks): an 11th item added to a full list ran 49 pt past its box, and
                     # the turn ended with the self-check's note unread; asked once, it fixes what still does not fit
@@ -334,6 +353,7 @@ class Agent:
                 waiting = False
                 for call in calls:
                     name, raw = call["function"]["name"], call["function"].get("arguments") or "{}"
+                    called.add(name)
                     if name in WAITING:
                         if waiting:
                             result = {"error": {"code": "ONE_AT_A_TIME", "message": "Ask one thing at a time.", "hint": ""}}
@@ -638,6 +658,11 @@ class Agent:
             log.warning(f"routing failed ({type(e).__name__}): every tool offered")
             return None
         groups, t.intent, t.kind = router.parse(text)
+        if groups is not None and t.kind in ("change", "question") and self._has_sources(t):
+            # the organisation's documents with every change and question, the assistant deciding whether to search
+            # (measured: "write an index of the topics of home loans" routed without them 5 times in 5, and the slide
+            # was written from the model's own knowledge; a question has no tools at all to check a fact with)
+            groups = groups | {"knowledge"}
         t.changes = t.kind == "change"
         t.groups = groups
         n = router.where_slide(text)
@@ -699,6 +724,20 @@ class Agent:
             t.intent = t.intent.split(" (where: ")[0]
         log.info("routed", extra={"groups": ",".join(sorted(groups)) if groups is not None else "all"})
         return router.tools_of(groups)
+
+    def _declined(self, t: Turn) -> bool:
+        """Did the person just say no to a plan or the instructions (their last answer)?"""
+        for m in reversed(self.app.conversations.messages(t.pid, t.cid)):
+            if m["role"] == "user":
+                return False
+            if m["role"] == "tool":
+                content = m.get("content") or ""
+                return "NOT_APPROVED" in content or '"approved": false' in content or '"accepted": false' in content
+        return False
+
+    def _has_sources(self, t: Turn) -> bool:
+        """Is there anything to search: the knowledge base, or the project's reference documents?"""
+        return bool(self.app.kb.available) or any(a["kind"] == "document" for a in self.app.assets.list(t.pid))
 
     def _offered(self, t: Turn) -> list[dict]:
         """The tools this turn can use: the ones that apply to the project and deck as they are now. Each offered

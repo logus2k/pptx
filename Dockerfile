@@ -1,7 +1,7 @@
 # The AI Slide Assistant: one process serving the REST API, socket.io and the frontend (technical design section 1).
 #   docker compose build      (builds the base image first when it is missing)
 #   docker compose up -d      -> http://localhost:2720 (through the proxy: https://logus2k.com/slides/)
-ARG BASE_IMAGE=slides-base:lo-1
+ARG BASE_IMAGE=slides-base:lo-2
 FROM ${BASE_IMAGE} AS app
 
 WORKDIR /slides

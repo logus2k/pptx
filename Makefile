@@ -16,14 +16,14 @@ dev:
 
 check:
 	.venv/bin/ruff check backend
-	docker build -q --build-arg BASE_IMAGE=slides-base:lo-1 --target test -t slides-test . >/dev/null
+	docker build -q --build-arg BASE_IMAGE=slides-base:lo-2 --target test -t slides-test . >/dev/null
 	docker run --rm -v $$PWD/fonts:/usr/share/fonts/slides:ro slides-test
 
 ui:
 	cd tests/ui && node shots.mjs && node m1.mjs 1440 light && node m1.mjs 1440 dark && node m1.mjs 834 light
 
 e2e:
-	docker build -q --build-arg BASE_IMAGE=slides-base:lo-1 --target test -t slides-test . >/dev/null
+	docker build -q --build-arg BASE_IMAGE=slides-base:lo-2 --target test -t slides-test . >/dev/null
 	-docker rm -f slides-e2e >/dev/null 2>&1
 	docker run -d --name slides-e2e -p 2722:2722 -u $$(id -u):$$(id -g) -e HOME=/tmp -v $$PWD:/src -w /src -v $$PWD/fonts:/usr/share/fonts/slides:ro \
 	  -e FAKE_SCRIPT=/src/tests/e2e/out/script.json slides-test python tests/e2e/fake_app.py >/dev/null
@@ -40,7 +40,7 @@ e2e:
 	  status=$$?; docker rm -f slides-e2e >/dev/null; exit $$status
 
 eval:
-	docker build -q --build-arg BASE_IMAGE=slides-base:lo-1 --target test -t slides-test . >/dev/null
+	docker build -q --build-arg BASE_IMAGE=slides-base:lo-2 --target test -t slides-test . >/dev/null
 	# on both networks, as the app: agent_server and Cortex (logus2k_network), the reranker (cortex-kb)
 	-docker rm -f slides-eval >/dev/null 2>&1
 	docker create --name slides-eval --network logus2k_network -u $$(id -u):$$(id -g) -e HOME=/tmp -v $$PWD:/src -w /src -v $$PWD/fonts:/usr/share/fonts/slides:ro \

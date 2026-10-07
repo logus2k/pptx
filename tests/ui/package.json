@@ -3,5 +3,8 @@
   "private": true,
   "type": "module",
   "description": "Browser checks of the page (Playwright's core library driving the installed Chrome, as Cortex's tests/ui do).",
-  "devDependencies": { "playwright-core": "1.63.0" }
+  "devDependencies": {
+    "axe-core": "4.14.0",
+    "playwright-core": "1.63.0"
+  }
 }

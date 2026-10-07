@@ -250,30 +250,27 @@ def memory_text(app, t, query: str, limit_tokens: int, count) -> str:
 
 
 def layouts_text(prs) -> str:
-    """The deck's layouts for add_slide and change_layout: each one the deck uses with an example slide's placeholders
-    (idx and what that slide has there), so a new slide can be made like an existing one; the others by name
-    (measured: a template's layouts named "3_Texto", "10_Texto", with no title placeholder: the model sent a title
-    to a layout without one and gave up)."""
-    examples: dict[str, str] = {}
+    """The deck's layouts for add_slide and change_layout, each described by what its placeholders are for (layouts.py:
+    heading, subtitle, rows of text, numbers, pictures, tables, by idx), with a slide made on it when the deck has one
+    (measured: a template's layouts named "3_Texto", "10_Texto", every placeholder typed "body": in an empty deck the
+    model chose "10_Texto", four columns under a heading, for "create a slide", and wrote nothing into it)."""
+    from ..docengine import layouts
+
+    made: dict[str, int] = {}
     for o in read.outline(prs):
-        if o["layout"] in examples:
-            continue
-        s = read.slide(prs, o["slide_id"])
-        held = []
-        for sh in s["shapes"]:
-            ph = sh.get("placeholder") or {}
-            if not ph or ph.get("type") in ("date", "footer", "slide_number"):
-                continue
-            text = _text(sh)
-            held.append(f"idx {ph.get('idx')} ({ph.get('type')})" + (f" «{text}»" if text else ""))
-        if held:
-            examples[o["layout"]] = f"{o['layout']} (as slide {o['index'] + 1}): " + "; ".join(held)
-    names = sorted({x["name"] for x in read.layouts(prs)})
-    others = [n for n in names if n not in examples]
-    text = "\n".join(examples[n] for n in names if n in examples)
-    if others:
-        text += ("\nOther layouts: " if text else "") + ", ".join(others)
-    return f"## Layouts of this deck (add_slide, change_layout; placeholders by idx)\n{text}"
+        made.setdefault(o["layout"], o["index"] + 1)
+    lines = []
+    for layout in prs.slide_layouts:
+        line = f"- {layout.name}: {layouts.describe(layout, prs.slide_width, prs.slide_height)}"
+        if layout.name in made:
+            line += f" (as slide {made[layout.name]})"
+        lines.append(line)
+    return (
+        "## Layouts of this deck (add_slide, change_layout): what each placeholder is for, by idx\n"
+        + "\n".join(lines)
+        + "\nChoose the layout whose places fit what the slide will say, and fill each of them: a heading [idx] is "
+        'the slide\'s title ("title" means it too).'
+    )
 
 
 def system_context(

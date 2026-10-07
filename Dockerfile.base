@@ -6,9 +6,12 @@ FROM python:3.12-slim
 
 # LibreOffice Impress, headless, for slide previews and PDF export (technical design section 9); no Java, no GUI.
 # Fonts metric-compatible with Office's (Calibri -> Carlito, Cambria -> Caladea, Arial/Times -> Liberation) so previews
-# and overflow estimates keep PowerPoint's line breaks (assumption A-5).
+# and overflow estimates keep PowerPoint's line breaks (assumption A-5). libraqm: Pillow lays text out with the font's
+# kerning (GPOS), as LibreOffice does (measured: a 12 pt Arial Nova line 200.3 pt wide without it, 194.7 with, LibreOffice
+# 194.3: a line that fits was wrapped).
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
       libreoffice-impress-nogui \
       fonts-crosextra-carlito fonts-crosextra-caladea fonts-liberation2 fonts-dejavu-core \
+      libraqm0 \
  && rm -rf /var/lib/apt/lists/*

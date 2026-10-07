@@ -388,6 +388,15 @@ def _fill_placeholder(slide, spec: dict) -> None:
         spec = {**spec, "type": "title" if int(spec["idx"]) == 0 else "body"}
         spec.pop("idx")
         return _fill_placeholder(slide, spec)
+    if target is None and spec.get("type") in ("title", "subtitle"):
+        # a layout whose heading is typed "body" (Banco CTT's): the placeholder its place and size make the heading or
+        # the subtitle (layouts.py)
+        from . import layouts
+
+        pres = slide.part.package.presentation_part.presentation
+        find = layouts.heading if spec["type"] == "title" else layouts.subtitle
+        idx = find(slide.slide_layout, pres.slide_width, pres.slide_height)
+        target = next((ph for ph in slide.placeholders if ph.placeholder_format.idx == idx), None) if idx is not None else None
     if target is None and spec.get("type") in ("title", "body"):
         # the roles the deck map names: "title" (a title slide's is a centred title), "body" (the main content
         # placeholder, whatever its type: object, body)

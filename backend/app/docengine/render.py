@@ -43,8 +43,9 @@ _fonts: str | None = None
 
 
 def fonts_digest() -> str:
-    """The fonts LibreOffice can use, as one hash (fontconfig's list: each file and its size); computed once, as the
-    fonts change only when the container is restarted with others mounted (fonts/: docs/licenses.md)."""
+    """The fonts LibreOffice can use, as one hash (fontconfig's list: each file and its size, and its configuration);
+    computed once, as the fonts change only when the container is restarted with others mounted (fonts/:
+    docs/licenses.md)."""
     global _fonts
     if _fonts is None:
         try:
@@ -56,6 +57,12 @@ def fonts_digest() -> str:
         for f in files:
             try:
                 h.update(f"{f}:{Path(f).stat().st_size}\n".encode())
+            except OSError:
+                continue
+        # and which font a name gets (config/fonts.conf among them): a mapping changed, the same files draw otherwise
+        for conf in sorted(Path("/etc/fonts/conf.d").glob("*.conf")):
+            try:
+                h.update(conf.name.encode() + conf.read_bytes())
             except OSError:
                 continue
         _fonts = h.hexdigest()

@@ -951,3 +951,44 @@ def test_fit_text_grows_the_box_into_free_space_when_shrinking_is_not_allowed():
     with pytest.raises(ops.OpError) as e:  # a box right under it: no room to grow
         ops.apply(blocked, "fit_text", {"slide_id": sid, "shape_id": box["shape_id"]})
     assert e.value.code == "CANNOT_FIT"
+
+
+def test_text_is_measured_run_by_run_with_kerning_letter_spacing_and_its_letters_descent():
+    """Measured against LibreOffice's renders (docs/decisions.md): a paragraph measured in its first run's bold wrapped
+    a line more; widths without the font's kerning were 3% wide; a 71 pt title's descenders passed its box."""
+    from app.docengine import textfit as tf
+
+    face = "Liberation Sans"  # in the base image: these hold without the licensed fonts
+    plain = (12.0, face, False, False, 0.0)
+    bold = (12.0, face, True, False, 0.0)
+    words = "uma frase com algumas palavras para medir"
+    room = tf._width(words, plain, face, face) + 0.5
+    assert tf._lines([("Nota: ", *bold), (words, *plain)], room + tf._width("Nota: ", bold, face, face), True, face, face) == 1
+    assert tf._lines([("Nota: " + words, *bold)], room + tf._width("Nota: ", bold, face, face), True, face, face) == 2
+    tight = (12.0, face, False, False, -0.5)  # letter spacing (spc) counts on every character
+    assert tf._width(words, tight, face, face) == pytest.approx(tf._width(words, plain, face, face) - 0.5 * len(words))
+    assert tf.width_pt("AV", face, 40) < tf.width_pt("A", face, 40) + tf.width_pt("V", face, 40) - 1  # kerned (raqm)
+    assert tf._descent([("ABC", *plain)], face, face) < 0.5 < tf._descent([("gpy", *plain)], face, face)
+
+
+def test_an_empty_line_is_as_tall_as_its_own_mark():
+    from app.docengine import textfit as tf
+
+    data, blank = ops.apply(deck("simple.pptx"), "add_slide", {"layout": "Blank"})
+    sid = blank["slides"][0]
+    lines = [{"runs": [{"text": "Primeira linha", "size_pt": 14}]}] + [{"runs": [{"text": ""}]} for _ in range(6)]
+    place = {"x": 0.1, "y": 0.1, "w": 0.4, "h": 0.5}
+    data, box = ops.apply(data, "add_shape", {"slide_id": sid, "kind": "rectangle", "box": place, "paragraphs": lines})
+
+    def extent(size):
+        prs = read.open_deck(data)
+        sh = next(x for x in prs.slides.get(sid).shapes if x.shape_id == box["shape_id"])
+        a = "{http://schemas.openxmlformats.org/drawingml/2006/main}"
+        for p in sh._element.txBody.findall(f"{a}p")[1:]:
+            end = p.find(f"{a}endParaRPr")
+            if end is None:
+                end = etree.SubElement(p, f"{a}endParaRPr")
+            end.set("sz", str(size * 100))
+        return tf.measure(sh)["top"]  # centred: the taller the empty lines, the higher the text starts
+
+    assert extent(8) - extent(28) == pytest.approx(6 * 20 * tf.PITCH / 2, abs=0.5)

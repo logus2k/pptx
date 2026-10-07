@@ -1,0 +1,93 @@
+{
+ "id": "first-use-index-from-kb",
+ "about": "The first test a person made (2026-10-07): a new deck from the Banco CTT template, empty; 'Cria um slide' was refused five times (an empty deck has no slide 0), then a table of contents from the knowledge base ended in a plan approved and nothing written.",
+ "turns": [
+  {
+   "say": "Cria um slide",
+   "status": "done",
+   "seconds": 3.4,
+   "waits": [],
+   "replies": [
+    null
+   ],
+   "tools": [
+    "add_slide",
+    "add_slide",
+    "add_slide",
+    "add_slide"
+   ],
+   "errors": [],
+   "proposal": null,
+   "deck": []
+  },
+  {
+   "say": "Escreve um índice com base nos tópicos de crédito à habitação",
+   "status": "done",
+   "seconds": 2.4,
+   "waits": [],
+   "replies": [
+    null
+   ],
+   "tools": [
+    "get_deck_outline",
+    "add_slide"
+   ],
+   "errors": [],
+   "proposal": null,
+   "deck": []
+  }
+ ],
+ "checks": [
+  {
+   "turn": 1,
+   "ok": true,
+   "check": "the turn ended done (done)"
+  },
+  {
+   "turn": 1,
+   "ok": false,
+   "check": "the deck has 1 slides (0)"
+  },
+  {
+   "turn": 1,
+   "ok": false,
+   "check": "the turn changed the deck"
+  },
+  {
+   "turn": 2,
+   "ok": true,
+   "check": "the turn ended done (done)"
+  },
+  {
+   "turn": 2,
+   "ok": false,
+   "check": "slide 1 exists"
+  },
+  {
+   "turn": 2,
+   "ok": false,
+   "check": "the assistant used kb_search (['add_slide', 'get_deck_outline'])"
+  },
+  {
+   "turn": 2,
+   "ok": false,
+   "check": "the turn changed the deck"
+  },
+  {
+   "turn": "end",
+   "ok": false,
+   "check": "the deck has at least 1 slides (0)"
+  },
+  {
+   "turn": "end",
+   "ok": true,
+   "check": "no slide left with empty placeholders (prompt text on show) []"
+  },
+  {
+   "turn": "end",
+   "ok": true,
+   "check": "no text past its box []"
+  }
+ ],
+ "passed": false
+}

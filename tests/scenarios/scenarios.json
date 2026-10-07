@@ -1,0 +1,16 @@
+{
+ "about": "User flows, each as a person does it (tests/scenarios/run.py). 'expect' on a turn is checked on the deck after that turn (proposals accepted); 'expect' on the scenario, on the deck at the end.",
+ "scenarios": [
+  {
+   "id": "first-use-index-from-kb",
+   "about": "The first test a person made (2026-10-07): a new deck from the Banco CTT template, empty; 'Cria um slide' was refused five times (an empty deck has no slide 0), then a table of contents from the knowledge base ended in a plan approved and nothing written.",
+   "turns": [
+    {"say": "Cria um slide", "expect": {"status": "done", "slides": 1, "changed": true}},
+    {"say": "Escreve um índice com base nos tópicos de crédito à habitação",
+     "expect": {"status": "done", "changed": true, "used": ["kb_search"],
+                "slide_text": [{"slide": 1, "min_lines": 4, "any": ["habitação", "crédito"]}]}}
+   ],
+   "expect": {"min_slides": 1, "no_empty_placeholders": true, "no_overflow": true}
+  }
+ ]
+}
