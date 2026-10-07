@@ -646,6 +646,17 @@ def test_the_layouts_are_sent_only_when_a_slide_can_be_made_or_relaid(server, fa
     chat.close()
 
 
+def test_the_new_text_a_request_quotes_does_not_choose_the_slide():
+    from app.agent import router
+
+    req = "Nos destaques, junta à coluna do que correu bem: «Margem acima do objetivo»."
+    assert router.unquoted(req) == "Nos destaques, junta à coluna do que correu bem: ."
+    slides = [{"index": 2, "title": "Resultados", "lines": ["Margem operacional de 21%, acima do objetivo de 19%"]},
+              {"index": 4, "title": "Destaques", "lines": ["Lançamento da app nova"]}]  # fmt: skip
+    assert router.phrase_slide(req, slides) == (3, "acima do objetivo")  # the quote alone would choose slide 3
+    assert router.phrase_slide(router.unquoted(req), slides) is None
+
+
 def test_the_words_a_request_names_are_found_in_the_deck():
     from app.agent import router
 

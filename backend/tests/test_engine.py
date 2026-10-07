@@ -1032,9 +1032,8 @@ def test_content_goes_where_the_layout_has_its_place_and_no_empty_placeholder_is
     data, res = ops.apply(cover, "fill_slide", {"slide_id": sid, "content": {"title": "Índice", "points": topics}})
     assert res["layout"] == "1_Texto" and res["slides"] == [sid]
     assert texts(data, sid) == {0: "Índice", 17: topics[0], 18: topics[1], 19: topics[2], 20: topics[3], 21: topics[4]}
-    with pytest.raises(ops.OpError) as e:
-        ops.apply(ctt, "add_slide", {"layout": "3_Tabela", "content": {"title": "x", "subtitle": "y"}})
-    assert e.value.code == "NO_PLACE"  # a heading and a table: no subtitle
+    _, res = ops.apply(ctt, "add_slide", {"layout": "Mensagem_Final", "content": {"title": "x", "subtitle": "y"}})
+    assert res["left_out"] == ["subtitle"]  # a heading alone: the slide is made, the subtitle reported
 
 
 def test_placed_content_is_fitted_to_its_box():
@@ -1057,4 +1056,39 @@ def test_add_slides_makes_a_slide_for_each_item_on_the_layout_its_content_fits()
     assert layouts[1] != layouts[0] and layouts[2] in ("1_Capa C/ Imagem", "2_Capa S/Imagem")  # 3 points; a cover
     texts = [" / ".join(" ".join(r.get("text", "") for r in p.get("runs", [])) for sh in read.slide(prs, sid)["shapes"]
                         for p in (sh.get("paragraphs") or [])) for sid in res["new_slide_ids"]]  # fmt: skip
-    assert texts[0] == "Contexto" and texts[1].startswith("Objetivos") and "Três" in texts[1] and "Outubro" in texts[2]
+    assert texts[0].strip(" /") == "Contexto" and all(w in texts[1] for w in ("Objetivos", "Um", "Três"))
+    assert "Outubro" in texts[2]
+
+
+def test_a_deck_reaches_nothing_outside_it_when_rendered():
+    """Security review H1, reproduced: a picture linked to http://127.0.0.1:8765/ was fetched with GET while
+    LibreOffice converted the deck (and a file:// link drew a file from the disk). The converted copy keeps no external
+    relationship but its hyperlinks; the deck itself is not changed."""
+    from app.docengine import external
+
+    src = io.BytesIO(deck("simple.pptx"))
+    out = io.BytesIO()
+    with zipfile.ZipFile(src) as z, zipfile.ZipFile(out, "w") as w:
+        for info in z.infolist():
+            data = z.read(info)
+            if info.filename == "ppt/slides/_rels/slide1.xml.rels":
+                data = data.replace(
+                    b"</Relationships>",
+                    b'<Relationship Id="rId90" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"'
+                    b' Target="http://127.0.0.1:8765/x.png" TargetMode="External"/>'
+                    b'<Relationship Id="rId91" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink"'
+                    b' Target="https://www.bancoctt.pt/" TargetMode="External"/></Relationships>',
+                )
+            w.writestr(info, data)
+    linked = out.getvalue()
+    clean, removed = external.stripped(linked)
+    rels = zipfile.ZipFile(io.BytesIO(clean)).read("ppt/slides/_rels/slide1.xml.rels")
+    assert removed == 1 and b"127.0.0.1" not in rels and b"https://www.bancoctt.pt/" in rels
+    assert external.stripped(deck("simple.pptx")) == (deck("simple.pptx"), 0)  # nothing external: the same bytes
+
+
+def test_text_alone_is_not_put_on_a_layout_made_for_a_table():
+    ctt = (REPO / "templates" / "bancoctt.pptx").read_bytes()
+    data, res = ops.apply(ctt, "add_slide", {"layout": "7_Tabela", "content": {"title": "Capa", "subtitle": "Outubro"}})
+    assert res["instead_of"] == "7_Tabela" and res["layout"] == "2_Capa S/Imagem"
+    assert read.outline(read.open_deck(data))[0]["layout"] == "2_Capa S/Imagem"

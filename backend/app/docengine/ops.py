@@ -448,7 +448,7 @@ def _point_text(point) -> tuple[str, str]:
     return "", str(point).strip()
 
 
-def _place_content(prs, s, content: dict) -> None:
+def _place_content(prs, s, content: dict) -> list[str]:
     """A slide's content put where its layout made a place for it (layouts.slots): the title in its heading, the
     subtitle under it, each point in a text box of its own with the box's column heading and number when the layout
     has as many, else every point as one list in the box with the most room; then the text placeholders left empty
@@ -466,15 +466,15 @@ def _place_content(prs, s, content: dict) -> None:
     def para(text, bold=False):
         return {"runs": [{"text": text, **({"bold": True} if bold else {})}]}
 
+    left_out = []
     for key in ("title", "subtitle"):
         if content.get(key):
             idx = where["heading" if key == "title" else "subtitle"]
             if idx is None or idx not in on:
-                raise OpError(
-                    "NO_PLACE",
-                    f"The layout {lay.name!r} has no {key}.",
-                    "Leave it out, or change the slide's layout with change_layout to one that has it (Layouts of this deck).",
-                )
+                # the rest is placed, this reported (measured: a subtitle for "Title and Content" refused the slide
+                # three times, and no slide was made)
+                left_out.append(key)
+                continue
             put(idx, [para(str(content[key]).strip())])
     points = [p for p in content.get("points") or [] if any(_point_text(p))]
     items = [i for i in where["items"] if i["body"] in on]
@@ -500,10 +500,10 @@ def _place_content(prs, s, content: dict) -> None:
             heading, text = _point_text(point)
             lines.append(para(f"{heading}: {text}" if heading and text else heading or text))
         put(where["large"] if where["large"] in on else items[0]["body"], lines)
-    for ph in list(s.placeholders):
+    for ph in list(s.placeholders):  # only when there were points to place: a title alone keeps its text box to fill
         kind = ph.placeholder_format.type.name.lower() if ph.placeholder_format.type is not None else "body"
         empty = ph.has_text_frame and not ph.text_frame.text.strip()
-        if kind in ("body", "object", "title", "center_title", "subtitle") and empty:
+        if points and kind in ("body", "object", "title", "center_title", "subtitle") and empty:
             ph._element.getparent().remove(ph._element)
     from . import textfit
 
@@ -514,6 +514,7 @@ def _place_content(prs, s, content: dict) -> None:
                 fit_text(prs, s.slide_id, ph.shape_id)
             except OpError:
                 pass  # too long even at 14 pt: the executor's self-check reports it
+    return left_out
 
 
 def add_slide(
@@ -527,13 +528,30 @@ def add_slide(
     deck_id=None,
 ) -> list[int]:
     lay = _layout(prs, layout)
+    instead = None
+    if content and not placeholders and _needs_other_content(prs, lay):
+        # text alone on a layout made for a table, a chart or a diagram, left empty: the layout the text fits (measured:
+        # a cover on "7_Tabela", its table place left on the slide, 2 runs in 3)
+        better = _layout_for_content(prs, content)
+        if better.name != lay.name:
+            lay, instead = better, lay.name
     s = prs.slides.add_slide(lay)
     _move_to(prs, s, _place(prs, s, position, after_slide_id, before_slide_id, default=len(prs.slides) - 1))
     for spec in placeholders or []:
         _fill_placeholder(s, spec)
-    if content:
-        _place_content(prs, s, content)
+    left_out = _place_content(prs, s, content) if content else []
+    if left_out or instead:
+        return {"slides": [s.slide_id], **({"left_out": left_out} if left_out else {}),
+                **({"layout": lay.name, "instead_of": instead} if instead else {})}  # fmt: skip
     return [s.slide_id]
+
+
+def _needs_other_content(prs, lay) -> bool:
+    """Does the layout have a place for a table, a chart or a diagram (which text cannot fill)?"""
+    from . import layouts
+
+    roles = {p["role"] for p in layouts.placeholders(lay, prs.slide_width, prs.slide_height)}
+    return bool(roles & {"table", "chart", "diagram"})
 
 
 def _relayout(s, lay) -> None:
@@ -559,7 +577,7 @@ def _best_layout(prs, points: int):
     for lay in prs.slide_layouts:
         where = layouts.slots(lay, prs.slide_width, prs.slide_height)
         items = where["items"]
-        if where["heading"] is None or not items:
+        if where["heading"] is None or not items or _needs_other_content(prs, lay):  # (measured: a cover on "7_Tabela")
             continue
         fit = len(items) - points if len(items) >= points else (1000 if max(i["room"] for i in items) >= points else None)
         if fit is not None and (best is None or fit < best[0]):
@@ -585,7 +603,11 @@ def _layout_for_content(prs, content: dict):
             continue
         if content.get("subtitle") and where["subtitle"] is not None and not where["items"]:
             return lay
-        plain.append((len(roles), lay))
+        head = next(x for x in layouts.placeholders(lay, prs.slide_width, prs.slide_height) if x["role"] == "heading")
+        # a content slide: a heading at the top and a text area (measured: by fewest places alone, the closing message;
+        # then a 60 pt statement; then a layout whose text box is 8 pt)
+        if head["y"] < 0.2 and head["size"] <= 32 and max([i["room"] for i in where["items"]] or [0]) >= 8:
+            plain.append((len(roles), lay))
     return min(plain, key=lambda x: x[0])[1] if plain else prs.slide_layouts[0]
 
 
@@ -601,7 +623,8 @@ def add_slides(prs, slides: list[dict], layout: str | None = None, after_slide_i
         except OpError:
             lay = _layout_for_content(prs, item)
         content = {k: item[k] for k in ("title", "subtitle", "points", "sources") if item.get(k)}
-        made += add_slide(prs, lay.name, after_slide_id=after, content=content)
+        got = add_slide(prs, lay.name, after_slide_id=after, content=content)
+        made += got["slides"] if isinstance(got, dict) else got
         after = made[-1]
     return {"slides": made, "new_slide_ids": made}
 
@@ -637,8 +660,8 @@ def fill_slide(prs, slide_id: int, content: dict, layout: str | None = None, dec
     for ph in s.placeholders:  # what the slide said in those places goes: the content is the new content
         if ph.placeholder_format.idx in places and ph.has_text_frame:
             _set_paragraphs(ph.text_frame, [{"runs": [{"text": ""}]}])
-    _place_content(prs, s, content)
-    return {"slides": [s.slide_id], **({"layout": moved} if moved else {})}
+    left_out = _place_content(prs, s, content)
+    return {"slides": [s.slide_id], **({"layout": moved} if moved else {}), **({"left_out": left_out} if left_out else {})}
 
 
 def delete_slide(prs, slide_id: int, deck_id=None) -> list[int]:

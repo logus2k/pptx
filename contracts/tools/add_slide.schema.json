@@ -147,12 +147,12 @@
     "points": {
      "type": "array",
      "maxItems": 30,
-     "description": "The slide's points, in order: a text, or {heading, text} for a point with a heading of its own (a column, a phase).",
+     "description": "The slide's points, in order, each a short line in your words (not a passage copied): a text, or {heading, text} for a point with a heading of its own (a column, a phase).",
      "items": {
       "anyOf": [
        {
         "type": "string",
-        "maxLength": 1000
+        "maxLength": 200
        },
        {
         "type": "object",
@@ -164,7 +164,7 @@
          },
          "text": {
           "type": "string",
-          "maxLength": 1000
+          "maxLength": 300
          }
         }
        }

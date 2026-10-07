@@ -22,7 +22,7 @@ from pathlib import Path
 import pypdfium2 as pdfium
 from pptx import Presentation
 
-from . import emf
+from . import emf, external
 
 log = logging.getLogger("slides.render")
 
@@ -135,6 +135,10 @@ def _only(data: bytes, keep: set[int]) -> bytes:
 def _convert(pptx: bytes, count: int) -> bytes:
     """PDF bytes from LibreOffice, in a fresh profile; RenderError with LibreOffice's own words if it fails. Its EMF
     pictures are drawn as PowerPoint draws them (emf.py: vector, not clipped at their frame)."""
+    # nothing outside the file is reached while converting (external.py: security review H1, reproduced)
+    pptx, removed = external.stripped(pptx)
+    if removed:
+        log.info("external links left out of the render", extra={"linkCount": removed})
     try:
         pptx = emf.normalised(pptx)
     except Exception as e:  # noqa: BLE001 - a picture it cannot prepare is rendered as it is

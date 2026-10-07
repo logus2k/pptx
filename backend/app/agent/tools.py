@@ -518,6 +518,10 @@ class Executor:
         out = {"ok": True, "deck_id": did, **result, "note": "Applied to the draft; the person reviews it before it is saved."}
         if result.get("unmatched"):
             out["note"] += " Text that had no place in the new layout was kept as a text box: mention it."
+        if result.get("left_out"):
+            out["note"] += f" Its layout has no place for the {' and '.join(result['left_out'])}: it was left out; say so."
+        if name == "add_slide" and result.get("instead_of"):
+            out["note"] += f" {result['instead_of']!r} is made for a table or a chart: the slide is on {result['layout']!r}."
         if name == "fill_slide" and result.get("layout"):
             out["note"] += f" The slide is now on the layout {result['layout']!r}, which has a place for each part: say so."
         if name == "fit_text":

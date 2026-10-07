@@ -668,7 +668,7 @@ class Agent:
         t.changes = t.kind == "change"
         t.groups = groups
         n = router.where_slide(text)
-        named = router.phrase_slide(last["content"], slides) if slides else None
+        named = router.phrase_slide(router.unquoted(last["content"]), slides) if slides else None
         if named and named[0] != n and t.kind == "change":
             # the request names a slide's own words: that slide, whatever the router read (its intent restated
             # from the person's words, with that slide as where)

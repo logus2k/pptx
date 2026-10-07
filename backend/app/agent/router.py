@@ -154,6 +154,17 @@ def parse(text: str) -> tuple[set[str] | None, str, str]:
 QUOTES = (("'", "'"), ('"', '"'), ("«", "»"), ("“", "”"), ("‘", "’"))  # noqa: RUF001 - the typographic quotes are meant
 
 
+def unquoted(text: str) -> str:
+    """The request without the pieces it quotes: those are found in the deck by their own exact text (locate), and are
+    often the new text to write (measured: «Margem acima do objetivo», to add to slide 5, shared "acima do objetivo"
+    with slide 3, and the turn edited slide 3)."""
+    out = " ".join(text.split())
+    for piece in quoted(text):
+        for open_, close in QUOTES:
+            out = out.replace(f"{open_}{piece}{close}", " ")
+    return " ".join(out.split())
+
+
 def quoted(text: str) -> list[str]:
     """The pieces of a request between quotation marks ('...', "...", «...», “...”), read character by character."""
     out = []

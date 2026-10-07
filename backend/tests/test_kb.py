@@ -349,6 +349,6 @@ def test_reading_calls_are_not_repeated_and_an_empty_deck_is_not_replaced(server
     results = [m for m in fake_model.sent[-1] if m["role"] == "tool"]
     assert '"slides": []' in results[0]["content"] and "ALREADY_READ" in results[1]["content"]
     assert "ACTIVE_DECK_EMPTY" in results[2]["content"]
-    assert "add_slide makes the first" in results[3]["content"]
+    assert "There was no slide 1: a new slide was made" in results[3]["content"]  # measured: fill_slide 30 times on it
     decks = requests.get(f"{server}/api/projects/{pid}/decks", headers=h(), timeout=10).json()["decks"]
     assert len(decks) == 1
