@@ -933,3 +933,20 @@ def test_fit_text_shrinks_to_the_largest_size_that_fits_and_never_below_14_pt():
     with pytest.raises(ops.OpError) as e:
         ops.apply(data, "fit_text", {"slide_id": sid, "shape_id": body["shape_id"]})
     assert e.value.code == "CANNOT_FIT"
+
+
+def test_fit_text_grows_the_box_into_free_space_when_shrinking_is_not_allowed():
+    data, blank = ops.apply(deck("simple.pptx"), "add_slide", {"layout": "Blank"})
+    sid = blank["slides"][0]
+    lines = [{"runs": [{"text": f"Ponto número {i} de uma lista longa", "size_pt": 12}]} for i in range(10)]
+    place = {"x": 0.1, "y": 0.1, "w": 0.4, "h": 0.15}
+    data, box = ops.apply(data, "add_shape", {"slide_id": sid, "kind": "text_box", "box": place, "paragraphs": lines})
+    shape = lambda d: next(s for s in get(d, sid)["shapes"] if s["shape_id"] == box["shape_id"])  # noqa: E731
+    assert shape(data)["overflow"]  # ten 12 pt lines in a short box
+    grown, res = ops.apply(data, "fit_text", {"slide_id": sid, "shape_id": box["shape_id"]})
+    assert res["scale"] == 1.0 and res["grown_pt"] > 0 and shape(grown)["overflow"] is False  # 12 pt: not shrunk, grown
+    under = {"x": 0.1, "y": 0.26, "w": 0.4, "h": 0.6}
+    blocked, _ = ops.apply(data, "add_shape", {"slide_id": sid, "kind": "rectangle", "box": under})
+    with pytest.raises(ops.OpError) as e:  # a box right under it: no room to grow
+        ops.apply(blocked, "fit_text", {"slide_id": sid, "shape_id": box["shape_id"]})
+    assert e.value.code == "CANNOT_FIT"

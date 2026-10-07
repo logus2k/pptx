@@ -817,8 +817,9 @@ MIN_BODY_PT = 14  # body text is never set smaller (the system prompt's rule)
 
 def fit_text(prs, slide_id: int, shape_id: int, deck_id=None) -> dict:
     """Shrink a shape's text to fit its box, as PowerPoint's "shrink text on overflow" does (normAutofit with a font
-    scale): the largest scale at which it fits (textfit.py), never below 14 pt. Returns {slides, scale}; CANNOT_FIT
-    when even at 14 pt it does not (then the box must grow or the text be split)."""
+    scale): the largest scale at which it fits (textfit.py), never below 14 pt; failing that, grow the box down into
+    free space, as "resize shape to fit text" does. Returns {slides, scale, grown_pt?}; CANNOT_FIT when neither can
+    (then the text must be shortened or split)."""
     from . import textfit
 
     s = get_slide(prs, slide_id)
@@ -841,6 +842,18 @@ def fit_text(prs, slide_id: int, shape_id: int, deck_id=None) -> dict:
             break
         scale -= 0.025
     body.remove(fit)
+    # not by shrinking (the 14 pt floor): the box grown down into free space, as PowerPoint's "resize shape to fit
+    # text" (measured: an 11th item in a 12 pt list, refused shrinking, and the turn ended with it 49 pt too long)
+    m = textfit.measure(sh)
+    if m is not None:
+        need = int((m["bottom"] + m["bIns"] / textfit.EMU_PT + textfit.TOL_PT) * textfit.EMU_PT) - sh.height
+        if need > 0 and sh.top + sh.height + need <= prs.slide_height:
+            below = (sh.left, sh.top + sh.height, sh.width, need)
+            if not _overlapping(below, _boxes(prs, s, {sh.shape_id})):
+                sh.height = sh.height + need
+                if textfit.overflows(sh) is False:
+                    return {"slides": [s.slide_id], "scale": 1.0, "grown_pt": round(need / textfit.EMU_PT, 1)}
+                sh.height = sh.height - need
     raise OpError(
         "CANNOT_FIT",
         f"Shape {shape_id}'s text does not fit its box even at {MIN_BODY_PT} pt.",

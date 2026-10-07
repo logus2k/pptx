@@ -422,6 +422,12 @@ class Executor:
         out = {"ok": True, "deck_id": did, **result, "note": "Applied to the draft; the person reviews it before it is saved."}
         if result.get("unmatched"):
             out["note"] += " Text that had no place in the new layout was kept as a text box: mention it."
+        if name == "fit_text":
+            out["note"] += (
+                f" The box was made {result['grown_pt']} pt taller, into free space below it."
+                if result.get("grown_pt")
+                else f" The text is at {round(result.get('scale', 1) * 100)}% of its size."
+            )
         if name in ("duplicate_shape", "connect_shapes"):
             what = "copy" if name == "duplicate_shape" else "connector"
             out["note"] += f" The {what} is shape {result['shape_id']}."

@@ -2,7 +2,7 @@
  "$schema": "https://json-schema.org/draft/2020-12/schema",
  "$id": "tools/fit_text",
  "title": "fit_text",
- "description": "Make a shape's text fit its box by shrinking it, as PowerPoint's \"shrink text on overflow\" does (never below 14 pt). For text that does not fit after an edit; when it cannot, the result says so.",
+ "description": "Make a shape's text fit its box: shrinks it, as PowerPoint's \"shrink text on overflow\" does (never below 14 pt), or else makes the box taller into free space below it. For text that does not fit after an edit; when neither can, the result says so.",
  "type": "object",
  "additionalProperties": false,
  "required": [
