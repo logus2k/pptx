@@ -30,6 +30,7 @@ EDITING = (
     "update_text",
     "duplicate_shape",
     "connect_shapes",
+    "fit_text",
     "change_template",
     "copy_slides",
     "edit_paragraphs",
@@ -181,6 +182,7 @@ def _for_model(node):
 
 TEXT_EDITS = (
     "update_text", "edit_paragraphs", "add_slide", "add_shape", "duplicate_shape", "format_text", "change_layout", "edit_table",
+    "fit_text",
 )  # fmt: skip
 
 # what the context already gives (the decks, the layouts) or another tool returns (kb_search: the passages' text):
@@ -232,6 +234,13 @@ class Turn:
     located: list[str] = field(default_factory=list)  # where the deck holds the words the request names (router.locate)
     overflowing: set = field(default_factory=set)  # (deck, slide id, shape id) an edit of this turn left too long
     result_chars: int = 12_000  # how much one tool result may hold (the loop sets it from the context budget)
+
+
+def slide_name(t: Turn, did: str, sid: int) -> str:
+    """A slide as the request numbers it ("slide 4"), or by its ID when this turn made it (measured: a new slide
+    named by its place, "slide 32", was taken for the slide 32 of the request's numbering, and resized)."""
+    start = t.start_order.get(did) or []
+    return f"slide {start.index(sid) + 1}" if sid in start else f"the new slide (ID {sid})"
 
 
 class Executor:
@@ -455,11 +464,12 @@ class Executor:
                     before = set()
                 for sh in shapes:
                     if sh.get("overflow") and sh["shape_id"] not in before:
-                        position = [x.slide_id for x in prs.slides].index(int(sid)) + 1
                         t.overflowing.add((did, int(sid), sh["shape_id"]))  # checked again before the turn ends
+                        on = slide_name(t, did, int(sid))
                         out["note"] += (
-                            f" The text of shape {sh['shape_id']} on slide {position} does not fit its box (an estimate):"
-                            " shorten it, split it over two slides, or make the box larger."
+                            f" The text of shape {sh['shape_id']} on {on} does not fit its box:"
+                            " fit it (fit_text), shorten it, make the box larger (move_resize_shape),"
+                            " or split it over two slides."
                         )
         if name in ("insert_image", "replace_image") and not caption:
             out["note"] += " If the picture has no alt text, write one with set_alt_text (one sentence on what it shows)."

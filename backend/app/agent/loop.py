@@ -16,7 +16,7 @@ from ..domain.proposals import FINAL, Stale
 from ..storage import NotFound
 from . import context, llm, router
 from ..docengine import read
-from .tools import EDITING, WAITING, Executor, sources_of, ToolError, Turn, definitions, image_message
+from .tools import EDITING, WAITING, Executor, sources_of, ToolError, Turn, definitions, image_message, slide_name
 
 log = logging.getLogger("slides.agent")
 MAX_MODEL_CALLS, MAX_TOOL_CALLS, MAX_SECONDS = 16, 40, 180
@@ -35,7 +35,8 @@ def speakable(text: str, limit: int = 300) -> str:
 
 OVERFLOW_NUDGE = (
     "(A note from the application, not from the person.) The text you changed still does not fit its box: {where}. "
-    "Fix it before you finish: shorten it, make the box larger (move_resize_shape), or split it over two slides."
+    "Fix it before you finish: fit_text shrinks it to fit; else shorten it, make the box larger (move_resize_shape), or "
+    "split it over two slides."
 )
 FAILED_NUDGE = (
     "(A note from the application, not from the person.) Nothing has changed yet: your edits failed. If the error tells "
@@ -234,6 +235,7 @@ class Agent:
                 t.groups = set(carried["groups"]) if carried["groups"] is not None else None
                 t.focus = carried.get("focus")
                 t.located = list(carried.get("located") or [])
+                t.overflowing = {tuple(x) for x in carried.get("overflowing") or []}
                 routed = router.tools_of(t.groups)
                 async with storage.lock(pid):
                     conv = self.app.conversations.get(pid, cid, email)
@@ -257,7 +259,17 @@ class Agent:
             if t.kind == "unclear":  # too vague to act on: asking is the only right step (measured: offered the core,
                 # the model asked in its reply text, which is no question the person can answer in the panel)
                 t.tool_defs = [d for d in t.tool_defs if d["function"]["name"] == "ask_user"] or t.tool_defs
-            room, answer_tokens = await asyncio.to_thread(context.budget, self.app.models, model, t.tool_defs)
+            try:
+                room, answer_tokens = await asyncio.to_thread(context.budget, self.app.models, model, t.tool_defs)
+            except context.ModelTooSmall:
+                if routed is not None:
+                    raise
+                # no route, and every tool together does not fit the window's fixed share (measured: 39 tools, 29.4%
+                # of 32 768): the groups most requests need, rather than a refused turn
+                fallback = router.tools_of(router.FALLBACK)
+                t.tool_defs = [d for d in t.tool_defs if d["function"]["name"] in fallback]
+                log.warning("every tool does not fit: the usual groups offered", extra={"toolCount": len(t.tool_defs)})
+                room, answer_tokens = await asyncio.to_thread(context.budget, self.app.models, model, t.tool_defs)
             t.result_chars = int(room * 0.15 * 3)  # a tool result: a sixth of the room, at ~3 characters a token
             started, model_calls, tool_calls, failed_nudged, overflow_nudged = time.monotonic(), 0, 0, False, False
             await self.emit("turn_started", {"model": model["label"]}, cid)
@@ -302,7 +314,7 @@ class Agent:
                     still = await asyncio.to_thread(self._still_overflowing, t)
                     if still:
                         overflow_nudged = True
-                        where = "; ".join(f"slide {n}, shape {i}" for n, i in still)
+                        where = "; ".join(f"{n}, shape {i}" for n, i in still)
                         retry = [*messages, {"role": "assistant", "content": text},
                                  {"role": "user", "content": OVERFLOW_NUDGE.format(where=where)}]  # fmt: skip
                         text, calls = await self._complete(model, retry, answer_tokens, cid, tools=t.tool_defs)
@@ -638,6 +650,17 @@ class Agent:
         if n and 1 <= n <= len(slides):  # the slide the request is about: the deck map centres there
             t.focus = order_ids[n - 1]
         # the words the request quotes, and the line the router named, found in the deck (a lexical fact each)
+        texts = {(s, sid, place): " ".join(words.split()) for s, sid, place, words in paragraphs}
+
+        def place(s, sid, p):
+            # as the call to make, with the whole line it is in (replayed, devai-01: "shape 115, paragraph
+            # [0]" took the next line's shape 10 times in 10; as shape_id and index, the right one 10 in 10;
+            # without the line, the paragraph was set to the corrected word alone)
+            if p.startswith("["):
+                line = texts.get((s, sid, p), "")
+                return f"slide {s}, in «{line}»: change it with shape_id {sid}, paragraph index {p[1:-1]}"
+            return f"slide {s}, shape_id {sid}, {p}"
+
         found, quoted_found = [], False
         for needle in [*router.quoted(last["content"]), router.where_text(text)]:
             if quoted_found and needle == router.where_text(text):
@@ -647,8 +670,8 @@ class Agent:
                 parts = router.contained([p for p in paragraphs if not n or p[0] == n], needle)
                 if 1 <= len(parts) <= 4:
                     for s_, sid_, place_, text_ in parts:
-                        where_ = f"paragraph {place_}" if place_.startswith("[") else place_
-                        found.append(f"«{text_}» is in the deck at slide {s_}, shape {sid_}, {where_}")
+                        where_ = f"paragraph index {place_[1:-1]}" if place_.startswith("[") else place_
+                        found.append(f"«{text_}» is in the deck at slide {s_}: shape_id {sid_}, {where_}")
                     continue
             others = []
             if n and any(h[0] == n for h in hits) and any(h[0] != n for h in hits):
@@ -664,15 +687,7 @@ class Agent:
                     # (replayed: 6 delete_shape and 4 update_text in 10; worded as naming the slide, delete_slide 10)
                     found.append(f'«{needle}» is the title of slide {titles[0]}: "{needle}" names slide {titles[0]}')
                     continue
-                texts = {(s, sid, place): words for s, sid, place, words in paragraphs}
-                places = "; ".join(
-                    f"slide {s}, shape {sid}, " + (f"paragraph {p}" if p.startswith("[") else p)
-                    # the whole line it is in, when longer: what the corrected line is (measured: given the place
-                    # only, the model set the paragraph to the corrected word alone)
-                    + (f" «{' '.join(texts[(s, sid, p)].split())}»" if len(texts.get((s, sid, p), "")) > len(needle) + 3 else "")
-                    for s, sid, p in hits
-                    if p != "title"
-                )
+                places = "; ".join(place(s, sid, p) for s, sid, p in hits if p != "title")
                 also = ""
                 if len(others) > 5:  # measured: on a 200-slide deck, 199 numbers listed and the edit went astray
                     also = f" (also on {len(others)} other slides: not asked)"
@@ -722,8 +737,8 @@ class Agent:
         }
         return [d for d in self.tool_defs if when.get(d["function"]["name"], True)]
 
-    def _still_overflowing(self, t: Turn) -> list[tuple[int, int]]:
-        """The shapes this turn's edits left too long that are still too long in the draft: [(slide number, shape)]."""
+    def _still_overflowing(self, t: Turn) -> list[tuple[str, int]]:
+        """The shapes this turn's edits left too long that are still too long in the draft: [(slide, shape)]."""
         out = []
         for did, sid, shape_id in sorted(t.overflowing):
             try:
@@ -732,8 +747,7 @@ class Agent:
                 if sid not in order:
                     continue
                 if any(x["shape_id"] == shape_id and x.get("overflow") for x in read.slide(prs, sid)["shapes"]):
-                    start = t.start_order.get(did) or order
-                    out.append((start.index(sid) + 1 if sid in start else order.index(sid) + 1, shape_id))
+                    out.append((slide_name(t, did, sid), shape_id))
             except (NotFound, KeyError, ValueError):
                 continue
         return out
@@ -801,6 +815,7 @@ class Agent:
                 "order": {k: list(v) for k, v in t.start_order.items()},
                 "focus": t.focus,
                 "located": list(t.located),
+                "overflowing": [list(x) for x in sorted(t.overflowing)],
             }
             self.app.conversations.write(pid, conv)
             t.conversation = conv

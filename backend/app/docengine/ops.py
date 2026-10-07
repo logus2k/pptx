@@ -811,6 +811,43 @@ def add_shape(prs, slide_id: int, kind: str, box: dict, paragraphs: list[dict] |
     return {"slides": [s.slide_id], "shape_id": sh.shape_id}
 
 
+# ── text that does not fit ───────────────────────────────────────────
+MIN_BODY_PT = 14  # body text is never set smaller (the system prompt's rule)
+
+
+def fit_text(prs, slide_id: int, shape_id: int, deck_id=None) -> dict:
+    """Shrink a shape's text to fit its box, as PowerPoint's "shrink text on overflow" does (normAutofit with a font
+    scale): the largest scale at which it fits (textfit.py), never below 14 pt. Returns {slides, scale}; CANNOT_FIT
+    when even at 14 pt it does not (then the box must grow or the text be split)."""
+    from . import textfit
+
+    s = get_slide(prs, slide_id)
+    sh = get_shape(s, shape_id)
+    if not getattr(sh, "has_text_frame", False) or not sh.has_text_frame:
+        raise OpError("NO_TEXT", f"Shape {shape_id} holds no text.", "")
+    body = sh.text_frame._txBody.find(qn("a:bodyPr"))
+    for tag in ("a:spAutoFit", "a:noAutofit", "a:normAutofit"):
+        for x in body.findall(qn(tag)):
+            body.remove(x)
+    fit = etree.SubElement(body, qn("a:normAutofit"))
+    smallest = textfit.smallest_size(sh) or MIN_BODY_PT
+    floor = min(1.0, MIN_BODY_PT / smallest) if smallest > MIN_BODY_PT else 1.0
+    scale = 1.0
+    while True:  # the scale written at every step: measured at it, not taken on trust
+        fit.set("fontScale", str(round(scale * 100000)))
+        if textfit.overflows(sh) is False:
+            return {"slides": [s.slide_id], "scale": round(scale, 3)}
+        if scale - 0.025 < floor - 1e-9:
+            break
+        scale -= 0.025
+    body.remove(fit)
+    raise OpError(
+        "CANNOT_FIT",
+        f"Shape {shape_id}'s text does not fit its box even at {MIN_BODY_PT} pt.",
+        "Make the box larger (move_resize_shape), shorten the text, or split it over two slides.",
+    )
+
+
 # ── diagrams made of shapes (technical design M7) ─────────────────────
 def _top_level(slide, sh, what: str) -> None:
     """A shape in a group is placed in the group's own coordinates: copied or connected as if on the slide, it would
@@ -1219,6 +1256,7 @@ OPERATIONS = {
     "format_text": format_text,
     "add_slide": add_slide,
     "duplicate_shape": duplicate_shape,
+    "fit_text": fit_text,
     "connect_shapes": connect_shapes,
     "delete_slide": delete_slide,
     "move_slide": move_slide,

@@ -158,6 +158,13 @@
         "type": "string"
        },
        "description": "Where the deck holds the words the request names"
+      },
+      "overflowing": {
+       "type": "array",
+       "items": {
+        "type": "array"
+       },
+       "description": "(deck, slide id, shape id) an edit of the turn left too long: checked again before it ends"
       }
      }
     }

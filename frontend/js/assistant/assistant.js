@@ -13,7 +13,7 @@ const TOOL_LABELS = {
   get_deck_outline: 'Reading the outline', get_slide: 'Reading a slide', render_slide: 'Looking at a slide',
   list_layouts: 'Looking at the layouts', update_text: 'Writing text', edit_paragraphs: 'Editing bullets', format_text: 'Formatting text', add_slide: 'Adding a slide',
   duplicate_slide: 'Duplicating a slide', delete_slide: 'Deleting a slide', move_slide: 'Moving a slide',
-  change_layout: 'Changing a layout', add_shape: 'Adding a shape', duplicate_shape: 'Copying a shape', connect_shapes: 'Connecting shapes', move_resize_shape: 'Moving a shape', delete_shape: 'Deleting a shape',
+  change_layout: 'Changing a layout', add_shape: 'Adding a shape', duplicate_shape: 'Copying a shape', connect_shapes: 'Connecting shapes', fit_text: 'Fitting text to its box', move_resize_shape: 'Moving a shape', delete_shape: 'Deleting a shape',
   insert_image: 'Inserting an image', replace_image: 'Replacing an image', set_alt_text: 'Writing alt text', edit_table: 'Editing a table',
   set_notes: 'Writing speaker notes', undo: 'Undoing', redo: 'Redoing',
   kb_search: 'Searching the knowledge base', kb_get: 'Reading a passage', kb_read_document: 'Reading a document',

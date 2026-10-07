@@ -88,8 +88,11 @@ def _shape_lines(d: dict, role: str, indent: str = "  ") -> list[str]:
     paragraphs = [
         (i, p) for i, p in enumerate(d.get("paragraphs") or []) if "".join(r.get("text", "") for r in p.get("runs", [])).strip()
     ]
-    if len(paragraphs) <= 1:
-        return [f"{indent}shape {d['shape_id']} ({role}{lock}): {_text(d) or '(empty)'}"]
+    if len(paragraphs) <= 1:  # its text first, then its ID: an ID between two texts was read as the next one's
+        # (replayed, devai-01 on Banco CTT's agenda: "shape 115 (body): Future Roles..." then "shape 93 (body): 04",
+        # the model edited 93 in 4 to 8 runs of 10; as «Future Roles...» (shape 115, body), 115 in 10 of 10)
+        words = _text(d)
+        return [f"{indent}{f'«{words}»' if words else '(empty)'} (shape {d['shape_id']}, {role}{lock})"]
     # one paragraph a line, indented by its level: as update_text takes them back (measured: joined on one line with
     # " / ", the model wrote a five-bullet agenda back as a single paragraph and dropped a bullet)
     lines = [f"{indent}shape {d['shape_id']} ({role}{lock}), {len(paragraphs)} paragraphs:"]

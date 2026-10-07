@@ -479,8 +479,8 @@ def test_a_model_too_small_is_refused_on_exact_counts_only():
     model = {"id": "fake", "provider": "local"}
     with pytest.raises(context.ModelTooSmall):
         context.budget(FakeModels(window=8192, estimating=False), model, defs)
-    room, answer = context.budget(FakeModels(window=28000, estimating=True), model, defs)  # over 30%, under 50%
-    assert answer == int(28000 * context.ANSWER_SHARE) and room > 0
+    room, answer = context.budget(FakeModels(window=32000, estimating=True), model, defs)  # over 30%, under 50%
+    assert answer == int(32000 * context.ANSWER_SHARE) and room > 0
     with pytest.raises(context.ModelTooSmall):  # an estimate past half the window: refused all the same
         context.budget(FakeModels(window=8192, estimating=True), model, defs)
 
@@ -500,7 +500,7 @@ def test_a_large_deck_keeps_every_slide_in_the_map_and_details_the_selection():
     text, brief = context.deck_map(prs, ids[119], 4000, count)
     assert count(text) <= 4000
     assert all(f"slide {i + 1} · id {sid}" in text for i, sid in enumerate(ids))
-    assert f"slide 120 · id {ids[119]} · Title and Content\n  shape 2 (title): Diapositivo 120" in text
+    assert f"slide 120 · id {ids[119]} · Title and Content\n  «Diapositivo 120» (shape 2, title)" in text
     assert "[0] Conteúdo do diapositivo 1\n" not in text  # far from the selection: its line only
     assert "\n    [0] Conteúdo do diapositivo 120\n    [1] Segunda linha\n" in text  # near it: one paragraph a line
     assert 0 < brief < 200
@@ -708,4 +708,19 @@ def test_text_left_too_long_is_fixed_before_the_turn_ends(server, fake_model):
     asked = [m[-1]["content"] for m in fake_model.sent if m and m[-1]["role"] == "user" and "does not fit" in m[-1]["content"]]
     assert len(asked) == 1 and f"slide 1, shape {title['shape_id']}" in asked[0]
     assert chat.last("assistant_message")["content"] == "Encurtei o título para caber."
+    chat.close()
+
+
+def test_with_no_route_and_every_tool_too_big_the_usual_groups_are_offered(server, fake_model):
+    from app.agent import router
+
+    pid, _, cid = setup(server)
+    fake_model._window, fake_model._estimating = 30000, False  # every tool over 30% of it, counted exactly
+    fake_model.routes = [{"intent": "-"}]  # an answer with no groups: no route
+    fake_model.script = [{"text": "Feito."}]
+    chat = Chat(server, pid, cid)
+    chat.send("faz qualquer coisa")
+    offered = set(fake_model.offered[-1])
+    assert chat.last("turn_ended")["status"] == "done"  # not refused
+    assert offered == router.tools_of(router.FALLBACK) & offered and "update_text" in offered and "kb_search" not in offered
     chat.close()

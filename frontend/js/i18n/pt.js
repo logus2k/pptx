@@ -102,6 +102,7 @@ window.CORTEX_PT = {
  "Restore version": "Restaurar versão",
  "Copying a shape": "A copiar uma forma",
  "Connecting shapes": "A ligar formas",
+ "Fitting text to its box": "A ajustar o texto à caixa",
  // hands-free (assistant.js, spec VO-2)
  "Hands-free": "Mãos livres",
  "Hands-free: speak without pressing anything": "Mãos livres: fale sem carregar em nada",

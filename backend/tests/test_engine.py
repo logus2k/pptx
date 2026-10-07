@@ -912,3 +912,24 @@ def test_a_copy_goes_where_it_covers_nothing_and_an_arrow_looks_like_the_diagram
     link = {"slide_id": sid, "from_shape_id": boxes[1], "to_shape_id": copy_["shape_id"]}
     data, second = ops.apply(edited.getvalue(), "connect_shapes", link)
     assert el(data, second["shape_id"]).find(f".//{a_}ln").get("w") == "31750"  # like the slide's connectors
+
+
+def test_fit_text_shrinks_to_the_largest_size_that_fits_and_never_below_14_pt():
+    from app.docengine import textfit
+
+    data = deck("simple.pptx")
+    sid = first_slide(data, 1)  # the agenda: a body of 5 points
+    body = next(s for s in get(data, sid)["shapes"] if len(s.get("paragraphs") or []) >= 5)
+    ops_ = [{"op": "insert", "text": f"Mais um ponto da agenda, o número {i}"} for i in range(5)]
+    data, _ = ops.apply(data, "edit_paragraphs", {"slide_id": sid, "shape_id": body["shape_id"], "operations": ops_})
+    assert next(s for s in get(data, sid)["shapes"] if s["shape_id"] == body["shape_id"])["overflow"]  # ten points: too long
+    fitted, res = ops.apply(data, "fit_text", {"slide_id": sid, "shape_id": body["shape_id"]})
+    shape = next(s for s in get(fitted, sid)["shapes"] if s["shape_id"] == body["shape_id"])
+    assert 0.5 < res["scale"] < 1 and shape["overflow"] is False
+    sh = next(x for x in read.open_deck(fitted).slides.get(sid).shapes if x.shape_id == body["shape_id"])
+    assert textfit.smallest_size(sh) >= 14  # never below the body minimum
+    many = [{"op": "insert", "text": "Ponto extra que não cabe de forma nenhuma na caixa"} for _ in range(25)]
+    data, _ = ops.apply(data, "edit_paragraphs", {"slide_id": sid, "shape_id": body["shape_id"], "operations": many})
+    with pytest.raises(ops.OpError) as e:
+        ops.apply(data, "fit_text", {"slide_id": sid, "shape_id": body["shape_id"]})
+    assert e.value.code == "CANNOT_FIT"

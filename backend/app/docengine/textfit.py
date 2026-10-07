@@ -169,6 +169,7 @@ def _body(sh) -> dict:
     scale = next((n.find(f"{A}normAutofit").get("fontScale") for n in nodes if n.find(f"{A}normAutofit") is not None), None)
     out["shrinks"] = any(n.find(f"{A}normAutofit") is not None for n in nodes)
     out["font_scale"] = int(scale) / 100000 if scale else 1.0
+    out["scale_set"] = scale is not None  # a scale written (fit_text, or PowerPoint on saving): measured at it
     return out
 
 
@@ -204,7 +205,7 @@ def measure(sh) -> dict | None:
         chain = ([ppr] if ppr is not None else []) + _chain(sh, level)
         runs = [r for r in p if r.tag in (f"{A}r", f"{A}fld", f"{A}br")]
         defaults = [c.find(f"{A}defRPr") for c in chain if c.find(f"{A}defRPr") is not None]
-        size = float(_first(defaults, "", "sz") or 1800) / 100
+        size = float(_first(defaults, "", "sz") or 1800) / 100 * body["font_scale"]
         bold = (_first(defaults, "", "b") or "0") in ("1", "true")
         face = _first(defaults, f"{A}latin", "typeface") or "+mn-lt"
         pieces: list[tuple[str, float, str, bool]] = []
@@ -213,12 +214,12 @@ def measure(sh) -> dict | None:
                 pieces.append(("\n", size, face, bold))
                 continue
             rpr = r.find(f"{A}rPr")
-            s = float(rpr.get("sz")) / 100 if rpr is not None and rpr.get("sz") else size
+            s = float(rpr.get("sz")) / 100 * body["font_scale"] if rpr is not None and rpr.get("sz") else size
             b = (rpr.get("b") in ("1", "true")) if rpr is not None and rpr.get("b") is not None else bold
             f = rpr.find(f"{A}latin").get("typeface") if rpr is not None and rpr.find(f"{A}latin") is not None else face
             pieces.append(("".join(t.text or "" for t in r.findall(f"{A}t")), s, f, b))
         text = "".join(t for t, *_ in pieces)
-        big = max((s for t, s, *_ in pieces if t.strip()), default=size) * body["font_scale"]
+        big = max((s for t, s, *_ in pieces if t.strip()), default=size)  # (sizes already scaled)
         before = _spacing(_first_node(chain, "spcBef"), big) if i else 0.0
         after = _spacing(_first_node(chain, "spcAft"), big)
         line_spc = _first_node(chain, "lnSpc")
@@ -290,6 +291,25 @@ def overflows(sh) -> bool | None:
         return None
     if m["grows"]:
         return False  # the box grows with its text
-    if m["shrinks"]:  # text that shrinks to fit overflows when it would have to shrink below 70%
+    if m["shrinks"] and not m["scale_set"]:  # shrink-to-fit with no scale yet (PowerPoint sets one on opening):
+        # it overflows when it would have to shrink below 70%
         return m["bottom"] - m["top"] > (m["box_h"] - (m["tIns"] + m["bIns"]) / EMU_PT) / 0.7
+    # a scale set (fit_text, or PowerPoint's own): measured at it
     return m["top"] < -TOL_PT or m["bottom"] > m["box_h"] + TOL_PT
+
+
+def smallest_size(sh) -> float | None:
+    """The smallest font size (points) the shape's text is set in, at its present scale."""
+    sizes = []
+    body = _body(sh)
+    for p in sh.text_frame._txBody.findall(f"{A}p"):
+        ppr = p.find(f"{A}pPr")
+        level = int(ppr.get("lvl", 0)) if ppr is not None else 0
+        chain = ([ppr] if ppr is not None else []) + _chain(sh, level)
+        defaults = [c.find(f"{A}defRPr") for c in chain if c.find(f"{A}defRPr") is not None]
+        base = float(_first(defaults, "", "sz") or 1800) / 100
+        for r in p.findall(f"{A}r"):
+            if "".join(t.text or "" for t in r.findall(f"{A}t")).strip():
+                rpr = r.find(f"{A}rPr")
+                sizes.append(float(rpr.get("sz")) / 100 if rpr is not None and rpr.get("sz") else base)
+    return min(sizes) * body["font_scale"] if sizes else None

@@ -15,7 +15,7 @@ import json
 
 GROUPS: dict[str, list[str]] = {
     "core": ["ask_user", "propose_plan", "get_slide", "get_deck_outline"],
-    "text": ["update_text", "edit_paragraphs", "format_text"],
+    "text": ["update_text", "edit_paragraphs", "format_text", "fit_text"],
     "table": ["edit_table"],
     "notes": ["set_notes"],
     "images": ["insert_image", "replace_image", "set_alt_text", "render_slide", "kb_list_images"],
@@ -52,6 +52,7 @@ DESCRIPTIONS = {
     '"reject slide five").',
 }
 ALL = set(GROUPS) - {"core"}
+FALLBACK = {"text", "structure", "table", "notes", "history"}  # unrouted, when every tool does not fit
 
 
 def slide_lines(shapes: list[dict], title_id: int | None, roles: dict[int, str] | None = None) -> list[str]:
