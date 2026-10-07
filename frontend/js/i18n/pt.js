@@ -103,6 +103,7 @@ window.CORTEX_PT = {
  "Copying a shape": "A copiar uma forma",
  "Connecting shapes": "A ligar formas",
  "Fitting text to its box": "A ajustar o texto à caixa",
+ "Writing a slide": "A escrever um diapositivo",
  // hands-free (assistant.js, spec VO-2)
  "Hands-free": "Mãos livres",
  "Hands-free: speak without pressing anything": "Mãos livres: fale sem carregar em nada",

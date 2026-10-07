@@ -1,0 +1,77 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "tools/fill_slide",
+ "title": "fill_slide",
+ "description": "Write what an existing slide says (its title, subtitle and points), in its layout's places: what it said there is replaced. For a slide made empty, or rewritten whole.",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "slide_id",
+  "content"
+ ],
+ "properties": {
+  "deck_id": {
+   "type": "string",
+   "description": "Left out: the active deck."
+  },
+  "slide_id": {
+   "type": "integer",
+   "description": "The slide's number or ID."
+  },
+  "content": {
+   "type": "object",
+   "additionalProperties": false,
+   "description": "What the slide says; the application puts each part where the layout has its place (the heading, the subtitle, each point in a box of its own with the box's number or column heading, or every point in one list) and removes the places left empty. Only text from the request or from what you found: never filler.",
+   "properties": {
+    "title": {
+     "type": "string",
+     "maxLength": 300
+    },
+    "subtitle": {
+     "type": "string",
+     "maxLength": 300
+    },
+    "points": {
+     "type": "array",
+     "maxItems": 30,
+     "description": "The slide's points, in order: a text, or {heading, text} for a point with a heading of its own (a column, a phase).",
+     "items": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 1000
+       },
+       {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+         "heading": {
+          "type": "string",
+          "maxLength": 200
+         },
+         "text": {
+          "type": "string",
+          "maxLength": 1000
+         }
+        }
+       }
+      ]
+     }
+    },
+    "sources": {
+     "type": "array",
+     "maxItems": 10,
+     "items": {
+      "type": "string",
+      "maxLength": 300
+     },
+     "description": "The titles of the knowledge-base documents its text comes from: the application writes their citations in the slide's notes."
+    }
+   }
+  },
+  "layout": {
+   "type": "string",
+   "description": "Put the slide on this layout first (Layouts of this deck). Left out: its layout, or, when that has no place for the points, the one that fits them."
+  }
+ }
+}

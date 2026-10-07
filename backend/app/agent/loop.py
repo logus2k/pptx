@@ -75,7 +75,9 @@ def _done(name: str, raw: str | dict, result: dict) -> str:
         args = raw if isinstance(raw, dict) else json.loads(raw or "{}")
     except ValueError:
         args = {}
-    where = next((f" on slide {args[k]}" for k in ("slide_id", "after_slide_id") if isinstance(args, dict) and k in args), "")
+    # the slide edited, as the request numbers it; a new slide by its ID only (measured: an invented "after slide 18"
+    # in an empty deck, dropped by the executor, came back as "add_slide on slide 18" and into the reply)
+    where = f" on slide {args['slide_id']}" if isinstance(args, dict) and "slide_id" in args else ""
     new = result.get("new_slide_ids")
     return f"{name}{where}" + (f", new slide ID {', '.join(map(str, new))}" if new else "")
 

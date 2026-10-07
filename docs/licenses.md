@@ -28,5 +28,6 @@ Every dependency, with why it is here (technical design section 0). Python versi
 | numpy | 2.5.3 | BSD 3-Clause | A spoken request's level before Whisper (as Cortex) |
 | aiohttp | 3.14.3 | Apache 2.0 | socket.io's async client to stt_server (as Cortex) |
 | anthropic | 1.8.0 | MIT | Claude models, when a key is set (as Cortex) |
+| axe-core (development, tests/ui) | 4.14.0 | MPL 2.0 | The accessibility audit (make a11y): WCAG 2.2 A/AA rules run in the browser on each screen |
 | pytest, ruff, websocket-client (development) | 9.1.1 / 0.16.10 / 1.9.0 | MIT / MIT / Apache 2.0 | Tests and lint |
 | playwright-core (development, tests/ui) | 1.63.0 | Apache 2.0 | Browser checks (as Cortex) |

@@ -107,9 +107,32 @@ def _plain_role(d: dict) -> str:
     return {"text_box": "text box", "shape": "shape", "connector": "connector"}.get(d["type"], d["type"])
 
 
-def roles(s: dict) -> dict[int, str]:
+def placeholder_roles(prs) -> dict[str, dict[int, str]]:
+    """Each layout's placeholders by idx, as layouts.py reads them: "title [19]", "subtitle [11], 24 pt, room for 2
+    lines", "text [17], 14 pt, room for 5 lines" (measured: in Banco CTT's "1_Texto", a list of five topics went into
+    the small subtitle box under the title, "body" by its type, and ran out of it; five list boxes beside it stayed
+    empty)."""
+    from ..docengine import layouts
+
+    out: dict[str, dict[int, str]] = {}
+    height_pt = prs.slide_height / 12700
+    for layout in prs.slide_layouts:
+        named = {}
+        for p in layouts.placeholders(layout, prs.slide_width, prs.slide_height):
+            role = "title" if p["role"] == "heading" else p["role"]
+            if role in ("text", "subtitle", "number", "tag"):
+                lines = max(1, int(p["h"] * height_pt / (p["size"] * 1.2)))
+                named[p["idx"]] = f"{role} [{p['idx']}], {p['size']:g} pt, room for {lines} line{'s' if lines > 1 else ''}"
+            else:
+                named[p["idx"]] = f"{role} [{p['idx']}]"
+        out[layout.name] = named
+    return out
+
+
+def roles(s: dict, layout_roles: dict[int, str] | None = None) -> dict[int, str]:
     """Each top-level shape's role on the slide (read.slide's output): title, subtitle, body - left and right when the
-    layout has two - date, footer, slide number, text box, table, picture, group."""
+    layout has two - date, footer, slide number, text box, table, picture, group. With the layout's roles
+    (placeholder_roles), a placeholder is named by what its layout made it for."""
     bodies = [
         x
         for x in s["shapes"]
@@ -124,7 +147,16 @@ def roles(s: dict) -> dict[int, str]:
     out = {}
     for d in s["shapes"]:
         ph = (d.get("placeholder") or {}).get("type")
-        if ph in ("title", "center_title"):
+        idx = (d.get("placeholder") or {}).get("idx")
+        if ph and layout_roles and idx in layout_roles and not _text(d):
+            # an empty placeholder by what its layout made it for, its idx and room; a shape with text keeps its plain
+            # role (measured: "«Agenda» (shape 2, title [0])" made "delete the agenda" delete the title, 5 in 5; with
+            # "title", the slide, 5 in 5)
+            named = layout_roles[idx]
+            if d["shape_id"] in sides and named.startswith("text ["):  # two columns: which one, then its place
+                named = sides[d["shape_id"]] + named.removeprefix("text")
+            out[d["shape_id"]] = named
+        elif ph in ("title", "center_title"):
             out[d["shape_id"]] = "title"
         elif ph == "subtitle":
             out[d["shape_id"]] = "subtitle"
@@ -137,7 +169,7 @@ def roles(s: dict) -> dict[int, str]:
     return out
 
 
-def slide_map(s: dict, number: str | None = None) -> str:
+def slide_map(s: dict, number: str | None = None, layout_roles: dict[int, str] | None = None) -> str:
     """A slide as the model targets it (read.slide's output): a header line, then every shape with its ID and role
     (roles()), table with its cells, picture with its alt text, group with its members), then the speaker notes.
     number: the slide's number in the request's numbering ("new" for a slide made in it); its place by default."""
@@ -145,7 +177,7 @@ def slide_map(s: dict, number: str | None = None) -> str:
     label = "new slide" if number == "new" else f"slide {number}"
     head = f"{label} · id {s['slide_id']} · {s['layout']}" + (" · hidden" if s["hidden"] else "")
     lines = [head]
-    named = roles(s)
+    named = roles(s, layout_roles)
     for d in s["shapes"]:
         lines += _shape_lines(d, named[d["shape_id"]])
     if s.get("notes"):
@@ -172,7 +204,11 @@ def deck_map(
     the ones deleted in it are listed (measured: renumbered after "delete slide 39", the map showed another slide 39,
     and it was deleted too)."""
     outline = read.outline(prs)
+    if not outline and not start:
+        # measured: an empty map said nothing, and the new slide was "after slide 18" in the model's reply and plan
+        return "(no slides yet: the deck is empty. A new slide becomes slide 1: leave after_slide_id out.)", 0
     number = {sid: str(i + 1) for i, sid in enumerate(start)} if start else {}
+    by_layout = placeholder_roles(prs)
     label = lambda o: number.get(o["slide_id"], "new") if start else str(o["index"] + 1)  # noqa: E731
     lines = {}
     for o in outline:
@@ -180,7 +216,11 @@ def deck_map(
         head = "new slide" if label(o) == "new" else f"slide {label(o)}"
         lines[o["slide_id"]] = f"{head} · id {o['slide_id']}{hidden} · {o['title'] or '(no title)'}"
     full = [
-        (o["slide_id"], slide_map(describe(read.slide(prs, o["slide_id"]), descriptions or {}), label(o))) for o in outline
+        (
+            o["slide_id"],
+            slide_map(describe(read.slide(prs, o["slide_id"]), descriptions or {}), label(o), by_layout.get(o["layout"])),
+        )
+        for o in outline
     ]
     now = {o["slide_id"] for o in outline}
     gone = [str(i + 1) for i, sid in enumerate(start or []) if sid not in now]
@@ -350,6 +390,11 @@ def system_context(
         parts.append(_data("Earlier in this conversation (summary)", t.conversation["summary"]))
     if getattr(t, "intent", ""):  # last, nearest the request: what to do now, as one instruction
         where = "".join(f"\n{x}." for x in getattr(t, "located", []) or [])
+        if active and active_bytes is not None and not read.outline(prs) and not getattr(t, "done", None):
+            # an empty deck has no last slide (measured: told "after the last slide", the model sent after_slide_id 18,
+            # the highest number in the layouts' names, 5 times in 5, and 17 once "18_Text" was removed; told the deck
+            # is empty, it left the place out 5 in 5)
+            t.intent = t.intent.split(" (where: ")[0] + " (the deck is empty: the new slide is its first, slide 1)"
         if t.changes and getattr(t, "done", None):  # the edits so far: done, not to be made again
             parts.append(
                 f"## Now\nThe person wants: {t.intent}{where}\nDone in this turn: {'; '.join(t.done)}.\nIf that is all the "
@@ -358,8 +403,8 @@ def system_context(
             )
         elif t.changes:
             parts.append(
-                f"## Now\nThe person wants: {t.intent}{where}\nDo it now by calling your tools, writing any text yourself; "
-                "then say in one sentence what you changed."
+                f"## Now\nThe person wants: {t.intent}{where}\nDo it now by calling your tools, writing the text "
+                "yourself from the request and what you find (never filler); then say in one sentence what you changed."
             )
         elif getattr(t, "kind", "") == "unclear":
             # without the router's intent (measured on the same call: with a long intent, ask_user 0 times in 10;

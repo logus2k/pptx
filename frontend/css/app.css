@@ -54,7 +54,7 @@
 /* ── data table (DESIGN.md, Components > Data table, ours): a --surface card; Subtitle 2 header; divided rows ── */
 .data-table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--card-outline); border-radius: var(--radius-xl); }
 .data-table { width: 100%; border-collapse: collapse; }
-.data-table th { height: 48px; padding: 0 var(--space-4); border-bottom: 1px solid var(--divider); text-align: left; color: var(--text-section);
+.data-table th { height: 48px; padding: 0 var(--space-4); border-bottom: 1px solid var(--divider); text-align: left; color: var(--text-weak);
   font: var(--fw-bold) var(--fs-subtitle)/var(--lh-subtitle) var(--font-sans); letter-spacing: var(--ls-subtitle); }
 .data-table td { height: 48px; padding: 0 var(--space-4); border-bottom: 1px solid var(--divider); }
 .data-table tr:last-child td { border-bottom: 0; }
@@ -153,7 +153,7 @@ a.button-link.secondary { border-color: var(--primary); }
 .strip-item.state-removed img { opacity: .4; }
 .diff { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: var(--space-4); width: 100%; max-width: 1400px; }
 .diff figure { margin: 0; display: flex; flex-direction: column; gap: var(--space-2); }
-.diff figcaption { color: var(--text-section); font: var(--fw-bold) var(--fs-subtitle)/var(--lh-subtitle) var(--font-sans); letter-spacing: var(--ls-subtitle); }
+.diff figcaption { color: var(--text-weak); font: var(--fw-bold) var(--fs-subtitle)/var(--lh-subtitle) var(--font-sans); letter-spacing: var(--ls-subtitle); }
 .include { color: var(--text-title); }
 
 /* the sources under a reply (spec KB-3) */
@@ -208,3 +208,17 @@ a.button-link.secondary { border-color: var(--primary); }
     font-size: var(--fs-p1); line-height: var(--lh-p1); letter-spacing: var(--ls-p1);
   }
 }
+
+/* ── contrast (DESIGN.md, Colors › Contrast; spec section 8: WCAG 2.2 AA in both themes) ─────────────────────────
+   The copied shell writes text that must be read in roles the design system lists as failing on the light theme
+   (--text-section 2.85:1, --text-secondary 2.80:1; white on --primary-hover 3.09:1). Its rule: never for text that
+   must be read. These are read (the product's name, menu sections, the status line, tab titles, column headings), so
+   they take --text-weak (5.74:1); a primary button's hover takes --primary-active, the system's listed replacement
+   (6.24:1). Found by the accessibility audit (tests/ui/a11y.mjs, axe-core). */
+.menu-logo .product, .menu-section, #status-bar, #status-bar .status-pill, #status-bar .status-item, #status-bar .status-right,
+#status-bar .status-pill.container, .main-tab:not(.active), .sb-view h3,
+.notif-meta { color: var(--text-weak); }  /* the selected tab and menu item keep --brand-text */
+button.primary:hover:not(:disabled), button.danger:hover:not(:disabled) { background: var(--primary-active); border-color: var(--primary-active); }
+/* a secondary button on the review bar's alert container: on --surface, as secondary buttons are (red on the yellow
+   container is 4.43:1; on --surface, 5.01:1) */
+.review-bar button:not(.primary) { background: var(--surface); }

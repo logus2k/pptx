@@ -15,7 +15,7 @@
    "maxItems": 30,
    "items": {
     "type": "string",
-    "maxLength": 300
+    "maxLength": 800
    }
   }
  }

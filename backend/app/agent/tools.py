@@ -28,6 +28,7 @@ from ..storage import NotFound
 TOOLS_DIR = REPO_DIR / "contracts" / "tools"
 EDITING = (
     "update_text",
+    "fill_slide",
     "duplicate_shape",
     "connect_shapes",
     "fit_text",
@@ -182,7 +183,7 @@ def _for_model(node):
 
 TEXT_EDITS = (
     "update_text", "edit_paragraphs", "add_slide", "add_shape", "duplicate_shape", "format_text", "change_layout", "edit_table",
-    "fit_text",
+    "fit_text", "fill_slide",
 )  # fmt: skip
 
 # what the context already gives (the decks, the layouts) or another tool returns (kb_search: the passages' text):
@@ -234,6 +235,13 @@ class Turn:
     located: list[str] = field(default_factory=list)  # where the deck holds the words the request names (router.locate)
     overflowing: set = field(default_factory=set)  # (deck, slide id, shape id) an edit of this turn left too long
     result_chars: int = 12_000  # how much one tool result may hold (the loop sets it from the context budget)
+    read_calls: set = field(default_factory=set)  # (tool, arguments) called this turn: a reading call is not repeated
+
+
+# reading tools a turn need not call twice with the same arguments (the deck changes only by the turn's own edits,
+# whose results say what changed)
+REPEAT_GUARD = ("get_slide", "get_deck_outline", "list_layouts", "list_templates", "list_decks", "kb_search", "kb_get",
+                "kb_read_document", "kb_list_images", "search_project", "search_conversations")  # fmt: skip
 
 
 def slide_name(t: Turn, did: str, sid: int) -> str:
@@ -321,6 +329,8 @@ class Executor:
                 continue
             if not 1 <= args[k] <= len(order):
                 hint = "New slides are named by their ID." if start else "Use a slide number or ID from the deck map."
+                if not now:  # measured: fill_slide on "slide 1" of an empty deck, four times
+                    hint = "The deck has no slides: add_slide makes the first (with its content)."
                 raise ToolError("SLIDE_NOT_FOUND", f"The deck has slides 1 to {len(order)}.", hint)
             sid = order[args[k] - 1]
             if sid not in now:
@@ -331,6 +341,38 @@ class Executor:
                 )
             out[k] = sid
         return out
+
+    async def _cite(self, t: Turn, did: str, sid: int | None, content: dict) -> None:
+        """A slide written from the knowledge base gets its sources in its notes (spec KB-3: "Fonte: <title>, <section
+        or p. N>, <date> - <link>"): the documents the content names, as this turn read them; when it names none it
+        recognises, every document the turn read, as consulted (measured: told to cite in the notes, the model did not,
+        2 runs in 2; and the reranker cannot tell the documents a slide used from those a search returned: 0.97 for
+        one unused, 0.60 for one used)."""
+        if sid is None:
+            return
+        since = []
+        for m in self.app.conversations.messages(t.pid, t.cid):
+            since = [] if m["role"] == "user" else [*since, m]
+        read_docs = sources_of(since)
+        if not read_docs:
+            return
+        named = {" ".join(str(x).split()).lower() for x in content.get("sources") or []}
+        used = [d for d in read_docs if {(d.get("title") or "").lower(), (d.get("document") or "").lower()} & named]
+        docs, label = (used, "Fonte") if used else (read_docs, "Fontes consultadas")
+        lines = []
+        for d in docs:
+            where = ", ".join([*d.get("sections", [])[:2], *(f"p. {n}" for n in d.get("pages", [])[:2])])
+            date = (d.get("updated") or "")[:10]
+            parts = [d.get("title") or d.get("document"), where, date]
+            line = ", ".join(x for x in parts if x) + (f" - {d['link']}" if d.get("link") else "")
+            lines.append(f"{label}: {line}" if label == "Fonte" else f"- {line}")
+        text = "\n".join(lines) if label == "Fonte" else "Fontes consultadas:\n" + "\n".join(lines)
+        try:  # what the notes said stays, the sources under it
+            had = (read.slide(read.open_deck(self._bytes(t, did)), sid).get("notes") or "").strip()
+        except (KeyError, NotFound):
+            had = ""
+        if text not in had:
+            await self._edit(t, "set_notes", {"slide_id": sid, "text": f"{had}\n\n{text}" if had else text, "deck_id": did})
 
     def _image(self, t: Turn, ref: dict) -> bytes:
         try:
@@ -391,13 +433,24 @@ class Executor:
         """The result the model reads (a dict, sent as JSON), errors included."""
         try:
             args = self.parse(name, raw_args)
+            key = (name, json.dumps(args, sort_keys=True, ensure_ascii=False))
+            if name in REPEAT_GUARD and key in t.read_calls:
+                # measured: a question answered after two searches went on with get_slide 15 times, to the turn's limit
+                hint = "Its result is above: use it. If you have what you need, answer the person now."
+                said = f"{name} was already called with these arguments."
+                return {"error": {"code": "ALREADY_READ", "message": said, "hint": hint}}
+            t.read_calls.add(key)
             if name in EDITING:
                 return await self._edit(t, name, args)
             return await getattr(self, f"t_{name}")(t, args)
         except ToolError as e:
             return e.as_dict()
         except ops.OpError as e:
-            return {"error": e.as_dict()}
+            out = {"error": e.as_dict()}
+            if name == "fill_slide" and e.code == "SLIDE_NOT_FOUND":
+                # measured: meaning a new slide, the model called fill_slide on the next ID five times
+                out["error"]["hint"] = "fill_slide writes an existing slide: for a new one, call add_slide with this content."
+            return out
 
     async def _edit(self, t: Turn, name: str, args: dict) -> dict:
         self.app.projects.get(t.pid, t.email, roles=("owner", "editor"))
@@ -426,9 +479,14 @@ class Executor:
             removed = [int(args["slide_id"])]
         self.app.proposals.record(t.pid, t.proposal, did, name, {**args, "deck_id": did}, result, new, removed)
         t.changed.add(did)
+        t.read_calls.clear()  # the deck changed: reading it again is new
+        if name in ("add_slide", "fill_slide") and (args.get("content") or {}) and "error" not in result:
+            await self._cite(t, did, (result.get("new_slide_ids") or result.get("slides") or [None])[0], args["content"])
         out = {"ok": True, "deck_id": did, **result, "note": "Applied to the draft; the person reviews it before it is saved."}
         if result.get("unmatched"):
             out["note"] += " Text that had no place in the new layout was kept as a text box: mention it."
+        if name == "fill_slide" and result.get("layout"):
+            out["note"] += f" The slide is now on the layout {result['layout']!r}, which has a place for each part: say so."
         if name == "fit_text":
             out["note"] += (
                 f" The box was made {result['grown_pt']} pt taller, into free space below it."
@@ -708,6 +766,18 @@ class Executor:
     # ── project ──────────────────────────────────────────────────────
     async def t_create_deck(self, t: Turn, args: dict) -> dict:
         project = self.app.projects.get(t.pid, t.email, roles=("owner", "editor"))
+        active = t.conversation.get("active_deck")
+        if active:
+            try:
+                empty = not read.outline(read.open_deck(self._bytes(t, active)))
+            except (NotFound, ToolError):
+                empty = False
+            if empty:  # measured: "create the cover of a presentation" on a new, empty deck made a second deck
+                raise ToolError(
+                    "ACTIVE_DECK_EMPTY",
+                    "The open deck has no slides yet: it is the presentation to make.",
+                    "Add the slides to it with add_slide (no new deck).",
+                )
         ref = args.get("template") or project["settings"]["default_template"]
         try:
             deck = await self.app.decks.from_template(t.pid, t.email, args["title"], ref)

@@ -506,7 +506,8 @@ def test_a_large_deck_keeps_every_slide_in_the_map_and_details_the_selection():
     assert "\n    [0] Conteúdo do diapositivo 120\n    [1] Segunda linha\n" in text  # near it: one paragraph a line
     assert 0 < brief < 200
     small, brief = context.deck_map(read.open_deck((DECKS / "simple.pptx").read_bytes()), None, 4000, count)
-    assert brief == 0 and "shape 4 (body, right), 2 paragraphs:\n    [0] Fluxo único\n    [1] Um só sistema" in small
+    right = "shape 4 (body, right), 2 paragraphs:\n    [0] Fluxo único\n    [1] Um só sistema"  # with text: its plain role
+    assert brief == 0 and right in small
 
 
 def test_when_every_edit_fails_the_reply_carries_the_applications_notice(server, fake_model):
@@ -586,7 +587,7 @@ def test_now_lists_the_edits_done_this_turn():
     from app.agent.loop import _done
 
     assert _done("duplicate_slide", '{"slide_id": 3}', {"new_slide_ids": [300]}) == "duplicate_slide on slide 3, new slide ID 300"
-    assert _done("add_slide", {"after_slide_id": 5}, {}) == "add_slide on slide 5"
+    assert _done("add_slide", {"after_slide_id": 5}, {"new_slide_ids": [300]}) == "add_slide, new slide ID 300"  # by its ID
     assert _done("set_notes", "not json", {}) == "set_notes"
 
 
@@ -761,9 +762,9 @@ def test_with_no_route_and_every_tool_too_big_the_usual_groups_are_offered(serve
     from app.agent import router
 
     pid, _, cid = setup(server)
-    # by the fake's count (2.5 characters a token), every tool is over 30% of windows below 47 500 and the usual
-    # groups under it above 34 200 (measured 2026-10-07; the real model: 29.8% and 21.5% of 32 768)
-    fake_model._window, fake_model._estimating = 40000, False
+    # by the fake's count (2.5 characters a token), the usual groups fit 30% of windows above 34 200, and the tools this
+    # project is offered do not fit 35 000 (measured 2026-10-07; the real model: 29.8% and 21.5% of 32 768)
+    fake_model._window, fake_model._estimating = 35000, False
     fake_model.routes = [{"intent": "-"}]  # an answer with no groups: no route
     fake_model.script = [{"text": "Feito."}]
     chat = Chat(server, pid, cid)

@@ -95,7 +95,8 @@ h1.brand { display: none; }
   #app > header { grid-column: 1; grid-row: 1; padding: 0 var(--space-2); background: var(--surface-page); }
   h1.brand { display: flex; align-items: center; gap: 10px; min-width: 0; margin-right: auto; }
   h1.brand img { width: 83px; height: 18px; flex: none; }
-  .brand-name { padding-left: 10px; border-left: 1px solid var(--divider); color: var(--text-section); font: var(--fw-bold) var(--fs-subtitle)/var(--lh-subtitle) var(--font-sans); letter-spacing: var(--ls-subtitle); }
+  /* Slides: --text-weak, not --text-section (2.85:1 on the light theme; DESIGN.md, Colors › Contrast) */
+  .brand-name { padding-left: 10px; border-left: 1px solid var(--divider); color: var(--text-weak); font: var(--fw-bold) var(--fs-subtitle)/var(--lh-subtitle) var(--font-sans); letter-spacing: var(--ls-subtitle); }
   .identity-btn-name, .identity-chevron { display: none; }
   .header-settings { display: grid; }
   .header-settings + .identity { margin-left: 0; }   /* the phone's Settings: the header's action icon (the bar keeps its five items) */
@@ -112,7 +113,8 @@ h1.brand { display: none; }
   #icon-bar .icon-bar-btn[data-key="session"], #icon-bar .icon-bar-btn[data-key="outline"] { display: none; }   /* five items, as in the app */
   .icon-bar-btn, #app.menu-collapsed .icon-bar-btn { position: relative; flex-direction: column; justify-content: flex-start; gap: 0; width: auto; min-width: 54px; height: auto; padding: var(--space-2) 0 0; border-radius: 0; color: var(--text-secondary); }
   .icon-bar-btn:hover { background: transparent; }
-  .icon-bar-label, #app.menu-collapsed .icon-bar-label { display: block; flex: none; overflow: visible; color: var(--text-secondary); font: var(--fw-bold) var(--fs-navbar)/var(--lh-navbar) var(--font-sans); letter-spacing: var(--ls-navbar); }
+  /* Slides: labels in --text-weak, not --text-secondary (2.80:1 on the light theme; DESIGN.md, Colors › Contrast) */
+  .icon-bar-label, #app.menu-collapsed .icon-bar-label { display: block; flex: none; overflow: visible; color: var(--text-weak); font: var(--fw-bold) var(--fs-navbar)/var(--lh-navbar) var(--font-sans); letter-spacing: var(--ls-navbar); }
   .icon-bar-btn-active .icon-bar-label, #icon-bar .icon-bar-btn[data-key="assistant"].icon-bar-btn-active .icon-bar-label { color: var(--brand-text); }
   #icon-bar .icon-bar-btn[data-key="assistant"].icon-bar-btn-active .menu-icon { color: var(--primary); }
   .menu-badge, #app.menu-collapsed .menu-badge { display: block; position: absolute; top: 2px; right: 6px; }

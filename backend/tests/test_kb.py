@@ -295,3 +295,60 @@ def test_without_the_kb_the_tools_say_so(server, fake_model, fake_kb):
         chat.close()
     assert tool_results(fake_model, "kb_search")[-1]["error"]["code"] == "KB_UNAVAILABLE"
     assert requests.get(f"{server}/api/kb/domains", headers=h(), timeout=10).json()["available"] is False
+
+
+def test_a_slide_written_from_the_kb_gets_its_sources_in_its_notes(server, fake_model, fake_kb):
+    """Measured: told to cite the sources in the notes, the model did not (2 runs in 2): the application writes them,
+    for the documents the content names, or every document the turn read as consulted."""
+    import requests
+
+    from app.docengine import read
+
+    pid = requests.post(f"{server}/api/projects", json={"name": "P"}, headers=h(), timeout=10).json()["id"]
+    did = requests.post(f"{server}/api/projects/{pid}/decks", json={"title": "D", "template": {"kind": "admin", "id": "default"}},
+                        headers=h(), timeout=30).json()["id"]  # fmt: skip
+    cid = requests.post(f"{server}/api/projects/{pid}/conversations", json={"deck_id": did}, headers=h(), timeout=10).json()["id"]
+    layout = read.layouts(read.open_deck(deck_bytes(server, pid, did)))[1]["name"]
+    content = {"title": "Garantia", "points": ["Dois anos"], "sources": ["Política de garantia 2026"]}
+    fake_model.script = [
+        {"tools": [["kb_search", {"query": "garantia 2026"}]]},
+        {"tools": [["add_slide", {"layout": layout, "content": content}]]},
+        {"text": "Feito."},
+    ]
+    chat = Chat(server, pid, cid)
+    try:
+        chat.send("um diapositivo sobre a garantia")
+        p = chat.last("proposal_updated")
+        chat.decide(p["id"], True)
+    finally:
+        chat.close()
+    prs = read.open_deck(deck_bytes(server, pid, did))
+    notes = read.slide(prs, read.outline(prs)[0]["slide_id"])["notes"]
+    assert notes.startswith("Fonte: Política de garantia 2026") and "https://" in notes and "Exclusões" not in notes.split(",")[0]
+
+
+def test_reading_calls_are_not_repeated_and_an_empty_deck_is_not_replaced(server, fake_model):
+    import requests
+
+    pid = requests.post(f"{server}/api/projects", json={"name": "P"}, headers=h(), timeout=10).json()["id"]
+    did = requests.post(f"{server}/api/projects/{pid}/decks", json={"title": "D", "template": {"kind": "admin", "id": "default"}},
+                        headers=h(), timeout=30).json()["id"]  # fmt: skip
+    cid = requests.post(f"{server}/api/projects/{pid}/conversations", json={"deck_id": did}, headers=h(), timeout=10).json()["id"]
+    fake_model.script = [
+        {"tools": [["get_deck_outline", {}]]},
+        {"tools": [["get_deck_outline", {}]]},  # measured: get_slide 15 times, to the turn's limit
+        {"tools": [["create_deck", {"title": "Outra"}]]},  # measured: a second deck while the open one was empty
+        {"tools": [["fill_slide", {"slide_id": 1, "content": {"title": "Capa"}}]]},
+        {"text": "Feito."},
+    ]
+    chat = Chat(server, pid, cid)
+    try:
+        chat.send("cria a capa de uma apresentação")
+    finally:
+        chat.close()
+    results = [m for m in fake_model.sent[-1] if m["role"] == "tool"]
+    assert '"slides": []' in results[0]["content"] and "ALREADY_READ" in results[1]["content"]
+    assert "ACTIVE_DECK_EMPTY" in results[2]["content"]
+    assert "add_slide makes the first" in results[3]["content"]
+    decks = requests.get(f"{server}/api/projects/{pid}/decks", headers=h(), timeout=10).json()["decks"]
+    assert len(decks) == 1

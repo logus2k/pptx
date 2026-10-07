@@ -25,8 +25,9 @@ export async function refreshProjects() {
     setHtml(listEl, html`<p class="muted">No projects yet. Create one to start.</p>`);
     return projects;
   }
-  setHtml(listEl, html`<ul class="list">${projects.map((p) => html`
-    <li class="clickable${p.id === current ? ' selected' : ''}" data-id="${p.id}" tabindex="0" role="button">
+  // a choice of the current project: listbox and options (a list's items cannot be buttons: axe, WCAG 1.3.1)
+  setHtml(listEl, html`<ul class="list" role="listbox" aria-label="Projects">${projects.map((p) => html`
+    <li class="clickable${p.id === current ? ' selected' : ''}" data-id="${p.id}" tabindex="0" role="option" aria-selected="${p.id === current ? 'true' : 'false'}">
       <div class="list-text"><div class="list-title user-text">${p.name}</div>
       <div class="list-caption">${when(p.updated_at)}</div></div>
     </li>`)}</ul>`);
@@ -40,7 +41,10 @@ export async function refreshProjects() {
 
 export function markCurrent(pid) {
   current = pid;
-  for (const li of listEl?.querySelectorAll('li[data-id]') || []) li.classList.toggle('selected', li.dataset.id === pid);
+  for (const li of listEl?.querySelectorAll('li[data-id]') || []) {
+    li.classList.toggle('selected', li.dataset.id === pid);
+    li.setAttribute('aria-selected', li.dataset.id === pid ? 'true' : 'false');
+  }
 }
 
 export async function newProject() {

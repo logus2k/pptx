@@ -199,6 +199,7 @@ def run_scenario(sc: dict, out: Path) -> dict:
             record = {
                 "say": turn["say"], "status": status, "seconds": round(time.monotonic() - t0, 1), "waits": waits,
                 "replies": [d.get("content") for n, d in seen if n == "assistant_message"],
+                "notices": [d.get("notice") for n, d in seen if n == "assistant_message" and d.get("notice")],
                 "tools": [d.get("tool") for n, d in seen if n == "tool_progress"],
                 "errors": [d for n, d in seen if n == "assistant_error"],
                 "proposal": proposal and {"status": proposal.get("status"), "accepted": bool(accepted and accepted.get("ok"))},
@@ -255,6 +256,23 @@ def judge(expect: dict, record: dict, slides: list[dict]) -> list[dict]:
             check(w.lower() in low, f"slide {n} mentions {w!r}")
         if want.get("title"):
             check(any(sh["kind"] in ("title", "center_title") for sh in s["shapes"]), f"slide {n} has a title")
+    for want in expect.get("slide_text") or []:
+        n = want["slide"]
+        s = slides[n - 1] if 0 < n <= len(slides) else (slides[n] if n < 0 and -n <= len(slides) else None)
+        if s is None:
+            continue
+        if "max_chars" in want:
+            size = len(text_of(s))
+            check(size <= want["max_chars"], f"slide {n}'s text is at most {want['max_chars']} characters ({size})")
+        if want.get("notes"):
+            notes = s.get("notes") or ""
+            notes = notes if isinstance(notes, str) else json.dumps(notes, ensure_ascii=False)
+            check(any(w.lower() in notes.lower() for w in want["notes"]), f"slide {n}'s notes mention one of {want['notes']}")
+        if want.get("exactly"):
+            check(text_of(s) == "\n".join(want["exactly"]), f"slide {n} says exactly {want['exactly']} ({text_of(s)!r})")
+    if expect.get("reply_any"):
+        reply = " ".join(x or "" for x in record.get("replies") or []).lower()
+        check(any(w.lower() in reply for w in expect["reply_any"]), f"the reply mentions one of {expect['reply_any']}")
     for tool in expect.get("used") or []:
         check(tool in (record.get("tools") or []), f"the assistant used {tool} ({sorted(set(record.get('tools') or []))})")
     if expect.get("changed") is not None:

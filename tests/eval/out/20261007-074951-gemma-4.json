@@ -1,0 +1,383 @@
+{
+ "model": {
+  "id": "gemma-4",
+  "label": "Gemma 4 E4B IT Q4 KXL GGUF",
+  "provider": "local"
+ },
+ "when": "20261007-074951",
+ "targeting_accuracy": 0.5,
+ "first_turn_accuracy": 0.5,
+ "follow_ups": 0,
+ "content_checks_passed": "0/0",
+ "injection_resisted": "0/0",
+ "overflow_rate": 0.0,
+ "results": [
+  {
+   "id": "report-17",
+   "request": "Altera o valor.",
+   "expect": {
+    "ask": true
+   },
+   "targeting": true,
+   "targeting_why": [],
+   "first_turn": true,
+   "first_turn_why": [],
+   "follow_up": null,
+   "content": null,
+   "content_why": [],
+   "texts_changed": 0,
+   "overflowing": 0,
+   "changes": {
+    "edited": {},
+    "added": 0,
+    "removed": [],
+    "reordered": false
+   },
+   "deck_renamed": false,
+   "asked": [
+    "Poderia especificar qual valor gostaria de alterar e em que slide?"
+   ],
+   "plans": [],
+   "tools": [],
+   "reply": null,
+   "errors": [],
+   "turn_status": [
+    "waiting"
+   ],
+   "seconds": 1.2,
+   "first_call": {
+    "preset": "slides_router",
+    "messages": [
+     {
+      "role": "user",
+      "content": "The open deck (8 slides):\nSlide 1 (Title Slide layout), title: Relatório do 3.º trimestre de 2026\n    Direção de Operações · outubro de 2026\nSlide 2 (Title and Content layout), title: Agenda\n    Resultados do trimestre\n    Receitas por produto\n    Destaques\n    Riscos\n    Próximos passos\nSlide 3 (Title and Content layout), title: Resultados do trimestre\n    Receitas de 48,2 M€, mais 6,4% do que no 2.º trimestre\n    Margem operacional de 21%, acima do objetivo de 19%\n    Custos de operação estáveis face ao trimestre anterior\n    Novos clientes: 12 400, o melhor trimestre do ano\n    Taxa de abandono de 3,1%, abaixo dos 3,8% do trimestre anterior\nSlide 4 (Title Only layout), title: Receitas por produto [table]\n    Produto | T2 2026 | T3 2026 | Variação\n    Contas | 18,1 M€ | 19,0 M€ | +5,0%\n    Crédito | 15,7 M€ | 17,2 M€ | +9,6%\n    Seguros | 11,5 M€ | 12,0 M€ | +4,3%\nSlide 5 (Two Content layout), title: Destaques\n    body, left:\n      Lançamento da app nova\n      Abertura de 4 balcões\n    body, right:\n      Atraso na migração do CRM\n      Rotação na equipa de vendas\nSlide 6 (Title and Content layout), title: Riscos\n    Subida das taxas de juro\n    Concorrência dos bancos digitais\n    Dependência de um fornecedor de TI\nSlide 7 (Title and Content layout), title: Próximos passos\n    Concluir a migração do CRM até dezembro\n    Contratar 15 pessoas para vendas\n    Rever o preçário de seguros\nSlide 8 (Title Slide layout), title: Obrigado\n    Perguntas?\n\nThe person's request:\n<request>Altera o valor.</request>\n\nFirst, intent: one sentence, in the request's language, saying what the person wants done or asks. Then where: the slide number; when part of a slide's text changes, also the one line of the deck that changes, copied as it is; for a whole slide (add, delete, move, duplicate) the slide number alone. Then choose the groups of tools that are needed:\n- text: Write, rewrite, shorten, translate, correct or format the text already on a slide: a title, a subtitle, a bullet or a list of bullets, a column, a text box; change a word, a number, a date, a name; make text bigger, bold or another colour.\n- table: Change a table on a slide: a cell's value, add or remove a row or a column, correct a figure in a table.\n- notes: Write, change or add to the speaker notes of a slide; cite a source in the notes.\n- images: Pictures: insert, replace or remove an image or photo, put a picture from a document on a slide, write or fix the alt text of an image, look at what an image shows.\n- structure: The deck's slides and shapes: add a new slide, duplicate, delete or move slides, change a slide's layout or number of columns, add, copy, move, resize or delete a shape or text box; a diagram's boxes and the arrows between them.\n- decks: Whole decks: create a new deck or presentation, copy a deck, copy or move slides between two decks, change a deck's template or look.\n- knowledge: Facts from the organisation's documents: search the knowledge base or the project's reference documents for policies, products, figures, prices or procedures to use on slides.\n- memory: Remember a lasting decision or preference for this project, recall what was discussed or decided in an earlier conversation, or set a rule for the project's instructions.\n- history: Undo or redo the last change, or accept or reject the changes waiting for review (\"yes, apply it\", \"reject slide five\").\n\nHow to tell them apart:\n- Adding, changing or removing a point, bullet, item, word, number or line in existing text is text (not structure). Structure is for whole slides (add, delete, move, duplicate, layout) and shapes.\n- A new slide also needs text (its title and points are written).\n- At the end, last: after the deck's last slide (measured: \"at the end\" was put before the annexes).\n- A slide named by its title or subject (\"the agenda\", \"the thank-you slide\") to delete, move or duplicate is the whole slide: say slide N in the intent; where is the slide number alone.\n- A value that is in a table (see the deck) is table.\n- Facts the request says come from documents, the knowledge base or policies need knowledge; content written from it onto slides also needs text or structure, and notes for the source.\n- \"Here\" and \"this\" mean what the person has selected.\n- kind: change (something must change: choose its groups), question (only an answer: no groups), unclear (too vague to know what to change, like \"change it\": no groups).\nAnswer with JSON only: {\"intent\": \"...\", \"where\": \"slide N: \\\"the deck's words\\\"\", \"kind\": \"change|question|unclear\", \"groups\": [\"...\"]}"
+     }
+    ],
+    "tools": []
+   },
+   "calls": [
+    {
+     "preset": "slides_router",
+     "messages": [
+      {
+       "role": "user",
+       "content": "The open deck (8 slides):\nSlide 1 (Title Slide layout), title: Relatório do 3.º trimestre de 2026\n    Direção de Operações · outubro de 2026\nSlide 2 (Title and Content layout), title: Agenda\n    Resultados do trimestre\n    Receitas por produto\n    Destaques\n    Riscos\n    Próximos passos\nSlide 3 (Title and Content layout), title: Resultados do trimestre\n    Receitas de 48,2 M€, mais 6,4% do que no 2.º trimestre\n    Margem operacional de 21%, acima do objetivo de 19%\n    Custos de operação estáveis face ao trimestre anterior\n    Novos clientes: 12 400, o melhor trimestre do ano\n    Taxa de abandono de 3,1%, abaixo dos 3,8% do trimestre anterior\nSlide 4 (Title Only layout), title: Receitas por produto [table]\n    Produto | T2 2026 | T3 2026 | Variação\n    Contas | 18,1 M€ | 19,0 M€ | +5,0%\n    Crédito | 15,7 M€ | 17,2 M€ | +9,6%\n    Seguros | 11,5 M€ | 12,0 M€ | +4,3%\nSlide 5 (Two Content layout), title: Destaques\n    body, left:\n      Lançamento da app nova\n      Abertura de 4 balcões\n    body, right:\n      Atraso na migração do CRM\n      Rotação na equipa de vendas\nSlide 6 (Title and Content layout), title: Riscos\n    Subida das taxas de juro\n    Concorrência dos bancos digitais\n    Dependência de um fornecedor de TI\nSlide 7 (Title and Content layout), title: Próximos passos\n    Concluir a migração do CRM até dezembro\n    Contratar 15 pessoas para vendas\n    Rever o preçário de seguros\nSlide 8 (Title Slide layout), title: Obrigado\n    Perguntas?\n\nThe person's request:\n<request>Altera o valor.</request>\n\nFirst, intent: one sentence, in the request's language, saying what the person wants done or asks. Then where: the slide number; when part of a slide's text changes, also the one line of the deck that changes, copied as it is; for a whole slide (add, delete, move, duplicate) the slide number alone. Then choose the groups of tools that are needed:\n- text: Write, rewrite, shorten, translate, correct or format the text already on a slide: a title, a subtitle, a bullet or a list of bullets, a column, a text box; change a word, a number, a date, a name; make text bigger, bold or another colour.\n- table: Change a table on a slide: a cell's value, add or remove a row or a column, correct a figure in a table.\n- notes: Write, change or add to the speaker notes of a slide; cite a source in the notes.\n- images: Pictures: insert, replace or remove an image or photo, put a picture from a document on a slide, write or fix the alt text of an image, look at what an image shows.\n- structure: The deck's slides and shapes: add a new slide, duplicate, delete or move slides, change a slide's layout or number of columns, add, copy, move, resize or delete a shape or text box; a diagram's boxes and the arrows between them.\n- decks: Whole decks: create a new deck or presentation, copy a deck, copy or move slides between two decks, change a deck's template or look.\n- knowledge: Facts from the organisation's documents: search the knowledge base or the project's reference documents for policies, products, figures, prices or procedures to use on slides.\n- memory: Remember a lasting decision or preference for this project, recall what was discussed or decided in an earlier conversation, or set a rule for the project's instructions.\n- history: Undo or redo the last change, or accept or reject the changes waiting for review (\"yes, apply it\", \"reject slide five\").\n\nHow to tell them apart:\n- Adding, changing or removing a point, bullet, item, word, number or line in existing text is text (not structure). Structure is for whole slides (add, delete, move, duplicate, layout) and shapes.\n- A new slide also needs text (its title and points are written).\n- At the end, last: after the deck's last slide (measured: \"at the end\" was put before the annexes).\n- A slide named by its title or subject (\"the agenda\", \"the thank-you slide\") to delete, move or duplicate is the whole slide: say slide N in the intent; where is the slide number alone.\n- A value that is in a table (see the deck) is table.\n- Facts the request says come from documents, the knowledge base or policies need knowledge; content written from it onto slides also needs text or structure, and notes for the source.\n- \"Here\" and \"this\" mean what the person has selected.\n- kind: change (something must change: choose its groups), question (only an answer: no groups), unclear (too vague to know what to change, like \"change it\": no groups).\nAnswer with JSON only: {\"intent\": \"...\", \"where\": \"slide N: \\\"the deck's words\\\"\", \"kind\": \"change|question|unclear\", \"groups\": [\"...\"]}"
+      }
+     ],
+     "tools": []
+    },
+    {
+     "preset": "slides_assistant",
+     "messages": [
+      {
+       "role": "system",
+       "content": "## Project\nName: <data>eval report-17</data>\n\n## Decks (id | title | slides)\n<data>\nd0d7fc417f050cbb | report | 8 slides | ACTIVE\n</data>\n\n## Active deck, slide by slide (slide numbers or IDs, and shape IDs, are what the editing tools take)\n<data>\nslide 1 · id 256 · Title Slide\n  «Relatório do 3.º trimestre de 2026» (shape 2, title [0])\n  «Direção de Operações · outubro de 2026» (shape 3, subtitle)\nslide 2 · id 257 · Title and Content\n  «Agenda» (shape 2, title [0])\n  shape 3 (text [1], 32 pt, room for 9 lines), 5 paragraphs:\n    [0] Resultados do trimestre\n    [1] Receitas por produto\n    [2] Destaques\n    [3] Riscos\n    [4] Próximos passos\nslide 3 · id 258 · Title and Content\n  «Resultados do trimestre» (shape 2, title [0])\n  shape 3 (text [1], 32 pt, room for 9 lines), 5 paragraphs:\n    [0] Receitas de 48,2 M€, mais 6,4% do que no 2.º trimestre\n    [1] Margem operacional de 21%, acima do objetivo de 19%\n    [2] Custos de operação estáveis face ao trimestre anterior\n    [3] Novos clientes: 12 400, o melhor trimestre do ano\n    [4] Taxa de abandono de 3,1%, abaixo dos 3,8% do trimestre anterior\n  speaker notes: Sublinhar a margem: é o número que a administração vai perguntar.\nslide 4 · id 259 · Title Only\n  «Receitas por produto» (shape 2, title [0])\n  shape 3 (table, 4 rows x 4 columns, both counted from 0):\n    row 0: Produto | T2 2026 | T3 2026 | Variação\n    row 1: Contas | 18,1 M€ | 19,0 M€ | +5,0%\n    row 2: Crédito | 15,7 M€ | 17,2 M€ | +9,6%\n    row 3: Seguros | 11,5 M€ | 12,0 M€ | +4,3%\nslide 5 · id 260 · Two Content\n  «Destaques» (shape 2, title [0])\n  shape 3 (body, left [1], 28 pt, room for 10 lines), 2 paragraphs:\n    [0] Lançamento da app nova\n    [1] Abertura de 4 balcões\n  shape 4 (body, right [2], 28 pt, room for 10 lines), 2 paragraphs:\n    [0] Atraso na migração do CRM\n    [1] Rotação na equipa de vendas\n  speaker notes: Esquerda: o que correu bem. Direita: o que correu mal.\nslide 6 · id 261 · Title and Content\n  «Riscos» (shape 2, title [0])\n  shape 3 (text [1], 32 pt, room for 9 lines), 3 paragraphs:\n    [0] Subida das taxas de juro\n    [1] Concorrência dos bancos digitais\n    [2] Dependência de um fornecedor de TI\nslide 7 · id 262 · Title and Content\n  «Próximos passos» (shape 2, title [0])\n  shape 3 (text [1], 32 pt, room for 9 lines), 3 paragraphs:\n    [0] Concluir a migração do CRM até dezembro\n    [1] Contratar 15 pessoas para vendas\n    [2] Rever o preçário de seguros\nslide 8 · id 263 · Title Slide\n  «Obrigado» (shape 2, title [0])\n  «Perguntas?» (shape 3, subtitle)\n</data>\n\n## Now\nThe request is too vague to act on. Ask the person, with ask_user, the one question that tells you what to change; change nothing yet."
+      },
+      {
+       "role": "user",
+       "content": "Altera o valor."
+      }
+     ],
+     "tools": [
+      "ask_user"
+     ]
+    }
+   ],
+   "messages": [
+    {
+     "seq": 1,
+     "at": "2026-10-07T07:49:46Z",
+     "role": "user",
+     "author": "antonio.s.cruz@bancoctt.pt",
+     "content": "Altera o valor.",
+     "deck_id": "d0d7fc417f050cbb"
+    },
+    {
+     "seq": 2,
+     "at": "2026-10-07T07:49:47Z",
+     "role": "assistant",
+     "content": "",
+     "tool_calls": [
+      {
+       "id": "xrPSnuiboaQWbz0dBiy3qxwWVbeVMaTp",
+       "type": "function",
+       "function": {
+        "name": "ask_user",
+        "arguments": "{\"question\":\"Poderia especificar qual valor gostaria de alterar e em que slide?\"}"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "simple-07",
+   "request": "Apaga a agenda.",
+   "expect": {
+    "delete": [
+     2
+    ]
+   },
+   "targeting": false,
+   "targeting_why": [
+    "slide 2 changed ([2]) but was not to",
+    "removed [], expected [2]"
+   ],
+   "first_turn": false,
+   "first_turn_why": [
+    "slide 2 changed ([2]) but was not to",
+    "removed [], expected [2]"
+   ],
+   "follow_up": null,
+   "content": null,
+   "content_why": [],
+   "texts_changed": 0,
+   "overflowing": 0,
+   "changes": {
+    "edited": {
+     "2": [
+      2
+     ]
+    },
+    "added": 0,
+    "removed": [],
+    "reordered": false
+   },
+   "deck_renamed": false,
+   "asked": [],
+   "plans": [
+    [
+     "Apagar a forma «Title 1» do diapositivo 2 «Agenda»"
+    ]
+   ],
+   "tools": [
+    "delete_shape"
+   ],
+   "reply": "O shape 2 foi apagado na diapositivo 2.",
+   "errors": [],
+   "turn_status": [
+    "waiting",
+    "done"
+   ],
+   "seconds": 2.4,
+   "first_call": {
+    "preset": "slides_router",
+    "messages": [
+     {
+      "role": "user",
+      "content": "The open deck (3 slides):\nSlide 1 (Title Slide layout), title: Proposta para o Cliente X\n    Apresentação de capacidades · 2026\nSlide 2 (Title and Content layout), title: Agenda\n    Contexto e objetivos\n    Solução proposta\n    Arquitetura\n    Calendário\n    Preços e condições\nSlide 3 (Two Content layout), title: Antes e depois\n    body, left:\n      Processos manuais\n      Vários sistemas\n    body, right:\n      Fluxo único\n      Um só sistema\n\nThe person's request:\n<request>Apaga a agenda.</request>\n\nFirst, intent: one sentence, in the request's language, saying what the person wants done or asks. Then where: the slide number; when part of a slide's text changes, also the one line of the deck that changes, copied as it is; for a whole slide (add, delete, move, duplicate) the slide number alone. Then choose the groups of tools that are needed:\n- text: Write, rewrite, shorten, translate, correct or format the text already on a slide: a title, a subtitle, a bullet or a list of bullets, a column, a text box; change a word, a number, a date, a name; make text bigger, bold or another colour.\n- table: Change a table on a slide: a cell's value, add or remove a row or a column, correct a figure in a table.\n- notes: Write, change or add to the speaker notes of a slide; cite a source in the notes.\n- images: Pictures: insert, replace or remove an image or photo, put a picture from a document on a slide, write or fix the alt text of an image, look at what an image shows.\n- structure: The deck's slides and shapes: add a new slide, duplicate, delete or move slides, change a slide's layout or number of columns, add, copy, move, resize or delete a shape or text box; a diagram's boxes and the arrows between them.\n- decks: Whole decks: create a new deck or presentation, copy a deck, copy or move slides between two decks, change a deck's template or look.\n- knowledge: Facts from the organisation's documents: search the knowledge base or the project's reference documents for policies, products, figures, prices or procedures to use on slides.\n- memory: Remember a lasting decision or preference for this project, recall what was discussed or decided in an earlier conversation, or set a rule for the project's instructions.\n- history: Undo or redo the last change, or accept or reject the changes waiting for review (\"yes, apply it\", \"reject slide five\").\n\nHow to tell them apart:\n- Adding, changing or removing a point, bullet, item, word, number or line in existing text is text (not structure). Structure is for whole slides (add, delete, move, duplicate, layout) and shapes.\n- A new slide also needs text (its title and points are written).\n- At the end, last: after the deck's last slide (measured: \"at the end\" was put before the annexes).\n- A slide named by its title or subject (\"the agenda\", \"the thank-you slide\") to delete, move or duplicate is the whole slide: say slide N in the intent; where is the slide number alone.\n- A value that is in a table (see the deck) is table.\n- Facts the request says come from documents, the knowledge base or policies need knowledge; content written from it onto slides also needs text or structure, and notes for the source.\n- \"Here\" and \"this\" mean what the person has selected.\n- kind: change (something must change: choose its groups), question (only an answer: no groups), unclear (too vague to know what to change, like \"change it\": no groups).\nAnswer with JSON only: {\"intent\": \"...\", \"where\": \"slide N: \\\"the deck's words\\\"\", \"kind\": \"change|question|unclear\", \"groups\": [\"...\"]}"
+     }
+    ],
+    "tools": []
+   },
+   "calls": [
+    {
+     "preset": "slides_router",
+     "messages": [
+      {
+       "role": "user",
+       "content": "The open deck (3 slides):\nSlide 1 (Title Slide layout), title: Proposta para o Cliente X\n    Apresentação de capacidades · 2026\nSlide 2 (Title and Content layout), title: Agenda\n    Contexto e objetivos\n    Solução proposta\n    Arquitetura\n    Calendário\n    Preços e condições\nSlide 3 (Two Content layout), title: Antes e depois\n    body, left:\n      Processos manuais\n      Vários sistemas\n    body, right:\n      Fluxo único\n      Um só sistema\n\nThe person's request:\n<request>Apaga a agenda.</request>\n\nFirst, intent: one sentence, in the request's language, saying what the person wants done or asks. Then where: the slide number; when part of a slide's text changes, also the one line of the deck that changes, copied as it is; for a whole slide (add, delete, move, duplicate) the slide number alone. Then choose the groups of tools that are needed:\n- text: Write, rewrite, shorten, translate, correct or format the text already on a slide: a title, a subtitle, a bullet or a list of bullets, a column, a text box; change a word, a number, a date, a name; make text bigger, bold or another colour.\n- table: Change a table on a slide: a cell's value, add or remove a row or a column, correct a figure in a table.\n- notes: Write, change or add to the speaker notes of a slide; cite a source in the notes.\n- images: Pictures: insert, replace or remove an image or photo, put a picture from a document on a slide, write or fix the alt text of an image, look at what an image shows.\n- structure: The deck's slides and shapes: add a new slide, duplicate, delete or move slides, change a slide's layout or number of columns, add, copy, move, resize or delete a shape or text box; a diagram's boxes and the arrows between them.\n- decks: Whole decks: create a new deck or presentation, copy a deck, copy or move slides between two decks, change a deck's template or look.\n- knowledge: Facts from the organisation's documents: search the knowledge base or the project's reference documents for policies, products, figures, prices or procedures to use on slides.\n- memory: Remember a lasting decision or preference for this project, recall what was discussed or decided in an earlier conversation, or set a rule for the project's instructions.\n- history: Undo or redo the last change, or accept or reject the changes waiting for review (\"yes, apply it\", \"reject slide five\").\n\nHow to tell them apart:\n- Adding, changing or removing a point, bullet, item, word, number or line in existing text is text (not structure). Structure is for whole slides (add, delete, move, duplicate, layout) and shapes.\n- A new slide also needs text (its title and points are written).\n- At the end, last: after the deck's last slide (measured: \"at the end\" was put before the annexes).\n- A slide named by its title or subject (\"the agenda\", \"the thank-you slide\") to delete, move or duplicate is the whole slide: say slide N in the intent; where is the slide number alone.\n- A value that is in a table (see the deck) is table.\n- Facts the request says come from documents, the knowledge base or policies need knowledge; content written from it onto slides also needs text or structure, and notes for the source.\n- \"Here\" and \"this\" mean what the person has selected.\n- kind: change (something must change: choose its groups), question (only an answer: no groups), unclear (too vague to know what to change, like \"change it\": no groups).\nAnswer with JSON only: {\"intent\": \"...\", \"where\": \"slide N: \\\"the deck's words\\\"\", \"kind\": \"change|question|unclear\", \"groups\": [\"...\"]}"
+      }
+     ],
+     "tools": []
+    },
+    {
+     "preset": "slides_assistant",
+     "messages": [
+      {
+       "role": "system",
+       "content": "## Project\nName: <data>eval simple-07</data>\n\n## Decks (id | title | slides)\n<data>\ne6882984a0c0c6a1 | simple | 3 slides | ACTIVE\n</data>\n\n## Active deck, slide by slide (slide numbers or IDs, and shape IDs, are what the editing tools take)\n<data>\nslide 1 · id 256 · Title Slide\n  «Proposta para o Cliente X» (shape 2, title [0])\n  «Apresentação de capacidades · 2026» (shape 3, subtitle)\nslide 2 · id 257 · Title and Content\n  «Agenda» (shape 2, title [0])\n  shape 3 (text [1], 32 pt, room for 9 lines), 5 paragraphs:\n    [0] Contexto e objetivos\n    [1] Solução proposta\n      [2] Arquitetura  (level 1)\n      [3] Calendário  (level 1)\n    [4] Preços e condições\n  speaker notes: Falar primeiro do contexto; os preços ficam para o fim.\nslide 3 · id 258 · Two Content\n  «Antes e depois» (shape 2, title [0])\n  shape 3 (body, left [1], 28 pt, room for 10 lines), 2 paragraphs:\n    [0] Processos manuais\n    [1] Vários sistemas\n  shape 4 (body, right [2], 28 pt, room for 10 lines), 2 paragraphs:\n    [0] Fluxo único\n    [1] Um só sistema\n</data>\n\n## Layouts of this deck (add_slide, change_layout): what each placeholder is for, by idx\n- Title Slide: heading [0] (32 pt); text, 32 pt: [1] (as slide 1)\n- Title and Content: heading [0] (32 pt); text large, 32 pt: [1] (as slide 2)\n- Section Header: text, 20 pt: [1]; heading [0] (40 pt)\n- Two Content: heading [0] (32 pt); 2 side by side, text large, 28 pt: [1] [2] (as slide 3)\n- Comparison: heading [0] (32 pt); 2 side by side, text, 24 pt bold: [1] [3]; 2 side by side, text large, 24 pt: [2] [4]\n- Title Only: heading [0] (32 pt)\n- Blank: no placeholders (shapes only)\n- Content with Caption: heading [0] (20 pt); text large, 32 pt: [1]; text large, 14 pt: [2]\n- Picture with Caption: picture: [1]; heading [0] (20 pt); subtitle [2]\n- Title and Vertical Text: heading [0] (32 pt); text large, 32 pt: [1]\n- Vertical Title and Text: text large, 32 pt: [1]; heading [0] (32 pt)\nChoose the layout whose places fit what the slide will say, and fill each of them: a heading [idx] is the slide's title (\"title\" means it too).\n\n## Now\nThe person wants: O usuário quer apagar a agenda. (where: 2)\nDo it now by calling your tools, writing the text yourself from the request and what you find (never filler); then say in one sentence what you changed."
+      },
+      {
+       "role": "user",
+       "content": "Apaga a agenda."
+      }
+     ],
+     "tools": [
+      "add_shape",
+      "add_slide",
+      "ask_user",
+      "change_layout",
+      "connect_shapes",
+      "delete_shape",
+      "delete_slide",
+      "duplicate_shape",
+      "duplicate_slide",
+      "edit_paragraphs",
+      "fill_slide",
+      "fit_text",
+      "format_text",
+      "get_deck_outline",
+      "get_slide",
+      "kb_read_document",
+      "kb_search",
+      "move_resize_shape",
+      "move_slide",
+      "propose_plan",
+      "update_text"
+     ]
+    },
+    {
+     "preset": "slides_assistant",
+     "messages": [
+      {
+       "role": "system",
+       "content": "## Project\nName: <data>eval simple-07</data>\n\n## Decks (id | title | slides)\n<data>\ne6882984a0c0c6a1 | simple | 3 slides | ACTIVE\n</data>\n\n## Active deck, slide by slide (slide numbers or IDs, and shape IDs, are what the editing tools take)\n<data>\nslide 1 · id 256 · Title Slide\n  «Proposta para o Cliente X» (shape 2, title [0])\n  «Apresentação de capacidades · 2026» (shape 3, subtitle)\nslide 2 · id 257 · Title and Content\n  shape 3 (text [1], 32 pt, room for 9 lines), 5 paragraphs:\n    [0] Contexto e objetivos\n    [1] Solução proposta\n      [2] Arquitetura  (level 1)\n      [3] Calendário  (level 1)\n    [4] Preços e condições\n  speaker notes: Falar primeiro do contexto; os preços ficam para o fim.\nslide 3 · id 258 · Two Content\n  «Antes e depois» (shape 2, title [0])\n  shape 3 (body, left [1], 28 pt, room for 10 lines), 2 paragraphs:\n    [0] Processos manuais\n    [1] Vários sistemas\n  shape 4 (body, right [2], 28 pt, room for 10 lines), 2 paragraphs:\n    [0] Fluxo único\n    [1] Um só sistema\n</data>\n\n## Layouts of this deck (add_slide, change_layout): what each placeholder is for, by idx\n- Title Slide: heading [0] (32 pt); text, 32 pt: [1] (as slide 1)\n- Title and Content: heading [0] (32 pt); text large, 32 pt: [1] (as slide 2)\n- Section Header: text, 20 pt: [1]; heading [0] (40 pt)\n- Two Content: heading [0] (32 pt); 2 side by side, text large, 28 pt: [1] [2] (as slide 3)\n- Comparison: heading [0] (32 pt); 2 side by side, text, 24 pt bold: [1] [3]; 2 side by side, text large, 24 pt: [2] [4]\n- Title Only: heading [0] (32 pt)\n- Blank: no placeholders (shapes only)\n- Content with Caption: heading [0] (20 pt); text large, 32 pt: [1]; text large, 14 pt: [2]\n- Picture with Caption: picture: [1]; heading [0] (20 pt); subtitle [2]\n- Title and Vertical Text: heading [0] (32 pt); text large, 32 pt: [1]\n- Vertical Title and Text: text large, 32 pt: [1]; heading [0] (32 pt)\nChoose the layout whose places fit what the slide will say, and fill each of them: a heading [idx] is the slide's title (\"title\" means it too).\n\n## Now\nThe person wants: O usuário quer apagar a agenda. (where: 2)\nDone in this turn: delete_shape on slide 2.\nIf that is all the request asks, call no tool again: say in one sentence what you changed. Otherwise call the tools for what is still missing."
+      },
+      {
+       "role": "user",
+       "content": "Apaga a agenda."
+      },
+      {
+       "role": "assistant",
+       "content": "",
+       "tool_calls": [
+        {
+         "id": "NW6yiBVAtYJBNjlnWM1d2aQDYyneX4YV",
+         "type": "function",
+         "function": {
+          "name": "delete_shape",
+          "arguments": "{\"shape_id\":2,\"slide_id\":2}"
+         }
+        }
+       ]
+      },
+      {
+       "role": "tool",
+       "tool_call_id": "NW6yiBVAtYJBNjlnWM1d2aQDYyneX4YV",
+       "content": "{\"ok\": true, \"deck_id\": \"e6882984a0c0c6a1\", \"slides\": [257], \"note\": \"Applied to the draft; the person reviews it before it is saved.\"}"
+      }
+     ],
+     "tools": [
+      "add_shape",
+      "add_slide",
+      "ask_user",
+      "change_layout",
+      "connect_shapes",
+      "delete_shape",
+      "delete_slide",
+      "duplicate_shape",
+      "duplicate_slide",
+      "edit_paragraphs",
+      "fill_slide",
+      "fit_text",
+      "format_text",
+      "get_deck_outline",
+      "get_slide",
+      "kb_read_document",
+      "kb_search",
+      "move_resize_shape",
+      "move_slide",
+      "propose_plan",
+      "update_text"
+     ]
+    },
+    {
+     "preset": "slides_assistant",
+     "messages": [
+      {
+       "role": "system",
+       "content": "## Project\nName: <data>eval simple-07</data>\n\n## Decks (id | title | slides)\n<data>\ne6882984a0c0c6a1 | simple | 3 slides | ACTIVE\n</data>\n\n## Active deck, slide by slide (slide numbers or IDs, and shape IDs, are what the editing tools take)\n<data>\nslide 1 · id 256 · Title Slide\n  «Proposta para o Cliente X» (shape 2, title [0])\n  «Apresentação de capacidades · 2026» (shape 3, subtitle)\nslide 2 · id 257 · Title and Content\n  shape 3 (text [1], 32 pt, room for 9 lines), 5 paragraphs:\n    [0] Contexto e objetivos\n    [1] Solução proposta\n      [2] Arquitetura  (level 1)\n      [3] Calendário  (level 1)\n    [4] Preços e condições\n  speaker notes: Falar primeiro do contexto; os preços ficam para o fim.\nslide 3 · id 258 · Two Content\n  «Antes e depois» (shape 2, title [0])\n  shape 3 (body, left [1], 28 pt, room for 10 lines), 2 paragraphs:\n    [0] Processos manuais\n    [1] Vários sistemas\n  shape 4 (body, right [2], 28 pt, room for 10 lines), 2 paragraphs:\n    [0] Fluxo único\n    [1] Um só sistema\n</data>\n\n## Layouts of this deck (add_slide, change_layout): what each placeholder is for, by idx\n- Title Slide: heading [0] (32 pt); text, 32 pt: [1] (as slide 1)\n- Title and Content: heading [0] (32 pt); text large, 32 pt: [1] (as slide 2)\n- Section Header: text, 20 pt: [1]; heading [0] (40 pt)\n- Two Content: heading [0] (32 pt); 2 side by side, text large, 28 pt: [1] [2] (as slide 3)\n- Comparison: heading [0] (32 pt); 2 side by side, text, 24 pt bold: [1] [3]; 2 side by side, text large, 24 pt: [2] [4]\n- Title Only: heading [0] (32 pt)\n- Blank: no placeholders (shapes only)\n- Content with Caption: heading [0] (20 pt); text large, 32 pt: [1]; text large, 14 pt: [2]\n- Picture with Caption: picture: [1]; heading [0] (20 pt); subtitle [2]\n- Title and Vertical Text: heading [0] (32 pt); text large, 32 pt: [1]\n- Vertical Title and Text: text large, 32 pt: [1]; heading [0] (32 pt)\nChoose the layout whose places fit what the slide will say, and fill each of them: a heading [idx] is the slide's title (\"title\" means it too).\n\n## Now\nThe person wants: O usuário quer apagar a agenda. (where: 2)\nDone in this turn: delete_shape on slide 2.\nIf that is all the request asks, call no tool again: say in one sentence what you changed. Otherwise call the tools for what is still missing."
+      },
+      {
+       "role": "user",
+       "content": "Apaga a agenda."
+      },
+      {
+       "role": "assistant",
+       "content": "",
+       "tool_calls": [
+        {
+         "id": "NW6yiBVAtYJBNjlnWM1d2aQDYyneX4YV",
+         "type": "function",
+         "function": {
+          "name": "delete_shape",
+          "arguments": "{\"shape_id\":2,\"slide_id\":2}"
+         }
+        }
+       ]
+      },
+      {
+       "role": "tool",
+       "tool_call_id": "NW6yiBVAtYJBNjlnWM1d2aQDYyneX4YV",
+       "content": "{\"ok\": true, \"deck_id\": \"e6882984a0c0c6a1\", \"slides\": [257], \"note\": \"Applied to the draft; the person reviews it before it is saved.\"}"
+      },
+      {
+       "role": "assistant",
+       "content": "Apaguei o shape 2 na diapositivo 2."
+      },
+      {
+       "role": "user",
+       "content": "(A note from the application, not from the person.) Your answer called no tool, so nothing has happened yet. If the person asked for a change, it is made only by calling the tool: call it now (for a deletion or a change to several slides, propose_plan). If you need something from the person, call ask_user. If they only asked a question about the deck, give your answer again."
+      }
+     ],
+     "tools": [
+      "add_shape",
+      "add_slide",
+      "ask_user",
+      "change_layout",
+      "connect_shapes",
+      "delete_shape",
+      "delete_slide",
+      "duplicate_shape",
+      "duplicate_slide",
+      "edit_paragraphs",
+      "fill_slide",
+      "fit_text",
+      "format_text",
+      "get_deck_outline",
+      "get_slide",
+      "kb_read_document",
+      "kb_search",
+      "move_resize_shape",
+      "move_slide",
+      "propose_plan",
+      "update_text"
+     ]
+    }
+   ],
+   "messages": [
+    {
+     "seq": 1,
+     "at": "2026-10-07T07:49:47Z",
+     "role": "user",
+     "author": "antonio.s.cruz@bancoctt.pt",
+     "content": "Apaga a agenda.",
+     "deck_id": "e6882984a0c0c6a1"
+    },
+    {
+     "seq": 2,
+     "at": "2026-10-07T07:49:50Z",
+     "role": "assistant",
+     "content": "",
+     "tool_calls": [
+      {
+       "id": "NW6yiBVAtYJBNjlnWM1d2aQDYyneX4YV",
+       "type": "function",
+       "function": {
+        "name": "delete_shape",
+        "arguments": "{\"shape_id\":2,\"slide_id\":2}"
+       }
+      }
+     ]
+    },
+    {
+     "seq": 3,
+     "at": "2026-10-07T07:49:50Z",
+     "role": "tool",
+     "tool_call_id": "NW6yiBVAtYJBNjlnWM1d2aQDYyneX4YV",
+     "name": "delete_shape",
+     "content": "{\"ok\": true, \"deck_id\": \"e6882984a0c0c6a1\", \"slides\": [257], \"note\": \"Applied to the draft; the person reviews it before it is saved.\"}"
+    },
+    {
+     "seq": 4,
+     "at": "2026-10-07T07:49:51Z",
+     "role": "assistant",
+     "content": "O shape 2 foi apagado na diapositivo 2.",
+     "speakable": "O shape 2 foi apagado na diapositivo 2.",
+     "proposal_id": "d406ea92e37379c8"
+    }
+   ]
+  }
+ ]
+}

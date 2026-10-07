@@ -5,12 +5,241 @@
    "id": "first-use-index-from-kb",
    "about": "The first test a person made (2026-10-07): a new deck from the Banco CTT template, empty; 'Cria um slide' was refused five times (an empty deck has no slide 0), then a table of contents from the knowledge base ended in a plan approved and nothing written.",
    "turns": [
-    {"say": "Cria um slide", "expect": {"status": "done", "slides": 1, "changed": true}},
-    {"say": "Escreve um índice com base nos tópicos de crédito à habitação",
-     "expect": {"status": "done", "changed": true, "used": ["kb_search"],
-                "slide_text": [{"slide": 1, "min_lines": 4, "any": ["habitação", "crédito"]}]}}
+    {
+     "say": "Cria um slide",
+     "expect": {
+      "status": "done",
+      "slides": 1,
+      "changed": true
+     }
+    },
+    {
+     "say": "Escreve um índice com base nos tópicos de crédito à habitação",
+     "expect": {
+      "status": "done",
+      "changed": true,
+      "used": [
+       "kb_search"
+      ],
+      "slide_text": [
+       {
+        "slide": 1,
+        "min_lines": 4,
+        "any": [
+         "habitação",
+         "crédito"
+        ]
+       }
+      ]
+     }
+    }
    ],
-   "expect": {"min_slides": 1, "no_empty_placeholders": true, "no_overflow": true}
+   "expect": {
+    "min_slides": 1,
+    "no_empty_placeholders": true,
+    "no_overflow": true
+   }
+  },
+  {
+   "id": "cover-for-a-new-deck",
+   "about": "A new deck from the Banco CTT template: its first slide, a cover, from what the person says.",
+   "turns": [
+    {
+     "say": "Cria a capa de uma apresentação sobre o Crédito Habitação Jovem, para a equipa comercial, outubro de 2026",
+     "expect": {
+      "status": "done",
+      "slides": 1,
+      "changed": true,
+      "slide_text": [
+       {
+        "slide": 1,
+        "all": [
+         "Jovem"
+        ],
+        "any": [
+         "comercial",
+         "outubro"
+        ]
+       }
+      ]
+     }
+    }
+   ],
+   "expect": {
+    "no_empty_placeholders": true,
+    "no_overflow": true
+   }
+  },
+  {
+   "id": "a-slide-from-the-kb-with-its-source",
+   "about": "S2 on Banco CTT's template: a slide about a product, from the knowledge base, cited in its notes.",
+   "turns": [
+    {
+     "say": "Cria a capa de uma apresentação sobre o Crédito Habitação Jovem",
+     "expect": {
+      "slides": 1
+     }
+    },
+    {
+     "say": "Acrescenta um diapositivo com as condições do crédito habitação jovem",
+     "expect": {
+      "status": "done",
+      "slides": 2,
+      "changed": true,
+      "used": [
+       "kb_search"
+      ],
+      "slide_text": [
+       {
+        "slide": 2,
+        "min_lines": 3,
+        "any": [
+         "jovem",
+         "35",
+         "garantia"
+        ],
+        "notes": [
+         "Fonte",
+         "Source",
+         "http"
+        ]
+       }
+      ]
+     }
+    }
+   ],
+   "expect": {
+    "no_empty_placeholders": true,
+    "no_overflow": true
+   }
+  },
+  {
+   "id": "slides-from-a-dictated-outline",
+   "about": "S6: from an empty Banco CTT deck, one slide per point of an outline the person dictates.",
+   "turns": [
+    {
+     "say": "Cria um diapositivo para cada um destes pontos: Contexto, Objetivos, Proposta, Calendário, Próximos passos",
+     "expect": {
+      "status": "done",
+      "slides": 5,
+      "changed": true,
+      "slide_text": [
+       {
+        "slide": 1,
+        "all": [
+         "Contexto"
+        ]
+       },
+       {
+        "slide": 3,
+        "all": [
+         "Proposta"
+        ]
+       },
+       {
+        "slide": 5,
+        "all": [
+         "Próximos passos"
+        ]
+       }
+      ]
+     }
+    }
+   ],
+   "expect": {
+    "no_overflow": true
+   }
+  },
+  {
+   "id": "shorten-a-slide-then-undo",
+   "about": "S1 and S7 on an uploaded deck: a slide's points shortened and accepted, then undone.",
+   "deck": {
+    "upload": "fixtures/decks/simple.pptx"
+   },
+   "turns": [
+    {
+     "say": "Encurta os pontos da agenda, para uma ou duas palavras cada",
+     "expect": {
+      "status": "done",
+      "slides": 3,
+      "changed": true,
+      "slide_text": [
+       {
+        "slide": 2,
+        "max_chars": 70,
+        "all": [
+         "Agenda"
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "say": "Desfaz a última alteração",
+     "expect": {
+      "status": "done",
+      "slides": 3,
+      "slide_text": [
+       {
+        "slide": 2,
+        "exactly": [
+         "Agenda",
+         "Contexto e objetivos",
+         "Solução proposta",
+         "Arquitetura",
+         "Calendário",
+         "Preços e condições"
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "a-question-answered-from-the-kb",
+   "about": "A question about a product: answered from the knowledge base, the deck unchanged.",
+   "turns": [
+    {
+     "say": "Qual é a idade máxima para o crédito habitação jovem?",
+     "expect": {
+      "status": "done",
+      "changed": false,
+      "used": [
+       "kb_search"
+      ],
+      "reply_any": [
+       "35",
+       "anos"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "delete-a-slide-after-approval",
+   "about": "A deletion is planned and approved before it is made (NL-8).",
+   "deck": {
+    "upload": "fixtures/decks/simple.pptx"
+   },
+   "turns": [
+    {
+     "say": "Apaga o diapositivo antes e depois",
+     "expect": {
+      "status": "done",
+      "slides": 2,
+      "changed": true,
+      "slide_text": [
+       {
+        "slide": 2,
+        "all": [
+         "Agenda"
+        ]
+       }
+      ]
+     }
+    }
+   ]
   }
  ]
 }

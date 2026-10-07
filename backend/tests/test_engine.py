@@ -992,3 +992,54 @@ def test_an_empty_line_is_as_tall_as_its_own_mark():
         return tf.measure(sh)["top"]  # centred: the taller the empty lines, the higher the text starts
 
     assert extent(8) - extent(28) == pytest.approx(6 * 20 * tf.PITCH / 2, abs=0.5)
+
+
+def test_content_goes_where_the_layout_has_its_place_and_no_empty_placeholder_is_left():
+    """Banco CTT's layouts: a heading typed "body", text boxes in columns with their own headings and agenda numbers
+    (each layout rendered and looked at); the model, given the boxes, put a list into a subtitle box, or into one
+    agenda box, or nowhere. The application places it."""
+    ctt = (REPO / "templates" / "bancoctt.pptx").read_bytes()
+
+    def texts(data, sid):
+        from pptx import Presentation
+
+        s = Presentation(io.BytesIO(data)).slides.get(sid)
+        return {ph.placeholder_format.idx: ph.text_frame.text for ph in s.placeholders if ph.has_text_frame}
+
+    topics = ["Regime e finalidades", "Fases do processo", "Servicing", "Crédito obras", "Crédito bonificado"]
+    data, made = ops.apply(ctt, "add_slide", {"layout": "1_Texto", "content": {"title": "Índice", "points": topics}})
+    got = texts(data, made["slides"][0])
+    assert got == {0: "Índice", 17: topics[0], 18: topics[1], 19: topics[2], 20: topics[3], 21: topics[4]}  # [11] removed
+    data, made = ops.apply(ctt, "add_slide", {"layout": "3_Agenda", "content": {"title": "Agenda", "points": topics[:3]}})
+    got = texts(data, made["slides"][0])
+    assert got == {0: "Agenda", 29: topics[0], 47: "01", 13: topics[1], 48: "02", 21: topics[2], 49: "03"}
+    columns = [{"heading": f"Fase {i}", "text": f"O que acontece na fase {i}."} for i in range(1, 5)]
+    content = {"title": "Fases", "subtitle": "Do pedido à escritura", "points": columns}
+    data, made = ops.apply(ctt, "add_slide", {"layout": "10_Texto", "content": content})
+    got = texts(data, made["slides"][0])
+    assert got[19] == "Fases" and got[20] == "Do pedido à escritura"
+    assert (got[30], got[12]) == ("Fase 1", "O que acontece na fase 1.")
+    assert (got[36], got[35]) == ("Fase 4", "O que acontece na fase 4.") and len(got) == 10
+    many = [f"Ponto {i}" for i in range(8)]  # more points than boxes: one list, in the box with the most room
+    data, made = ops.apply(ctt, "add_slide", {"layout": "1_Texto", "content": {"title": "Muitos", "points": many}})
+    got = texts(data, made["slides"][0])
+    assert list(got.values()).count("\n".join(many)) == 1 and len(got) == 2
+    sid = made["slides"][0]
+    data, _ = ops.apply(data, "fill_slide", {"slide_id": sid, "content": {"title": "Outro", "points": topics[:2]}})
+    assert texts(data, sid) == {0: "Outro", 17: topics[0], 18: topics[1]}  # what it said is replaced
+    cover, made = ops.apply(ctt, "add_slide", {"layout": "2_Capa S/Imagem", "content": {"title": "Novo"}})
+    sid = made["slides"][0]  # a cover has no place for points: the slide moves to the layout that fits them, same ID
+    data, res = ops.apply(cover, "fill_slide", {"slide_id": sid, "content": {"title": "Índice", "points": topics}})
+    assert res["layout"] == "1_Texto" and res["slides"] == [sid]
+    assert texts(data, sid) == {0: "Índice", 17: topics[0], 18: topics[1], 19: topics[2], 20: topics[3], 21: topics[4]}
+    with pytest.raises(ops.OpError) as e:
+        ops.apply(ctt, "add_slide", {"layout": "3_Tabela", "content": {"title": "x", "subtitle": "y"}})
+    assert e.value.code == "NO_PLACE"  # a heading and a table: no subtitle
+
+
+def test_placed_content_is_fitted_to_its_box():
+    ctt = (REPO / "templates" / "bancoctt.pptx").read_bytes()
+    long_title = "Índice dos tópicos de crédito à habitação do Banco CTT"  # 40 pt in a narrow title box
+    data, made = ops.apply(ctt, "add_slide", {"layout": "1_Texto", "content": {"title": long_title, "points": ["a", "b"]}})
+    title = next(sh for sh in get(data, made["slides"][0])["shapes"] if (sh.get("placeholder") or {}).get("idx") == 0)
+    assert title["overflow"] is False

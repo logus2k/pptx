@@ -109,3 +109,50 @@ def describe(layout, width: int, height: int) -> str:
         row.append(p)
     flush()
     return "; ".join(parts) or "no placeholders (shapes only)"
+
+
+def _column(a: dict, b: dict) -> bool:
+    """Do the two boxes share a column (their widths overlap by half the narrower)?"""
+    overlap = min(a["x"] + a["w"], b["x"] + b["w"]) - max(a["x"], b["x"])
+    return overlap >= 0.5 * min(a["w"], b["w"])
+
+
+def slots(layout, width: int, height: int) -> dict:
+    """Where a slide's content goes on this layout: {heading, subtitle, items: [{body, header, number}], large} - each
+    item a text box, with the bold one-line box over it in its column (a column's heading) and the number box over
+    it or beside it ("00": an agenda's), in reading order; large, the text box with the most room (for a list that has
+    more points than the layout has boxes)."""
+    ps = placeholders(layout, width, height)
+    head = next((p for p in ps if p["role"] == "heading"), None)
+    sub = next((p for p in ps if p["role"] == "subtitle"), None)
+    texts = [p for p in ps if p["role"] == "text"]
+    numbers = [p for p in ps if p["role"] == "number"]
+    height_pt = height / 12700
+
+    def room(p):
+        return p["h"] * height_pt / (p["size"] * 1.2)
+
+    # a column's heading: bold, one line, with a text box under it in its column
+    def has_body_under(p):
+        return any(q is not p and not q["bold"] and _column(p, q) and 0 < q["y"] - p["y"] <= 0.3 for q in texts)
+
+    headers = {id(p) for p in texts if p["bold"] and room(p) < 2.5 and has_body_under(p)}
+    bodies = [p for p in texts if id(p) not in headers]
+    items, used = [], set()
+    for b in bodies:
+        above = [h for h in texts if id(h) in headers and id(h) not in used and _column(h, b) and 0 < b["y"] - h["y"] <= 0.3]
+        header = min(above, key=lambda h: b["y"] - h["y"]) if above else None
+        def numbers_it(n, b=b):
+            over = _column(n, b) and 0 < b["y"] - n["y"] <= 0.25
+            beside = abs(n["y"] - b["y"]) < 0.05 and 0 < b["x"] - n["x"] <= 0.25
+            return id(n) not in used and (over or beside)
+
+        near = [n for n in numbers if numbers_it(n)]
+        number = min(near, key=lambda n: abs(b["y"] - n["y"]) + abs(b["x"] - n["x"])) if near else None
+        for x in (header, number):
+            if x is not None:
+                used.add(id(x))
+        item = {"body": b["idx"], "header": header and header["idx"], "number": number and number["idx"], "room": room(b)}
+        items.append(item)
+    large = max(items, key=lambda i: i["room"])["body"] if items else None
+    return {"heading": head and head["idx"], "subtitle": sub and sub["idx"], "items": items, "large": large}
