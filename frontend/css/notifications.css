@@ -1,0 +1,44 @@
+/* Slides: copied verbatim from Cortex (static/css/notifications.css). */
+/* Notifications (static/js/shell/notifications.js): the bell at the right of the status bar and its panel. The
+   panel is a raised surface (--surface-raised, a 10px radius, --shadow-float); its items are list rows; an unread
+   one has a Bold title and a --primary dot. The toasts are Notyf's, given the Banco CTT toast's look in
+   vendor-theme.css. Icons are inline SVG in currentColor. */
+
+#status-bar .status-bell { position: relative; cursor: pointer; padding: 0 var(--space-2); height: 100%; color: var(--text-secondary); }
+#status-bar .status-bell:hover { color: var(--text); background: var(--surface-hover); }
+.status-bell svg { width: 16px; height: 16px; }
+/* count badge (ours): a --primary pill with white Badge text */
+.status-bell-badge { position: absolute; top: 1px; right: 0; min-width: 14px; height: 14px; padding: 0 4px; border-radius: var(--radius-pill);
+  background: var(--primary); color: var(--text-on-primary); text-align: center; font: var(--fw-bold) 10px/14px var(--font-sans); letter-spacing: 0; }
+.status-bell-badge[hidden] { display: none; }
+
+.notif-panel { position: fixed; bottom: 36px; right: var(--space-2); z-index: 10000; display: flex; flex-direction: column; overflow: hidden;
+  width: 360px; max-width: calc(100vw - 16px); max-height: 420px;
+  background: var(--surface-raised); border: 1px solid var(--card-outline); border-radius: var(--radius-xl); box-shadow: var(--shadow-float);
+  transform: translateY(16px); opacity: 0; pointer-events: none; transition: transform var(--dur-base) var(--ease), opacity var(--dur-base) var(--ease);
+  font-family: var(--font-sans); }
+.notif-panel.notif-visible { transform: translateY(0); opacity: 1; pointer-events: auto; }
+.notif-panel.notif-hiding { transform: translateY(16px); opacity: 0; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .notif-panel { transition: none; } }
+
+.notif-header { display: flex; align-items: center; justify-content: space-between; padding: var(--space-3) var(--space-2) var(--space-3) var(--space-4); border-bottom: 1px solid var(--divider);
+  color: var(--text-title); font: var(--fw-bold) var(--fs-subtitle)/var(--lh-subtitle) var(--font-sans); letter-spacing: var(--ls-subtitle); }
+.notif-actions { display: flex; gap: var(--space-1); }
+.notif-btn { min-height: 28px; padding: 0 var(--space-2); }
+
+.notif-list { flex: 1; overflow-y: auto; }
+.notif-empty { padding: var(--space-6) var(--space-4); text-align: center; color: var(--text-weak); }
+.notif-item { position: relative; display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-3) var(--space-8) var(--space-3) var(--space-4); color: var(--text); border-bottom: 1px solid var(--divider); }
+.notif-item:last-child { border-bottom: none; }
+.notif-item.has-link { cursor: pointer; }
+.notif-item.has-link:hover { background: var(--surface-hover); }
+.notif-item.unread .notif-title { font-weight: var(--fw-bold); }
+.notif-item.unread::after { content: ''; position: absolute; top: 18px; right: var(--space-4); width: 8px; height: 8px; border-radius: 50%; background: var(--primary); }
+.notif-icon { flex-shrink: 0; width: 16px; height: 16px; margin-top: 2px; }
+.notif-success .notif-icon { color: var(--success); }
+.notif-error .notif-icon { color: var(--primary); }
+.notif-info .notif-icon { color: var(--link); }
+.notif-warning .notif-icon { color: var(--alert); }
+.notif-body { flex: 1; min-width: 0; word-break: break-word; }
+.notif-msg { margin-top: 2px; color: var(--text-weak); white-space: pre-line; font-size: var(--fs-caption); line-height: var(--lh-caption); letter-spacing: var(--ls-caption); }
+.notif-meta { margin-top: var(--space-1); color: var(--text-secondary); font-size: var(--fs-caption); line-height: var(--lh-caption); letter-spacing: var(--ls-caption); }

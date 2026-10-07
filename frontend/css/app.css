@@ -1,0 +1,210 @@
+/* This app's own styles, after the copied ones (shell.css). Every colour, size, space, radius and shadow is a role of
+   tokens.css; each component follows the bancoctt-design skill's references/DESIGN.md, named per rule. */
+
+/* ── a view in the middle pane: the content column (DESIGN.md, Layout: 968px desktop column, 24px gaps). The lead
+   line is --text-title: --text-secondary fails contrast on the light page (DESIGN.md, Colors › Contrast: 2.80). ── */
+.page { max-width: 968px; margin: 0 auto; padding: var(--space-8) var(--space-6) var(--space-12); }
+.page > h1 { margin-bottom: var(--space-2); color: var(--text-title); }
+.page > .lead { margin: 0 0 var(--space-8); color: var(--text-title); font-size: var(--fs-p1); line-height: var(--lh-p1); letter-spacing: var(--ls-p1); }
+.page section { margin-bottom: var(--space-8); }
+/* a section title above a card or a list: Subtitle 2 in --text-section, 8px above it (DESIGN.md, Typography) */
+/* DESIGN.md's replacement for --text-section in section titles (2.70:1 on the light page; neutral-400, 5.74:1) */
+.section-title { margin: 0 0 var(--space-2); color: var(--text-weak); font: var(--fw-bold) var(--fs-subtitle)/var(--lh-subtitle) var(--font-sans); letter-spacing: var(--ls-subtitle); }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.stack { display: flex; flex-direction: column; gap: var(--space-2); max-width: var(--button-max-width); }
+/* buttons in a form's stack are the full 48px (DESIGN.md, Components > Buttons); shell.css's default is the compact 32px */
+.stack > button { min-height: var(--control-height); }
+
+/* ── cards (DESIGN.md, Components > Cards): --surface, 10px radius, 16px padding, flat; --card-outline ── */
+.card { padding: var(--space-4); background: var(--surface); border: 1px solid var(--card-outline); border-radius: var(--radius-xl); }
+.card.action { box-shadow: var(--shadow); }
+
+/* ── feedback blocks (DESIGN.md, Components > Feedback block): info is shell.css's .banner; alert and error ── */
+.banner { display: flex; gap: var(--space-3); align-items: flex-start; }
+.banner.alert { background: var(--container-alert); }
+.banner.error { background: var(--container-primary); }
+.banner .banner-icon { flex: none; width: 24px; height: 24px; color: var(--text); }
+.banner b { display: block; font: var(--fw-bold) var(--fs-subtitle)/var(--lh-subtitle) var(--font-sans); letter-spacing: var(--ls-subtitle); }
+.banner small { display: block; margin-top: var(--space-1); font-size: var(--fs-caption); line-height: var(--lh-caption); letter-spacing: var(--ls-caption); }
+
+/* ── lists (DESIGN.md, Components > Lists): rows at least 64px, 16px padding, divided; title + caption ── */
+.list { list-style: none; margin: 0; padding: 0; background: var(--surface); border: 1px solid var(--card-outline); border-radius: var(--radius-xl); overflow: hidden; }
+.list > li { display: flex; align-items: center; gap: var(--space-3); min-height: 64px; padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--divider); }
+.list > li:last-child { border-bottom: 0; }
+.list > li.clickable { cursor: pointer; }
+.list > li.clickable:hover { background: var(--surface-hover); }
+.list > li.selected { background: var(--surface-active); }
+.list .list-text { flex: 1 1 auto; min-width: 0; }
+.list .list-title { color: var(--text); font: var(--fw-bold) var(--fs-subtitle)/var(--lh-subtitle) var(--font-sans); letter-spacing: var(--ls-subtitle); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.list .list-caption { margin-top: var(--space-1); color: var(--text-weak); font-size: var(--fs-caption); line-height: var(--lh-caption); letter-spacing: var(--ls-caption); }
+
+/* ── status tags in a container colour (DESIGN.md, Chips and tags; shell.css's .pill is the fluid one) ── */
+.pill.info { background: var(--container-info); }
+.pill.alert { background: var(--container-alert); }
+.pill.error { background: var(--container-primary); }
+/* count badge (ours): an 18px --primary pill with white Badge text */
+.count-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 6px; border-radius: var(--radius-pill);
+  background: var(--primary); color: var(--text-on-primary); font: var(--fw-bold) var(--fs-badge)/var(--lh-badge) var(--font-sans); letter-spacing: var(--ls-badge); }
+
+/* ── skeleton (DESIGN.md, Components > Skeleton): --skeleton rectangles, 14px tall, no rounding ── */
+.skeleton { display: block; height: 14px; background: var(--skeleton); }
+.skeleton.label { width: 80px; }
+.skeleton.value { width: 120px; }
+
+/* ── data table (DESIGN.md, Components > Data table, ours): a --surface card; Subtitle 2 header; divided rows ── */
+.data-table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--card-outline); border-radius: var(--radius-xl); }
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table th { height: 48px; padding: 0 var(--space-4); border-bottom: 1px solid var(--divider); text-align: left; color: var(--text-section);
+  font: var(--fw-bold) var(--fs-subtitle)/var(--lh-subtitle) var(--font-sans); letter-spacing: var(--ls-subtitle); }
+.data-table td { height: 48px; padding: 0 var(--space-4); border-bottom: 1px solid var(--divider); }
+.data-table tr:last-child td { border-bottom: 0; }
+.data-table tbody tr:hover td { background: var(--surface-hover); }
+.data-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ── the design-system page's swatches (views/design-system.js): role names and their colours ── */
+.swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--space-2); }
+.swatch { display: flex; align-items: center; gap: var(--space-2); font-size: var(--fs-caption); line-height: var(--lh-caption); }
+.swatch i { flex: none; width: 24px; height: 24px; border: 1px solid var(--divider); border-radius: var(--radius-sm); }
+.type-sample > * { margin: 0 0 var(--space-2); }
+.ds-h4 { font: var(--fw-bold) var(--fs-h4)/var(--lh-h4) var(--font-sans); letter-spacing: var(--ls-h4); }
+.ds-h5 { font: var(--fw-bold) var(--fs-h5)/var(--lh-h5) var(--font-sans); letter-spacing: var(--ls-h5); }
+.ds-p1 { font-size: var(--fs-p1); line-height: var(--lh-p1); letter-spacing: var(--ls-p1); }
+.ds-caption { color: var(--text-weak); font-size: var(--fs-caption); line-height: var(--lh-caption); letter-spacing: var(--ls-caption); }
+
+/* ── phones: no editor (spec section 8) ── */
+.phone-note { margin: var(--space-4); }
+
+/* ── links that act as buttons (Download): the Ghost button's look (shell.css button) ── */
+a.button-link { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); min-height: var(--button-compact); padding: 3px var(--space-4);
+  border: 1px solid transparent; border-radius: var(--radius-sm); color: var(--brand-text); text-decoration: none;
+  font: var(--fw-bold) var(--fs-button)/var(--lh-button) var(--font-sans); letter-spacing: var(--ls-button); }
+a.button-link:hover { background: var(--surface-active); }
+a.button-link.secondary { border-color: var(--primary); }
+.stack > a.button-link { min-height: var(--control-height); }
+
+/* ── the project home's decks: cards with the first slide (DESIGN.md, Cards: --surface, 10px, flat) ── */
+.deck-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--space-4); }
+.deck-card { display: flex; flex-direction: column; align-items: stretch; gap: var(--space-1); min-height: 0; padding: var(--space-3); text-align: left; white-space: normal;
+  background: var(--surface); border: 1px solid var(--card-outline); border-radius: var(--radius-xl); color: var(--text); font-weight: var(--fw-regular); }
+.deck-card:hover:not(:disabled) { background: var(--surface-hover); }
+.deck-thumb { display: grid; place-items: center; aspect-ratio: 16 / 9; margin-bottom: var(--space-2); overflow: hidden; border-radius: var(--radius-sm); background: var(--skeleton); }
+.deck-thumb img { width: 100%; height: 100%; object-fit: contain; background: #FFFFFF; }   /* a slide is white paper in both themes: DESIGN.md rule 1's one exception, "the document-page white" */
+.deck-empty { color: var(--text); font-size: var(--fs-caption); }
+.deck-title { font: var(--fw-bold) var(--fs-subtitle)/var(--lh-subtitle) var(--font-sans); letter-spacing: var(--ls-subtitle); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.deck-caption { color: var(--text-weak); font-size: var(--fs-caption); line-height: var(--lh-caption); letter-spacing: var(--ls-caption); }
+
+/* ── the editor: a bar, then the strip | the stage | the versions panel ── */
+.editor { display: flex; flex-direction: column; height: 100%; min-height: 0; container: editor / inline-size; }
+/* the bar's commands wrap onto a second row when the editor is narrow (the assistant pane open, a tablet): never cut off */
+.editor-bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); flex: none; min-height: 56px; padding: var(--space-1) var(--space-4); background: var(--surface); border-bottom: 1px solid var(--divider); }
+.editor-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-title); font: var(--fw-bold) var(--fs-subtitle)/var(--lh-subtitle) var(--font-sans); letter-spacing: var(--ls-subtitle); }
+.editor-spacer { flex: 1 1 auto; }
+.editor-body { display: grid; grid-template-columns: 200px minmax(0, 1fr) auto; flex: 1 1 auto; min-height: 0; }
+.slide-strip { list-style: none; margin: 0; padding: var(--space-3); overflow-y: auto; background: var(--surface); border-right: 1px solid var(--divider); }
+.slide-strip li { margin-bottom: var(--space-3); }
+.strip-item { display: grid; grid-template-columns: 20px minmax(0, 1fr); align-items: start; gap: var(--space-2); width: 100%; min-height: 0; padding: var(--space-1); border-radius: var(--radius-sm); color: var(--text-weak); }
+.strip-item img { width: 100%; aspect-ratio: 16 / 9; object-fit: contain; border: 1px solid var(--divider); border-radius: var(--radius-sm); background: #FFFFFF; }   /* white paper, as above (DESIGN.md rule 1) */
+.strip-item.selected { background: var(--surface-active); color: var(--brand-text); }
+.strip-item.selected img { border: 2px solid var(--primary); }
+.strip-item.hidden-slide img { opacity: .45; }
+.strip-number { font: var(--fw-bold) var(--fs-caption)/var(--lh-caption) var(--font-sans); text-align: right; }
+.stage { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-3); min-width: 0; padding: var(--space-6); overflow: auto; }
+.stage-sheet { width: 100%; max-width: 1100px; aspect-ratio: 16 / 9; border-radius: var(--radius-xl); overflow: hidden; background: #FFFFFF;   /* white paper (DESIGN.md rule 1) */ box-shadow: var(--shadow); }
+.stage-sheet img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.stage-note { margin: 0; color: var(--text-title); font-size: var(--fs-caption); line-height: var(--lh-caption); letter-spacing: var(--ls-caption); text-align: center; }
+.versions-panel { width: 360px; max-width: 40vw; padding: var(--space-4); overflow-y: auto; background: var(--surface-page); border-left: 1px solid var(--divider); }
+.versions-panel .data-table td { height: auto; padding-top: var(--space-2); padding-bottom: var(--space-2); }
+.version-author { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* a narrow editor (a tablet, 834-1279px, or a desktop with the assistant pane open): the versions panel opens over the
+   stage from the right, as DESIGN.md's tablet layout has its secondary panels (up to 400px, --shadow-float). The
+   editor's own width decides, not the window's: beside it, strip + versions would leave the stage too little room */
+@container editor (max-width: 999px) {
+  .editor-body { position: relative; grid-template-columns: 160px minmax(0, 1fr); }
+  .versions-panel { position: absolute; top: 0; right: 0; bottom: 0; z-index: 5; width: min(400px, 90%); max-width: none; box-shadow: var(--shadow-float); }
+}
+
+/* ── the assistant pane (assistant.js): Cortex's chat (shell.css) with this app's cards ── */
+.assistant { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.assistant-head { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-bottom: 1px solid var(--divider); background: var(--surface); }
+.assistant-conv { flex: 1 1 auto; min-width: 0; }
+.assistant-conv select { width: 100%; }
+.assistant .chat-log:empty::before { content: none; }
+.assistant-status { min-height: 20px; padding: 0 var(--space-4); color: var(--text-title); font-size: var(--fs-caption); line-height: var(--lh-caption); }
+.attachments { display: flex; flex-wrap: wrap; gap: var(--space-1); padding: 0 var(--space-3) var(--space-2); }
+.chat-card { align-self: stretch; padding: var(--space-4); border-radius: var(--radius-xl); background: var(--surface); border: 1px solid var(--card-outline); box-shadow: var(--shadow); }
+.chat-card h3 { margin: 0 0 var(--space-2); }
+.chat-card p { margin: 0 0 var(--space-3); }
+.chat-card ol { margin: 0 0 var(--space-3); padding-left: var(--space-6); }
+.chat-card.proposal, .chat-card.plan { border-left: 4px solid var(--primary); }
+.instructions-text { white-space: pre-wrap; margin: 0 0 var(--space-3); padding: var(--space-3); background: var(--surface-field); border-radius: var(--radius-sm); font: inherit; }
+.chat-attach { margin-top: var(--space-1); font-size: var(--fs-caption); opacity: .8; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.instructions-box textarea { min-height: 96px; resize: vertical; }
+
+/* ── the editor: selection boxes over the shapes; reviewing the assistant's changes ── */
+.stage-sheet { position: relative; }
+.shape-boxes { position: absolute; inset: 0; }
+.shape-box { position: absolute; min-height: 0; padding: 0; border: 1px dashed transparent; border-radius: 2px; background: transparent; }
+.shape-box:hover:not(:disabled) { background: transparent; border-color: var(--control-border); }
+.shape-box.on, .shape-box.on:hover:not(:disabled) { border: 2px solid var(--primary); background: transparent; }
+.review-bar { display: flex; align-items: center; gap: var(--space-2); flex: none; padding: var(--space-2) var(--space-4); background: var(--container-alert); color: var(--text-title); }
+.strip-thumb { position: relative; display: block; }
+.strip-badge { position: absolute; top: 4px; right: 4px; }
+.strip-item.state-removed img { opacity: .4; }
+.diff { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: var(--space-4); width: 100%; max-width: 1400px; }
+.diff figure { margin: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.diff figcaption { color: var(--text-section); font: var(--fw-bold) var(--fs-subtitle)/var(--lh-subtitle) var(--font-sans); letter-spacing: var(--ls-subtitle); }
+.include { color: var(--text-title); }
+
+/* the sources under a reply (spec KB-3) */
+.chat-sources { align-self: flex-start; max-width: 100%; margin: calc(-1 * var(--space-2)) 0 var(--space-2); color: var(--text-title); font-size: var(--fs-caption); line-height: var(--lh-caption); }
+.chat-sources summary { cursor: pointer; color: var(--text-title); font-weight: var(--fw-bold); }
+.chat-sources ul { margin: var(--space-1) 0 0; padding-left: var(--space-4); }
+.chat-sources li { margin-bottom: var(--space-1); overflow-wrap: anywhere; }
+.chat-sources a { color: var(--brand-text); }   /* --link (teal) is under 3:1 on white: text links are brand red */
+.chat-sources small { display: block; color: var(--text-title); }
+.kb-domains { display: grid; gap: var(--space-2); }
+/* spoken replies: a setting of the pane, in its header beside "new conversation" */
+.assistant-head .head-speaker { flex: none; width: 40px; height: 40px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+.assistant-head .head-speaker svg { width: 20px; height: 20px; }
+.cvchat-input::placeholder { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* a slide image still rendering (deck.js loading()): the skeleton, gently pulsing, instead of a blank white page */
+.strip-thumb.loading, .stage-sheet.loading { background: var(--skeleton); animation: rendering 1.4s ease-in-out infinite; }
+.strip-thumb.loading img, .stage-sheet.loading img { visibility: hidden; }
+@keyframes rendering { 50% { opacity: 0.55; } }
+@media (prefers-reduced-motion: reduce) { .strip-thumb.loading, .stage-sheet.loading { animation: none; } }
+.strip-item.selected .strip-thumb.loading { outline: 2px solid var(--primary); outline-offset: -2px; }   /* the selection, while it renders */
+
+/* ── edits by hand (spec PM-7) ── */
+/* the sheet lets the text editor reach past its edge; the picture keeps the sheet's rounded corners */
+.stage-sheet { overflow: visible; }
+.stage-sheet img { border-radius: inherit; }
+/* a text box's text, edited where it is: the filled field with an underline (DESIGN.md, Components > Inputs: the
+   textarea's own style, shell.css) on a --surface card with --shadow-float, as a menu floats over the page (ours) */
+.text-edit { position: absolute; z-index: 2; min-width: 280px; padding: var(--space-2); background: var(--surface); border-radius: var(--radius-sm); box-shadow: var(--shadow-float); }
+.text-edit textarea { display: block; width: 100%; resize: vertical; }
+.text-edit .row { align-items: center; margin-top: var(--space-2); }
+/* where a dragged slide lands: a --primary line above the slide it goes before (the selected role, rule 2) */
+.slide-strip li.drop-target { box-shadow: 0 -3px 0 var(--primary); }
+.slide-strip li[draggable="true"] { cursor: grab; }
+
+/* ── hands-free (spec VO-2): the explicit "on" indicator, a status block above the composer (DESIGN.md, Colors:
+   status = a container colour plus --text; Components > Feedback blocks, compact: ours). Its dot is --primary
+   (active, rule 2) and pulses while a request is being heard; still otherwise. ── */
+.hands-free-bar { display: flex; align-items: center; gap: var(--space-2); margin: 0 var(--space-4) var(--space-1); padding: var(--space-1) var(--space-2) var(--space-1) var(--space-3); border-radius: var(--radius-sm); background: var(--container-info); color: var(--text); font-size: var(--fs-caption); line-height: var(--lh-caption); }
+.hands-free-bar[hidden] { display: none; }
+.hands-free-text { flex: 1 1 auto; min-width: 0; }
+.hands-free-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--primary); }
+.hands-free-bar.hearing .hands-free-dot { animation: hearing 1s ease-in-out infinite; }
+@keyframes hearing { 50% { transform: scale(1.5); } }
+@media (prefers-reduced-motion: reduce) { .hands-free-bar.hearing .hands-free-dot { animation: none; outline: 3px solid var(--primary); outline-offset: 2px; } }
+.assistant-head [data-action="hands-free"].active { background: var(--container-info); color: var(--text); }
+
+/* ── fields on touch screens: Paragraph 1 (16px), not 2 (14px). iOS zooms the page in when a smaller field gets the
+   focus (measured: the new-project dialog on an iPhone opened zoomed, its panel undrawn). DESIGN.md's Paragraph 1
+   style, no invented size (docs/design-gaps.md). ── */
+@media (pointer: coarse) {
+  select, input[type="text"], input[type="number"], input[type="email"], input[type="search"], input[type="date"], input:not([type]), textarea {
+    font-size: var(--fs-p1); line-height: var(--lh-p1); letter-spacing: var(--ls-p1);
+  }
+}

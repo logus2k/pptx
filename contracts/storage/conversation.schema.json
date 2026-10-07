@@ -1,0 +1,167 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "storage/conversation.schema.json",
+ "title": "DATA_DIR/projects/<pid>/conversations/<id>/conversation.json (technical design section 4)",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "schema_version",
+  "id",
+  "project_id",
+  "title",
+  "created_by",
+  "created_at",
+  "updated_at",
+  "summary",
+  "summary_upto",
+  "active_deck",
+  "pending",
+  "next_seq"
+ ],
+ "properties": {
+  "schema_version": {
+   "const": 1
+  },
+  "id": {
+   "type": "string"
+  },
+  "project_id": {
+   "type": "string"
+  },
+  "title": {
+   "type": "string",
+   "maxLength": 200
+  },
+  "created_by": {
+   "type": "string"
+  },
+  "created_at": {
+   "type": "string"
+  },
+  "updated_at": {
+   "type": "string"
+  },
+  "summary": {
+   "type": "string",
+   "description": "The rolling summary of messages up to summary_upto (technical design 6.2)."
+  },
+  "summary_upto": {
+   "type": "integer",
+   "minimum": 0,
+   "description": "The last message seq folded into the summary."
+  },
+  "active_deck": {
+   "type": [
+    "string",
+    "null"
+   ]
+  },
+  "pending": {
+   "description": "What the turn waits for: a question, a plan, or instructions to confirm (the tool call it answers).",
+   "oneOf": [
+    {
+     "type": "null"
+    },
+    {
+     "type": "object",
+     "required": [
+      "kind",
+      "tool_call_id"
+     ],
+     "properties": {
+      "kind": {
+       "enum": [
+        "question",
+        "plan",
+        "instructions"
+       ]
+      },
+      "tool_call_id": {
+       "type": "string"
+      },
+      "payload": {
+       "type": "object"
+      }
+     }
+    }
+   ]
+  },
+  "next_seq": {
+   "type": "integer",
+   "minimum": 1
+  },
+  "route": {
+   "description": "The request a waiting turn was working on, as the router read it, and the edits it had made: the turn that goes on after the answer continues it instead of routing the request again (measured: routed again on the changed deck, a deletion approved in a plan was made three times).",
+   "oneOf": [
+    {
+     "type": "null"
+    },
+    {
+     "type": "object",
+     "required": [
+      "intent",
+      "kind",
+      "groups",
+      "done"
+     ],
+     "additionalProperties": false,
+     "properties": {
+      "intent": {
+       "type": "string"
+      },
+      "kind": {
+       "enum": [
+        "change",
+        "question",
+        "unclear"
+       ]
+      },
+      "groups": {
+       "oneOf": [
+        {
+         "type": "null"
+        },
+        {
+         "type": "array",
+         "items": {
+          "type": "string"
+         }
+        }
+       ]
+      },
+      "done": {
+       "type": "array",
+       "items": {
+        "type": "string"
+       }
+      },
+      "order": {
+       "type": "object",
+       "description": "deck id -> its slide IDs when the request was made: what the request's slide numbers mean",
+       "additionalProperties": {
+        "type": "array",
+        "items": {
+         "type": "integer"
+        }
+       }
+      },
+      "focus": {
+       "type": [
+        "integer",
+        "null"
+       ],
+       "description": "The slide ID the request is about (the router's where): the deck map centres there"
+      },
+      "located": {
+       "type": "array",
+       "items": {
+        "type": "string"
+       },
+       "description": "Where the deck holds the words the request names"
+      }
+     }
+    }
+   ]
+  }
+ }
+}

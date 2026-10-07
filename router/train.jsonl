@@ -1,0 +1,451 @@
+{"text": "Rewrite the title on the first slide to sound more impactful for our Q3 report.", "labels": ["text"], "source": "generated"}
+{"text": "Shorten the bullet points in the 'Risk Assessment' slide; they are too dense.", "labels": ["text"], "source": "generated"}
+{"text": "Translate the entire text box on slide 5 to European Portuguese.", "labels": ["text"], "source": "generated"}
+{"text": "Correct the date listed in the proposal summary on slide 8.", "labels": ["text"], "source": "generated"}
+{"text": "Format the pricing table in slide 12 to align everything to the right.", "labels": ["text"], "source": "generated"}
+{"text": "Can you please change the name 'John Doe' to 'Maria Silva' in this slide?", "labels": ["text"], "source": "generated"}
+{"text": "Make the subtitle on the 'Product Overview' slide bold and slightly larger.", "labels": ["text"], "source": "generated"}
+{"text": "Rewrite the introductory paragraph about market penetration to be more concise.", "labels": ["text"], "source": "generated"}
+{"text": "Shorten the list of required milestones for the implementation plan.", "labels": ["text"], "source": "generated"}
+{"text": "Translate the risk matrix on slide 15 into Portuguese (PT).", "labels": ["text"], "source": "generated"}
+{"text": "Correct the currency symbol in the column showing investment figures.", "labels": ["text"], "source": "generated"}
+{"text": "Format the text in the main body on 'this slide' to use Arial font.", "labels": ["text"], "source": "generated"}
+{"text": "Change the word 'potential' to 'confirmed' in the objective section.", "labels": ["text"], "source": "generated"}
+{"text": "Make the title on slide 2 huge and blue.", "labels": ["text"], "source": "generated"}
+{"text": "Rewrite the concluding summary to be more action-oriented.", "labels": ["text"], "source": "generated"}
+{"text": "Shorten the list of competitive advantages displayed here.", "labels": ["text"], "source": "generated"}
+{"text": "Translate the executive summary from English to European Portuguese.", "labels": ["text"], "source": "generated"}
+{"text": "Correct the numerical values in the financial projection column.", "labels": ["text"], "source": "generated"}
+{"text": "Format the text box describing the new product features to be centered.", "labels": ["text"], "source": "generated"}
+{"text": "Can you update the project lead's name in this slide to Ana Costa?", "labels": ["text"], "source": "generated"}
+{"text": "Rewrite the section on regulatory compliance to be clearer.", "labels": ["text"], "source": "generated"}
+{"text": "Shorten the description of the security risks shown on slide 10.", "labels": ["text"], "source": "generated"}
+{"text": "Translate the entire slide content to Portuguese (PT) please.", "labels": ["text"], "source": "generated"}
+{"text": "Correct the percentage figures in the growth chart text.", "labels": ["text"], "source": "generated"}
+{"text": "Format the bulleted list on 'this slide' using large black font.", "labels": ["text"], "source": "generated"}
+{"text": "Change the date of the latest review in the project timeline to next Tuesday.", "labels": ["text"], "source": "generated"}
+{"text": "Rewrite the pitch for the new banking product to be more engaging.", "labels": ["text"], "source": "generated"}
+{"text": "Shorten the narrative text accompanying the risk heatmap.", "labels": ["text"], "source": "generated"}
+{"text": "Translate the entire proposal summary to Portuguese (PT).", "labels": ["text"], "source": "generated"}
+{"text": "Correct the spelling of 'estrategia' in the plan overview.", "labels": ["text"], "source": "generated"}
+{"text": "Format the subtitle to be italicized and a slightly different colour.", "labels": ["text"], "source": "generated"}
+{"text": "Change the number '150k' to '180k' in the budget breakdown.", "labels": ["text"], "source": "generated"}
+{"text": "Change a table on slide 3: update the interest rate in the second row, third column.", "labels": ["table"], "source": "generated"}
+{"text": "Pode alterar a tabela neste slide: mudar o valor do risco de crédito na célula inferior esquerda.", "labels": ["table"], "source": "generated"}
+{"text": "On the 'Q3 Performance Report' slide, change a table: adjust the projected revenue figure.", "labels": ["table"], "source": "generated"}
+{"text": "Change a table on slide 15: remove the entire row detailing operational costs.", "labels": ["table"], "source": "generated"}
+{"text": "Neste slide, por favor, altere uma tabela: corrija o valor da taxa de juro na coluna de comparação.", "labels": ["table"], "source": "generated"}
+{"text": "Change a table on slide 7: insert a new column for 'Compliance Score'.", "labels": ["table"], "source": "generated"}
+{"text": "For this slide, change a table: replace the old market share percentage with the new one.", "labels": ["table"], "source": "generated"}
+{"text": "Pode modificar a tabela deste slide: apagar a linha referente aos custos de aquisição.", "labels": ["table"], "source": "generated"}
+{"text": "Update the table on slide 2: correct the 'Maximum Loss' figure.", "labels": ["table"], "source": "generated"}
+{"text": "Change a table on the 'Product Pricing Proposal' slide: modify the fee amount in the summary row.", "labels": ["table"], "source": "generated"}
+{"text": "Por favor, no slide com o título 'Plano Estratégico', altere uma tabela: adicionar uma coluna de 'Mitigação'.", "labels": ["table"], "source": "generated"}
+{"text": "Change a table on slide 22: change the initial investment value.", "labels": ["table"], "source": "generated"}
+{"text": "Neste slide, altere uma tabela: apagar a coluna de 'Variáveis Externas'.", "labels": ["table"], "source": "generated"}
+{"text": "Change a table on slide 5: correct the risk assessment score.", "labels": ["table"], "source": "generated"}
+{"text": "Podes mudar a tabela aqui: alterar o valor da projeção de lucro no último ponto.", "labels": ["table"], "source": "generated"}
+{"text": "Change a table on slide 1: update the primary benchmark price.", "labels": ["table"], "source": "generated"}
+{"text": "Pode mudar a tabela da apresentação: remover a linha dos cenários de baixa.", "labels": ["table"], "source": "generated"}
+{"text": "Change a table on the 'Risk Analysis' slide: fix the probability value in the matrix.", "labels": ["table"], "source": "generated"}
+{"text": "Neste slide, faça uma alteração numa tabela: mudar o valor da taxa de câmbio.", "labels": ["table"], "source": "generated"}
+{"text": "Change a table on slide 10: add a row for 'Emerging Markets' data.", "labels": ["table"], "source": "generated"}
+{"text": "Alterar a tabela neste slide: mudar o valor da rentabilidade esperada.", "labels": ["table"], "source": "generated"}
+{"text": "Change a table on slide 18: remove the column showing historical trends.", "labels": ["table"], "source": "generated"}
+{"text": "Pode corrigir um número na tabela deste slide: o valor do custo operacional.", "labels": ["table"], "source": "generated"}
+{"text": "Change a table on the 'New Product Launch' slide: adjust the projected uptake quantity.", "labels": ["table"], "source": "generated"}
+{"text": "Neste slide, por favor, mude uma célula da tabela: o valor do ROI esperado.", "labels": ["table"], "source": "generated"}
+{"text": "Change a table on slide 4: add a column for 'Regulatory Impact'.", "labels": ["table"], "source": "generated"}
+{"text": "Por favor, altere uma tabela neste slide: apagar a linha de teste beta.", "labels": ["table"], "source": "generated"}
+{"text": "Change a table on slide 25: correct the benchmark interest rate.", "labels": ["table"], "source": "generated"}
+{"text": "Mudar uma tabela aqui: substituir o valor de risco por outro.", "labels": ["table"], "source": "generated"}
+{"text": "Change a table on the 'Investment Plan' slide: add a row for 'Contingency Funding'.", "labels": ["table"], "source": "generated"}
+{"text": "Neste slide, altere uma tabela: modificar a percentagem de despesa fixa.", "labels": ["table"], "source": "generated"}
+{"text": "Change a table on slide 12: remove the column summarizing competitor activity.", "labels": ["table"], "source": "generated"}
+{"text": "Podes corrigir um dado na tabela deste slide: o preço de referência.", "labels": ["table"], "source": "generated"}
+{"text": "Alterar a tabela do slide 9: mudar o valor do spread aplicado.", "labels": ["table"], "source": "generated"}
+{"text": "Write a brief summary of the Q3 risk assessment in the speaker notes for this slide.", "labels": ["notes"], "source": "generated"}
+{"text": "Change the speaker notes on slide 5 to include a citation from the internal compliance manual.", "labels": ["notes"], "source": "generated"}
+{"text": "Add a note citing the latest market research report on the new product launch.", "labels": ["notes"], "source": "generated"}
+{"text": "Podes escrever um resumo do plano de expansão nos apontamentos do orador desta lâmina?", "labels": ["notes"], "source": "generated"}
+{"text": "Update the speaker notes on the 'Pricing Strategy' slide to cite the approved pricing document.", "labels": ["notes"], "source": "generated"}
+{"text": "Cite source ABC in the notes regarding the projected revenue growth.", "labels": ["notes"], "source": "generated"}
+{"text": "Can you write some detailed speaker notes on the implementation timeline and cite the project charter?", "labels": ["notes"], "source": "generated"}
+{"text": "Adicione uma referência ao documento de regulamentação nos apontamentos desta lâmina.", "labels": ["notes"], "source": "generated"}
+{"text": "Change the speaker notes for the risks slide to mention the European banking directive, citing it.", "labels": ["notes"], "source": "generated"}
+{"text": "Write a justification for the budget increase in the notes, citing the departmental request.", "labels": ["notes"], "source": "generated"}
+{"text": "Aumenta os apontamentos do orador desta lâmina para incluir uma citação da análise de concorrência.", "labels": ["notes"], "source": "generated"}
+{"text": "Add a citation for the feasibility study to the notes of the proposal slide.", "labels": ["notes"], "source": "generated"}
+{"text": "Change the speaker notes for slide 12 to cite the regulatory filing.", "labels": ["notes"], "source": "generated"}
+{"text": "Write a short note on expected returns and cite the model used.", "labels": ["notes"], "source": "generated"}
+{"text": "Põe na nota do orador desta lâmina uma referência à diretiva PSD2.", "labels": ["notes"], "source": "generated"}
+{"text": "Please change the notes on this slide to cite the feasibility report and elaborate slightly.", "labels": ["notes"], "source": "generated"}
+{"text": "Cite the updated interest rate bulletin in the speaker notes for the investment section.", "labels": ["notes"], "source": "generated"}
+{"text": "Adiciona uma referência bibliográfica sobre os riscos de liquidez nos apontamentos.", "labels": ["notes"], "source": "generated"}
+{"text": "Write a concluding statement in the speaker notes, citing the board's approval.", "labels": ["notes"], "source": "generated"}
+{"text": "Change the notes for the 'Next Steps' slide to cite the action plan document.", "labels": ["notes"], "source": "generated"}
+{"text": "Podes acrescentar uma citação do parecer jurídico nos apontamentos desta lâmina?", "labels": ["notes"], "source": "generated"}
+{"text": "Add a detailed explanation of the market segmentation, citing the latest demographic data.", "labels": ["notes"], "source": "generated"}
+{"text": "Write a concise note about the service offering and cite the product brief.", "labels": ["notes"], "source": "generated"}
+{"text": "Muda os apontamentos do orador da lâmina sobre produtos para citar a ficha técnica.", "labels": ["notes"], "source": "generated"}
+{"text": "Cite the legal framework in the speaker notes for the compliance slide.", "labels": ["notes"], "source": "generated"}
+{"text": "Can you expand the notes on profitability by citing the internal forecast?", "labels": ["notes"], "source": "generated"}
+{"text": "Adicione uma nota de referência ao relatório de auditoria nos apontamentos desta lâmina.", "labels": ["notes"], "source": "generated"}
+{"text": "Change the speaker notes on the financial projections slide to cite the official valuation.", "labels": ["notes"], "source": "generated"}
+{"text": "Escreve um resumo do risco operacional e cita o manual de controlo interno.", "labels": ["notes"], "source": "generated"}
+{"text": "Cite the official communication memo in the notes of this slide concerning system upgrades.", "labels": ["notes"], "source": "generated"}
+{"text": "Pictures insert a chart related to Q3 projections on the risks slide", "labels": ["images"], "source": "generated"}
+{"text": "Pictures replace the logo on slide 5 with the new corporate branding", "labels": ["images"], "source": "generated"}
+{"text": "Pictures remove the outdated stock photo from the product features section", "labels": ["images"], "source": "generated"}
+{"text": "Pictures put a picture from the attached risk assessment document on the cover slide", "labels": ["images"], "source": "generated"}
+{"text": "Pictures write new alt text for the market share graph on slide 8", "labels": ["images"], "source": "generated"}
+{"text": "Pictures look at what the image in the pricing proposal shows", "labels": ["images"], "source": "generated"}
+{"text": "Asunto: inserir foto sobre o plano de expansão na página 12", "labels": ["images"], "source": "generated"}
+{"text": "Substitui a imagem do produto na slide de vendas por uma mais recente", "labels": ["images"], "source": "generated"}
+{"text": "Remove a foto de arquivo desta slide antes de enviar", "labels": ["images"], "source": "generated"}
+{"text": "Por favor, coloque a imagem do relatório anexo neste slide", "labels": ["images"], "source": "generated"}
+{"text": "Alterar o alt text da foto de segurança na diapositivo de riscos", "labels": ["images"], "source": "generated"}
+{"text": "Queres ver o que essa imagem da proposta de investimento mostra", "labels": ["images"], "source": "generated"}
+{"text": "Insert a high-res image of the new service offering onto the product page", "labels": ["images"], "source": "generated"}
+{"text": "Can you replace the current diagram on slide 3 with the one from the appendix?", "labels": ["images"], "source": "generated"}
+{"text": "Remove the background picture from the executive summary slide", "labels": ["images"], "source": "generated"}
+{"text": "Put the GDPR compliance graphic from the shared drive onto the legal review slide", "labels": ["images"], "source": "generated"}
+{"text": "Fix the alt text on the infographic in the operational plan", "labels": ["images"], "source": "generated"}
+{"text": "Look at what the picture on 'Risk Mitigation' slide depicts", "labels": ["images"], "source": "generated"}
+{"text": "Insere uma imagem que ilustre os resultados do relatório trimestral na slide 6", "labels": ["images"], "source": "generated"}
+{"text": "Substitua a foto antiga do escritório por uma mais moderna na apresentação de vendas", "labels": ["images"], "source": "generated"}
+{"text": "Apagar a imagem desnecessária deste slide agora", "labels": ["images"], "source": "generated"}
+{"text": "Please insert a visualization of the current pricing structure onto this slide", "labels": ["images"], "source": "generated"}
+{"text": "Change the image on the 'Future Plans' slide to reflect the merger", "labels": ["images"], "source": "generated"}
+{"text": "Can you check the alt text for the compliance photo on slide 10?", "labels": ["images"], "source": "generated"}
+{"text": "Coloca a imagem do documento de risco na slide sobre análise de mercado", "labels": ["images"], "source": "generated"}
+{"text": "Remove that old picture from the proposal overview", "labels": ["images"], "source": "generated"}
+{"text": "Update the image on the investment proposal to the latest asset photo", "labels": ["images"], "source": "generated"}
+{"text": "Write better alt text for the regional growth chart on slide 15", "labels": ["images"], "source": "generated"}
+{"text": "Show me what the image on this current slide is depicting", "labels": ["images"], "source": "generated"}
+{"text": "Inserir fotografia de apoio ao tópico de produtos na slide 4", "labels": ["images"], "source": "generated"}
+{"text": "Replace the competitor analysis image with the new benchmark photo", "labels": ["images"], "source": "generated"}
+{"text": "Remove any photos that are not directly relevant to the risk section", "labels": ["images"], "source": "generated"}
+{"text": "This slide deck's slides and shapes: add a new slide after the risks presentation slide", "labels": ["structure"], "source": "generated"}
+{"text": "Pode duplicar o slide de propostas no meio desta apresentação?", "labels": ["structure"], "source": "generated"}
+{"text": "Deck's slides and shapes: delete the third slide about product features", "labels": ["structure"], "source": "generated"}
+{"text": "Can you move the slide titled 'Q3 Financial Summary' to the very beginning?", "labels": ["structure"], "source": "generated"}
+{"text": "Neste deck, por favor, mude o layout do slide de riscos para ter duas colunas", "labels": ["structure"], "source": "generated"}
+{"text": "Deck's slides and shapes: add a new text box near the logo on the first slide", "labels": ["structure"], "source": "generated"}
+{"text": "Por favor, insira um slide novo após a introdução, usando o layout de dois painéis", "labels": ["structure"], "source": "generated"}
+{"text": "Deck's slides and shapes: resize the main chart shape on this slide to fit the new data", "labels": ["structure"], "source": "generated"}
+{"text": "Delete the shape containing the old pricing structure on slide 5", "labels": ["structure"], "source": "generated"}
+{"text": "This deck's slides and shapes: move the slide covering 'implementation plan' just before the conclusion", "labels": ["structure"], "source": "generated"}
+{"text": "Pode deletar o slide que fala sobre riscos de mercado?", "labels": ["structure"], "source": "generated"}
+{"text": "Deck's slides and shapes: change the layout of slide 8 to one with three columns", "labels": ["structure"], "source": "generated"}
+{"text": "Adicionar um novo slide logo após a apresentação de produtos", "labels": ["structure"], "source": "generated"}
+{"text": "Deck's slides and shapes: duplicate the slide detailing the service plan", "labels": ["structure"], "source": "generated"}
+{"text": "Move this slide to the end of the deck", "labels": ["structure"], "source": "generated"}
+{"text": "Change the number of columns on the current slide deck to four", "labels": ["structure"], "source": "generated"}
+{"text": "Deck's slides and shapes: add a new shape underneath the main title on the first slide", "labels": ["structure"], "source": "generated"}
+{"text": "Delete the shape that displays the previous quarter's figures", "labels": ["structure"], "source": "generated"}
+{"text": "Pode reorganizar as slides do relatório de preços para que a segmentação venha primeiro?", "labels": ["structure"], "source": "generated"}
+{"text": "Deck's slides and shapes: resize the text box containing the executive summary on slide 2", "labels": ["structure"], "source": "generated"}
+{"text": "Add a blank slide before the final summary slide", "labels": ["structure"], "source": "generated"}
+{"text": "Neste deck, quero mover o slide de riscos para o início", "labels": ["structure"], "source": "generated"}
+{"text": "Deck's slides and shapes: change slide 12's layout to a title and content view", "labels": ["structure"], "source": "generated"}
+{"text": "Adicione um texto novo neste slide para os pontos de ação", "labels": ["structure"], "source": "generated"}
+{"text": "Duplicate the slide showing the competitor analysis", "labels": ["structure"], "source": "generated"}
+{"text": "Deck's slides and shapes: delete the placeholder shape on the pricing slide", "labels": ["structure"], "source": "generated"}
+{"text": "Por favor, insira um novo slide depois do plano de projeto", "labels": ["structure"], "source": "generated"}
+{"text": "Move this slide up one position", "labels": ["structure"], "source": "generated"}
+{"text": "Deck's slides and shapes: change slide 7's layout to a comparison table style", "labels": ["structure"], "source": "generated"}
+{"text": "Adicionar um shape de diagrama de fluxo no slide de processos", "labels": ["structure"], "source": "generated"}
+{"text": "Delete the shape that summarizes the risks on the current slide", "labels": ["structure"], "source": "generated"}
+{"text": "Pode mover o slide de proposta para depois do relatório financeiro?", "labels": ["structure"], "source": "generated"}
+{"text": "Cria um novo deck para o relatório de risco trimestral", "labels": ["decks"], "source": "generated"}
+{"text": "Copie o deck de propostas de crédito para um novo ficheiro", "labels": ["decks"], "source": "generated"}
+{"text": "Mova os slides da secção de preços para o plano de expansão", "labels": ["decks"], "source": "generated"}
+{"text": "Altera o tema do deck de produtos para o novo layout corporativo", "labels": ["decks"], "source": "generated"}
+{"text": "Create a new deck for the Q3 performance report", "labels": ["decks"], "source": "generated"}
+{"text": "Copy the pricing proposal deck and save it as a draft", "labels": ["decks"], "source": "generated"}
+{"text": "Move slides 12 through 15 from the risk analysis deck to the main plan", "labels": ["decks"], "source": "generated"}
+{"text": "Change the template of the product launch presentation to the sleek design", "labels": ["decks"], "source": "generated"}
+{"text": "Cria um deck do zero para a apresentação de novos produtos", "labels": ["decks"], "source": "generated"}
+{"text": "Duplique o deck de planos de investimento para revisão", "labels": ["decks"], "source": "generated"}
+{"text": "Mova os slides sobre conformidade do deck de propostas para o deck de riscos", "labels": ["decks"], "source": "generated"}
+{"text": "Muda o aspeto do deck de relatórios para o mais formal", "labels": ["decks"], "source": "generated"}
+{"text": "New presentation needed for the latest market analysis", "labels": ["decks"], "source": "generated"}
+{"text": "Make a copy of the existing risk profile deck", "labels": ["decks"], "source": "generated"}
+{"text": "Transfer the slides detailing the price structure to the main proposal", "labels": ["decks"], "source": "generated"}
+{"text": "Update the look of the strategic planning deck", "labels": ["decks"], "source": "generated"}
+{"text": "Por favor, crie um novo deck para o relatório executivo", "labels": ["decks"], "source": "generated"}
+{"text": "Copie este deck inteiro para um backup antes de editar", "labels": ["decks"], "source": "generated"}
+{"text": "Move slide 5, the one about regulatory changes, to the risk deck", "labels": ["decks"], "source": "generated"}
+{"text": "Change the template on this deck to the blue corporate theme", "labels": ["decks"], "source": "generated"}
+{"text": "Gerar um novo deck para a revisão de custos", "labels": ["decks"], "source": "generated"}
+{"text": "Duplicate the whole deck showcasing product features", "labels": ["decks"], "source": "generated"}
+{"text": "Move the slides titled 'Market Entry Strategy' to the main plan deck", "labels": ["decks"], "source": "generated"}
+{"text": "Can you apply the standard banking template to this report deck?", "labels": ["decks"], "source": "generated"}
+{"text": "Crie um deck para documentar os riscos identificados", "labels": ["decks"], "source": "generated"}
+{"text": "Copy the existing deck about competitor analysis", "labels": ["decks"], "source": "generated"}
+{"text": "Move the slides describing pricing tiers into the proposal deck", "labels": ["decks"], "source": "generated"}
+{"text": "Apply the premium look to the deck detailing future plans", "labels": ["decks"], "source": "generated"}
+{"text": "Need a fresh deck for the latest financial report", "labels": ["decks"], "source": "generated"}
+{"text": "Copy the entire deck detailing the proposed solution", "labels": ["decks"], "source": "generated"}
+{"text": "Move all slides related to compliance from this deck to the risk deck", "labels": ["decks"], "source": "generated"}
+{"text": "Change the deck's look to the modern, minimalist style", "labels": ["decks"], "source": "generated"}
+{"text": "Search the knowledge base for the current Q3 risk management guidelines to update the risk assessment slide.", "labels": ["knowledge"], "source": "generated"}
+{"text": "Pode procurar os detalhes dos produtos de investimento europeus na base de conhecimento para a apresentação?", "labels": ["knowledge"], "source": "generated"}
+{"text": "Need the latest interest rates for our mortgage product in the proposal slides.", "labels": ["knowledge"], "source": "generated"}
+{"text": "Verifique nos documentos de referência a taxa de câmbio atual para o slide de finanças.", "labels": ["knowledge"], "source": "generated"}
+{"text": "Find the compliance procedures mentioned in the internal documentation for the AML section.", "labels": ["knowledge"], "source": "generated"}
+{"text": "Qual é o procedimento de aprovação de crédito segundo os nossos documentos internos?", "labels": ["knowledge"], "source": "generated"}
+{"text": "Update slide 7 with the latest regulatory change concerning PSD2, referencing the policy documents.", "labels": ["knowledge"], "source": "generated"}
+{"text": "Procure nos documentos a metodologia de cálculo de rentabilidade para inserir no slide de análise.", "labels": ["knowledge"], "source": "generated"}
+{"text": "Get the pricing structure for the corporate loan package from the official product catalog.", "labels": ["knowledge"], "source": "generated"}
+{"text": "Tem as diretrizes de segurança de dados mais recentes para incluir na apresentação?", "labels": ["knowledge"], "source": "generated"}
+{"text": "What are the approved SLA metrics for this service, according to the service level agreements in the shared drive?", "labels": ["knowledge"], "source": "generated"}
+{"text": "Pode achar os valores de referência de liquidez para esta apresentação?", "labels": ["knowledge"], "source": "generated"}
+{"text": "For this slide, please pull the projected growth figures from the annual business plan document.", "labels": ["knowledge"], "source": "generated"}
+{"text": "Dá-me os valores dos spreads aplicados aos nossos produtos de poupança.", "labels": ["knowledge"], "source": "generated"}
+{"text": "Search the knowledge base for the updated KYC requirements for this client proposal.", "labels": ["knowledge"], "source": "generated"}
+{"text": "Onde estão os últimos números de performance do trimestre para colocar no gráfico?", "labels": ["knowledge"], "source": "generated"}
+{"text": "Insert the official branding guidelines information onto this slide.", "labels": ["knowledge"], "source": "generated"}
+{"text": "Preciso dos limites de exposição de risco definidos nos documentos de gestão de risco.", "labels": ["knowledge"], "source": "generated"}
+{"text": "Locate the specific procedural steps for onboarding new institutional clients.", "labels": ["knowledge"], "source": "generated"}
+{"text": "Find the projected market share figures for the next fiscal year.", "labels": ["knowledge"], "source": "generated"}
+{"text": "Search the reference documents for the official contact points for compliance issues.", "labels": ["knowledge"], "source": "generated"}
+{"text": "Qual é o procedimento padrão de escalonamento de incidentes?", "labels": ["knowledge"], "source": "generated"}
+{"text": "Please pull the current fee schedule for international transfers from the latest product sheet.", "labels": ["knowledge"], "source": "generated"}
+{"text": "Verifica nos documentos a descrição detalhada do produto X para o slide de descrição.", "labels": ["knowledge"], "source": "generated"}
+{"text": "Need the current pricing table for small business loans.", "labels": ["knowledge"], "source": "generated"}
+{"text": "O conhecimento base tem as normas de conformidade europeias mais recentes?", "labels": ["knowledge"], "source": "generated"}
+{"text": "Search for the documented limitations of liability for the financial advisory service.", "labels": ["knowledge"], "source": "generated"}
+{"text": "Pode confirmar os requisitos de documentação para a proposta de fusão?", "labels": ["knowledge"], "source": "generated"}
+{"text": "What is the official procedure for asset valuation as per internal standards?", "labels": ["knowledge"], "source": "generated"}
+{"text": "Encontra a matriz de risco associada a este plano de negócios nos documentos.", "labels": ["knowledge"], "source": "generated"}
+{"text": "Show me the cost breakdowns according to the internal cost structure document.", "labels": ["knowledge"], "source": "generated"}
+{"text": "Remember that the primary audience is compliance, so all risk sections must use conservative language for this proposal.", "labels": ["memory"], "source": "generated"}
+{"text": "Recall how we agreed to format the Q3 pricing slides – always use the Euro symbol.", "labels": ["memory"], "source": "generated"}
+{"text": "Set a rule: no jargon in the executive summary slides.", "labels": ["memory"], "source": "generated"}
+{"text": "Lembra-te que o tom geral deve ser muito formal para este relatório de risco, certo?", "labels": ["memory"], "source": "generated"}
+{"text": "Can you recall the decision we made about color coding for the product features in slide 5?", "labels": ["memory"], "source": "generated"}
+{"text": "Set a rule for this entire deck: all revenue figures must be rounded to the nearest thousand.", "labels": ["memory"], "source": "generated"}
+{"text": "Remember the preference for using the 'Waterfall' chart type specifically for showing plan progression.", "labels": ["memory"], "source": "generated"}
+{"text": "Recall what we decided about the disclaimer placement on the final slide of the investment proposal.", "labels": ["memory"], "source": "generated"}
+{"text": "Por favor, lembra-te que os custos operacionais devem ser apresentados em Euros, não em USD.", "labels": ["memory"], "source": "generated"}
+{"text": "Remember the decision to highlight the competitive advantage first on the main product overview slide.", "labels": ["memory"], "source": "generated"}
+{"text": "Recall the specific legal phrasing we settled on for the liability section.", "labels": ["memory"], "source": "generated"}
+{"text": "Set a rule: if a slide mentions 'future growth,' it must also include a corresponding mitigation strategy.", "labels": ["memory"], "source": "generated"}
+{"text": "Lembrar que o foco principal da reunião é a análise de risco, por isso destaque isso em todo o documento.", "labels": ["memory"], "source": "generated"}
+{"text": "Remember the client requested the timeline to be visualized as a Gantt chart, not just a simple list.", "labels": ["memory"], "source": "generated"}
+{"text": "Recall the exact wording we used for the 'regulatory compliance' heading in the previous version.", "labels": ["memory"], "source": "generated"}
+{"text": "Set a rule for all price comparison slides: always show the VAT breakdown.", "labels": ["memory"], "source": "generated"}
+{"text": "Remember that the senior partner prefers minimal text on slides 1 through 3.", "labels": ["memory"], "source": "generated"}
+{"text": "Recall our discussion about emphasizing the long-term viability versus short-term gains for this product pitch.", "labels": ["memory"], "source": "generated"}
+{"text": "Set a rule: when discussing risks, always present the probability alongside the impact.", "labels": ["memory"], "source": "generated"}
+{"text": "Lembra-te que a apresentação deve ser direcionada aos executivos, portanto, foco em resultados, não em processos.", "labels": ["memory"], "source": "generated"}
+{"text": "Remember the preference for using muted blues and greys throughout the entire project.", "labels": ["memory"], "source": "generated"}
+{"text": "Recall what we said about simplifying the technical jargon when explaining this banking product.", "labels": ["memory"], "source": "generated"}
+{"text": "Set a rule for the next review: check every slide for consistent branding guidelines compliance.", "labels": ["memory"], "source": "generated"}
+{"text": "Lembra-te de manter a terminologia financeira estritamente portuguesa neste relatório.", "labels": ["memory"], "source": "generated"}
+{"text": "Remember the decision to put the executive summary before the detailed financial projections.", "labels": ["memory"], "source": "generated"}
+{"text": "Recall the approved template style for risk assessment slides.", "labels": ["memory"], "source": "generated"}
+{"text": "Set a rule: never use more than four bullet points per slide.", "labels": ["memory"], "source": "generated"}
+{"text": "Lembra-te que o foco deve ser a implementação do plano, não apenas a teoria.", "labels": ["memory"], "source": "generated"}
+{"text": "Recall the specific client name we need to reference when discussing the market analysis.", "labels": ["memory"], "source": "generated"}
+{"text": "Remember the agreed-upon layout for the pricing structure comparison slides.", "labels": ["memory"], "source": "generated"}
+{"text": "Set a rule for the proposals: the competitor analysis must take up at least 20% of the slide space.", "labels": ["memory"], "source": "generated"}
+{"text": "Desfaz essa alteração por favor", "labels": ["history"], "source": "generated"}
+{"text": "Aceitar as alterações pendentes", "labels": ["history"], "source": "generated"}
+{"text": "Redo o último ajuste na proposta", "labels": ["history"], "source": "generated"}
+{"text": "Rejeitar as mudanças da página três", "labels": ["history"], "source": "generated"}
+{"text": "Podem desfazer o que foi feito no relatório?", "labels": ["history"], "source": "generated"}
+{"text": "Apply the waiting changes to the product slide", "labels": ["history"], "source": "generated"}
+{"text": "Rejeitar as mudanças na slide de riscos", "labels": ["history"], "source": "generated"}
+{"text": "Undo the last edit on this proposal", "labels": ["history"], "source": "generated"}
+{"text": "Sim aplicar as mudanças do preço", "labels": ["history"], "source": "generated"}
+{"text": "Voltar a fazer o que acabei de mudar", "labels": ["history"], "source": "generated"}
+{"text": "Aceitar as alterações desta apresentação", "labels": ["history"], "source": "generated"}
+{"text": "Reject the changes on the risk assessment", "labels": ["history"], "source": "generated"}
+{"text": "Desfazer a última correção no plano", "labels": ["history"], "source": "generated"}
+{"text": "Yes apply it to the next slide", "labels": ["history"], "source": "generated"}
+{"text": "Rejeitar a alteração da slide de introdução", "labels": ["history"], "source": "generated"}
+{"text": "Redo o ajuste feito no relatório de finanças", "labels": ["history"], "source": "generated"}
+{"text": "Apply the changes for this product description", "labels": ["history"], "source": "generated"}
+{"text": "Undo the modification on slide one", "labels": ["history"], "source": "generated"}
+{"text": "Accept the price changes now", "labels": ["history"], "source": "generated"}
+{"text": "Desfazer o que fiz na proposta", "labels": ["history"], "source": "generated"}
+{"text": "Redo the last change in the plan", "labels": ["history"], "source": "generated"}
+{"text": "Yes apply it to the current slide", "labels": ["history"], "source": "generated"}
+{"text": "Rejeitar as alterações na slide de visão", "labels": ["history"], "source": "generated"}
+{"text": "Undo the edit on the compliance report", "labels": ["history"], "source": "generated"}
+{"text": "Apply the new pricing structure", "labels": ["history"], "source": "generated"}
+{"text": "Desfaz essa mudança no plano de ação", "labels": ["history"], "source": "generated"}
+{"text": "Reject slide five changes", "labels": ["history"], "source": "generated"}
+{"text": "Redo the risk mitigation adjustments", "labels": ["history"], "source": "generated"}
+{"text": "Aceitar as correções no relatório", "labels": ["history"], "source": "generated"}
+{"text": "Undo the last thing i did on this slide", "labels": ["history"], "source": "generated"}
+{"text": "Apply the updates for the new product offering", "labels": ["history"], "source": "generated"}
+{"text": "Rejeitar as mudanças pendentes agora", "labels": ["history"], "source": "generated"}
+{"text": "How is the risk assessment section on slide 7 looking for the Q3 report?", "labels": [], "source": "generated"}
+{"text": "Oi obrigado por ver isto", "labels": [], "source": "generated"}
+{"text": "Can you tell me about the latest pricing structure mentioned in the proposal?", "labels": [], "source": "generated"}
+{"text": "Como está o plano de implementação para o produto X?", "labels": [], "source": "generated"}
+{"text": "What's the general sentiment about the market analysis we presented?", "labels": [], "source": "generated"}
+{"text": "Obrigado pela ajuda", "labels": [], "source": "generated"}
+{"text": "Tell me more about the projected costs on the final slide.", "labels": [], "source": "generated"}
+{"text": "Para onde devo ir a seguir com esta apresentação?", "labels": [], "source": "generated"}
+{"text": "Esta slide está correta?", "labels": [], "source": "generated"}
+{"text": "Hello", "labels": [], "source": "generated"}
+{"text": "What are your thoughts on the competitive landscape overview?", "labels": [], "source": "generated"}
+{"text": "Pode verificar o slide 3?", "labels": [], "source": "generated"}
+{"text": "I need a general opinion on the whole deck.", "labels": [], "source": "generated"}
+{"text": "Qual é o ponto principal do resumo executivo?", "labels": [], "source": "generated"}
+{"text": "Thank you", "labels": [], "source": "generated"}
+{"text": "How should I phrase the risks on slide 12?", "labels": [], "source": "generated"}
+{"text": "Diz-me algo sobre isto", "labels": [], "source": "generated"}
+{"text": "Regarding the operational plan, what are the next steps?", "labels": [], "source": "generated"}
+{"text": "Pode rever o slide de resultados?", "labels": [], "source": "generated"}
+{"text": "Good morning", "labels": [], "source": "generated"}
+{"text": "What should I do next?", "labels": [], "source": "generated"}
+{"text": "What's the status of the strategic plan presentation?", "labels": [], "source": "generated"}
+{"text": "O que acha deste gráfico de mercado?", "labels": [], "source": "generated"}
+{"text": "Can you confirm the project scope details?", "labels": [], "source": "generated"}
+{"text": "Apresentação finalizada?", "labels": [], "source": "generated"}
+{"text": "What about the European regulations discussed?", "labels": [], "source": "generated"}
+{"text": "Obrigado", "labels": [], "source": "generated"}
+{"text": "Please give me some feedback on the product features presentation.", "labels": [], "source": "generated"}
+{"text": "Como devo abordar os preços no slide?", "labels": [], "source": "generated"}
+{"text": "Hello there", "labels": [], "source": "generated"}
+{"text": "What's up with this deck?", "labels": [], "source": "generated"}
+{"text": "In this proposal deck, please add a new slide after the risks section and ensure the deck's slides and shapes: add a new slide, duplicate, delete or move slides, change a slide's layout or number of columns, add, move, resize or delete a shape or text box.; Write, rewrite, shorten, translate, correct or format the text already on a slide: a title, a subtitle, a bullet or a list of bullets, a column, a text box; change a word, a number, a date, a name; make text bigger, bold or another colour.", "labels": ["structure", "text"], "source": "generated"}
+{"text": "Na apresentação de produtos, por favor, duplique a segunda slide e atualize os preços nos tópicos; e também, nos slides e formas do deck: adicionar, duplicar, excluir ou mover slides, alterar o layout ou número de colunas de um slide, adicionar, mover, redimensionar ou excluir uma forma ou caixa de texto.; Reescrever, encurtar, traduzir, corrigir ou formatar o texto já no slide: um título, um subtítulo, um ponto ou uma lista de pontos, uma coluna, uma caixa de texto; mudar uma palavra, um número, uma data, um nome; deixar o texto maior, em negrito ou outra cor.", "labels": ["structure", "text"], "source": "generated"}
+{"text": "Ajuste o layout da slide 5 e acrescente um shape para o novo plano de marketing; use as funcionalidades de slides e formas do deck: adicionar um novo slide, duplicar, excluir ou mover slides, mudar o layout ou número de colunas de um slide, adicionar, mover, redimensionar ou excluir uma forma ou caixa de texto.; Reescreva e corrija o texto na seção de riscos, garantindo que o texto já no slide: um título, um subtítulo, um ponto ou uma lista de pontos, uma coluna, uma caixa de texto, esteja profissional.", "labels": ["structure", "text"], "source": "generated"}
+{"text": "Mover a slide de resumo para o início e certifique-se de que todos os textos estão em negrito e com tamanho 16; deck's slides and shapes: add a new slide, duplicate, delete or move slides, change a slide's layout or number of columns, add, move, resize or delete a shape or text box.; Write, rewrite, shorten, translate, correct or format the text already on a slide: a title, a subtitle, a bullet or a list of bullets, a column, a text box; change a word, a number, a date, a name; make text bigger, bold or another colour.", "labels": ["structure", "text"], "source": "generated"}
+{"text": "Nesta proposta de investimento, por favor, substitua o nome do gestor na slide 3 e encurte a descrição dos riscos; slides and shapes: add a new slide, duplicate, delete or move slides, change a slide's layout or number of columns, add, move, resize or delete a shape or text box.; Text on slide: title, subtitle, bullet or list of bullets, column, text box; rewrite, shorten, translate, correct or format; change a word, a number, a date, a name; change text size, bold or another color.", "labels": ["structure", "text"], "source": "generated"}
+{"text": "Can you delete the slide about competitor analysis and then translate the executive summary into European Portuguese? deck's slides and shapes: add a new slide, duplicate, delete or move slides, change a slide's layout or number of columns, add, move, resize or delete a shape or text box.; Write, rewrite, shorten, translate, correct or format the text already on a slide: a title, a subtitle, a bullet or a list of bullets, a column, a text box; change a word, a number, a date, a name; make text bigger, bold or another colour.", "labels": ["structure", "text"], "source": "generated"}
+{"text": "Change the title of this slide to reflect Q3 performance and make the main bullet points larger and blue; deck's slides and shapes: add a new slide, duplicate, delete or move slides, change a slide's layout or number of columns, add, move, resize or delete a shape or text box.; Rewrite, correct or format the text already on a slide: a title, a subtitle, a bullet or a list of bullets, a column, a text box; change a word, a number, a date, a name; make text bigger, bold or another colour.", "labels": ["structure", "text"], "source": "generated"}
+{"text": "Please reorganize the bullet points on the pricing slide to have two columns and increase the font size of the main text; deck's slides and shapes: add a new slide, duplicate, delete or move slides, change a slide's layout or number of columns, add, move, resize or delete a shape or text box.; Text on the slide: title, subtitle, bullet or list of bullets, column, text box; format, rewrite or correct; change a word, a number, a date, a name; change text size, bold or another color.", "labels": ["structure", "text"], "source": "generated"}
+{"text": "Adicione um novo slide no final, um slide de agradecimento, e ajuste o layout da slide 8 para três colunas; deck's slides and shapes: add a new slide, duplicate, delete or move slides, change a slide's layout or number of columns, add, move, resize or delete a shape or text box.; Text: title, subtitle, bullet or list of bullets, column, text box; rewrite, shorten, correct or format; change a word, a number, a date, a name; make text bigger, bold or another colour.", "labels": ["structure", "text"], "source": "generated"}
+{"text": "For the risk assessment report, please ensure all dates are in DD/MM/YYYY format and change the background color of the main text box; deck's slides and shapes: add a new slide, duplicate, delete or move slides, change a slide's layout or number of columns, add, move, resize or delete a shape or text box.; Text: title, subtitle, bullet or list of bullets, column, text box; rewrite, shorten, translate, correct or format; change a word, a number, a date, a name; make text bigger, bold or another colour.", "labels": ["structure", "text"], "source": "generated"}
+{"text": "Delete the duplicate shape in the introductory slide and bold the main title; deck's slides and shapes: add a new slide, duplicate, delete or move slides, change a slide's layout or number of columns, add, move, resize or delete a shape or text box.; Text on the slide: title, subtitle, bullet or list of bullets, column, text box; change a word, a number, a date, a name; make text bigger, bold or another colour.", "labels": ["structure", "text"], "source": "generated"}
+{"text": "Pode traduzir os tópicos da slide de planos para inglês e garantir que a lista de bullets esteja formatada com marcadores consistentes; deck's slides and shapes: add a new slide, duplicate, delete or move slides, change a slide's layout or number of columns, add, move, resize or delete a shape or text box.; Text: title, subtitle, bullet or list of bullets, column, text box; rewrite, shorten, translate, correct or format; change a word, a number, a date, a name; make text bigger, bold or another colour.", "labels": ["structure", "text"], "source": "generated"}
+{"text": "Shorten the text in the 'Product Features' section and make the subtitle green; deck's slides and shapes: add a new slide, duplicate, delete or move slides, change a slide's layout or number of columns, add, move, resize or delete a shape or text box.; Text: title, subtitle, bullet or list of bullets, column, text box; rewrite, shorten, translate, correct or format; change a word, a number, a date, a name; make text bigger, bold or another colour.", "labels": ["structure", "text"], "source": "generated"}
+{"text": "Move the slide detailing compliance issues to follow the strategy slide, and update the current quarter's numbers; deck's slides and shapes: add a new slide, duplicate, delete or move slides, change a slide's layout or number of columns, add, move, resize or delete a shape or text box.; Text: title, subtitle, bullet or list of bullets, column, text box; change a word, a number, a date, a name; rewrite, correct or format; make text bigger, bold or another colour.", "labels": ["structure", "text"], "source": "generated"}
+{"text": "In this financial report, increase the size of all numbers on the main data slide and review the language for clarity; deck's slides and shapes: add a new slide, duplicate, delete or move slides, change a slide's layout or number of columns, add, move, resize or delete a shape or text box.; Text on slide: title, subtitle, bullet or list of bullets, column, text box; rewrite, shorten, translate, correct or format; change a word, a number, a date, a name; make text bigger, bold or another colour.", "labels": ["structure", "text"], "source": "generated"}
+{"text": "Preciso que verifique a base de conhecimento para as tarifas do nosso novo produto, e depois adicione um gráfico com esses dados à segunda slide, mudando o layout para duas colunas.", "labels": ["knowledge", "notes", "structure", "text"], "source": "generated"}
+{"text": "Using the reference documents, find the latest compliance procedure and rewrite the bullet points on the risks slide to be more concise, then increase the font size of the main title.", "labels": ["knowledge", "notes", "structure", "text"], "source": "generated"}
+{"text": "Este slide aqui precisa de uma nova slide duplicada, baseada neste conteúdo, e adicione os factos sobre o procedimento interno de aprovação que encontrar nos documentos.", "labels": ["knowledge", "notes", "structure", "text"], "source": "generated"}
+{"text": "Look up the Q3 sales figures in the knowledge base and update the number in the KPI textbox on slide 5, making sure to bold the value and cite the source in the speaker notes.", "labels": ["knowledge", "notes", "structure", "text"], "source": "generated"}
+{"text": "Por favor, traduza para inglês o texto desta slide e, ao mesmo tempo, reescreva os pontos principais usando a terminologia correta dos produtos.", "labels": ["knowledge", "notes", "structure", "text"], "source": "generated"}
+{"text": "Delete the third slide, then add a new slide after it; populate it with the current pricing structure found in the latest proposal document.", "labels": ["knowledge", "notes", "structure", "text"], "source": "generated"}
+{"text": "Mude o layout desta slide para ter três colunas e procure os dados de risco mais recentes na base de dados da organização para preencher um novo shape.", "labels": ["knowledge", "notes", "structure", "text"], "source": "generated"}
+{"text": "Correct the grammar in the subtitle of this slide and shorten the associated speaker notes, referencing the internal policy document.", "labels": ["knowledge", "notes", "structure", "text"], "source": "generated"}
+{"text": "Este slide precisa de uma revisão total do texto: use os dados do relatório de mercado mais recente e reformate tudo para um tom mais formal.", "labels": ["knowledge", "notes", "structure", "text"], "source": "generated"}
+{"text": "Move slide 7 before slide 3. On the new slide 3, add a text box summarizing the key features of Product X, pulling details from the product sheet.", "labels": ["knowledge", "notes", "structure", "text"], "source": "generated"}
+{"text": "Atualiza o nome do contacto neste slide para João Silva e garante que o speaker notes contém a citação correta da diretiva financeira.", "labels": ["knowledge", "notes", "structure", "text"], "source": "generated"}
+{"text": "Find the operational procedure for refunds in the documentation and insert it as a new, detailed list of bullets on the 'Customer Support' slide.", "labels": ["knowledge", "notes", "structure", "text"], "source": "generated"}
+{"text": "Quero mudar a cor do texto do título desta slide para azul escuro e garantir que todos os números apresentados correspondem aos valores atuais do orçamento.", "labels": ["knowledge", "notes", "structure", "text"], "source": "generated"}
+{"text": "Shorten the introductory text on this slide and add a speaker note citing the corporate strategy document regarding market penetration.", "labels": ["knowledge", "notes", "structure", "text"], "source": "generated"}
+{"text": "Adiciona um shape para apresentar as previsões de faturamento e preenche-o com os dados projetados na nossa base de dados interna.", "labels": ["knowledge", "notes", "structure", "text"], "source": "generated"}
+{"text": "Por favor, na slide 5, procure na base de conhecimento a taxa de juros atual para crédito habitação e reescreva o texto do subtítulo para ser mais persuasivo", "labels": ["knowledge", "text"], "source": "generated"}
+{"text": "Search the knowledge base for the latest compliance procedures regarding AML and rewrite the bullet points on the 'Risk Assessment' slide to be concise and professional.", "labels": ["knowledge", "text"], "source": "generated"}
+{"text": "Nesta slide, atualize o nome do gestor de conta para Maria Silva e aumente o tamanho da fonte do título para 24pt", "labels": ["knowledge", "text"], "source": "generated"}
+{"text": "Can you find the current product pricing for our corporate loan packages from the reference documents and update the main text box on 'Product Overview'?", "labels": ["knowledge", "text"], "source": "generated"}
+{"text": "Procure os dados de performance do último trimestre nos documentos do projeto e formata a coluna de 'Resultados' na slide 12 em negrito.", "labels": ["knowledge", "text"], "source": "generated"}
+{"text": "Rewrite this slide's content to focus more on benefits rather than features, using the sales pitch guidelines from the internal documents.", "labels": ["knowledge", "text"], "source": "generated"}
+{"text": "Find the official procedure for handling high-value transactions in the knowledge base and correct any inconsistencies in the procedure text on the current slide.", "labels": ["knowledge", "text"], "source": "generated"}
+{"text": "Shorten the list of bullet points on the 'Market Entry Plan' slide, ensuring the core message aligns with the strategy document, and translate them to Portuguese.", "labels": ["knowledge", "text"], "source": "generated"}
+{"text": "Na slide sobre Propostas de Investimento, encontre a taxa de câmbio mais recente e altere o valor numérico no gráfico.", "labels": ["knowledge", "text"], "source": "generated"}
+{"text": "Find the required risk mitigation steps from the risk register and ensure all related bullet points on 'Project Risks' are correctly formatted and clear.", "labels": ["knowledge", "text"], "source": "generated"}
+{"text": "Podes traduzir o texto deste slide para português europeu e garantir que a terminologia financeira está correta de acordo com os nossos guias?", "labels": ["knowledge", "text"], "source": "generated"}
+{"text": "Change the date on the 'Milestone Schedule' slide to Q3 2024, referencing the approved project timeline document.", "labels": ["knowledge", "text"], "source": "generated"}
+{"text": "Search for the updated fee structure in the product documentation and adjust the text box describing the pricing model on this slide.", "labels": ["knowledge", "text"], "source": "generated"}
+{"text": "Correct any grammatical errors in the title and subtitles of the presentation, referencing the bank's style guide.", "labels": ["knowledge", "text"], "source": "generated"}
+{"text": "I need you to shorten the entire section describing regulatory changes on the latest slide, pulling the most critical points from the compliance manuals.", "labels": ["knowledge", "text"], "source": "generated"}
+{"text": "Poderias inserir uma imagem sobre o risco do produto na segunda apresentação e garantir que o texto alternativo descreva o gráfico de risco?", "labels": ["images", "structure"], "source": "generated"}
+{"text": "Please replace the image on slide 5 with a photo from the Q3 report and verify the alt text", "labels": ["images", "structure"], "source": "generated"}
+{"text": "Adicionar um novo slide após o de 'Plano de Expansão' e mudar o layout para duas colunas, também atualizando a imagem existente.", "labels": ["images", "structure"], "source": "generated"}
+{"text": "Can you remove the picture from the current slide and ensure the text boxes align correctly with the new plan structure?", "labels": ["images", "structure"], "source": "generated"}
+{"text": "Insere uma imagem ilustrativa de uma proposta de investimento no slide 10 e revisa o seu alt text.", "labels": ["images", "structure"], "source": "generated"}
+{"text": "Mover o shape de 'Preços' para o final do slide e depois apagar o antigo.", "labels": ["images", "structure"], "source": "generated"}
+{"text": "Please look at what the image on this slide shows and update its alt text regarding the risk assessment.", "labels": ["images", "structure"], "source": "generated"}
+{"text": "Desejo duplicar o slide sobre os produtos e adicionar uma imagem relacionada, ajustando o tamanho do shape principal.", "labels": ["images", "structure"], "source": "generated"}
+{"text": "Insere uma foto do documento de referência na primeira slide e garante que o alt text é preciso para o relatório.", "labels": ["images", "structure"], "source": "generated"}
+{"text": "Change the layout of slide 3 to have more columns and delete the shape that overlaps with the pricing data.", "labels": ["images", "structure"], "source": "generated"}
+{"text": "Could you replace the current image with one from the proposal documentation and fix the alt text?", "labels": ["images", "structure"], "source": "generated"}
+{"text": "Remove the image from the slide about risks and make sure all shapes are centered on the new slide layout.", "labels": ["images", "structure"], "source": "generated"}
+{"text": "Na slide de 'Relatórios', adicione uma imagem e assegura-te que o texto alternativo reflete o tema.", "labels": ["images", "structure"], "source": "generated"}
+{"text": "Duplicate slide 7, then resize the main shape and insert a picture about the new plan.", "labels": ["images", "structure"], "source": "generated"}
+{"text": "Look at what this image shows and update the alt text while also deleting an unnecessary text box.", "labels": ["images", "structure"], "source": "generated"}
+{"text": "In Portuguese please create a new deck for the Q3 Risk Report using the corporate template", "labels": ["decks", "structure"], "source": "generated"}
+{"text": "Can you copy the 'Product Launch Proposal' deck and put all its slides into the 'Internal Review' deck?", "labels": ["decks", "structure"], "source": "generated"}
+{"text": "Adicione uma nova slide ao deck de planos de investimento depois da slide 5", "labels": ["decks", "structure"], "source": "generated"}
+{"text": "Duplicate the 'Annual Performance' deck and change the template to the modern one", "labels": ["decks", "structure"], "source": "generated"}
+{"text": "Por favor, mova a slide com o título 'Análise de Mercado' para o início do deck de preços", "labels": ["decks", "structure"], "source": "generated"}
+{"text": "Change the layout of 'this slide' to three columns and resize the main chart shape", "labels": ["decks", "structure"], "source": "generated"}
+{"text": "Copy the current deck and then move the slide titled 'Executive Summary' to the new copy", "labels": ["decks", "structure"], "source": "generated"}
+{"text": "Create a new presentation from the existing 'Strategy 2025' and apply the dark theme", "labels": ["decks", "structure"], "source": "generated"}
+{"text": "Delete the shape that contains the compliance text on the slide discussing 'Regulatory Risks'", "labels": ["decks", "structure"], "source": "generated"}
+{"text": "In Portuguese please duplicate the slide at position 12 and add a new text box beneath it", "labels": ["decks", "structure"], "source": "generated"}
+{"text": "I need to copy slides 3 through 7 from the 'Project Alpha Plan' deck into the 'Final Approval' deck", "labels": ["decks", "structure"], "source": "generated"}
+{"text": "Can you add a new slide after slide 10 in the 'Quarterly Report' and set its layout to title and body?", "labels": ["decks", "structure"], "source": "generated"}
+{"text": "Change the template of the deck detailing 'New Product Features' to the vibrant design", "labels": ["decks", "structure"], "source": "generated"}
+{"text": "Move the slide about 'Pricing Structure' to the end of the current deck and delete the original", "labels": ["decks", "structure"], "source": "generated"}
+{"text": "Em português copie o deck completo de 'Propostas Comerciais' e mude o aspeto para o mais formal", "labels": ["decks", "structure"], "source": "generated"}
+{"text": "Rewrite the title of the 'Risk Assessment' slide to be more impactful and make the main bullet points bolder.", "labels": ["notes", "text"], "source": "generated"}
+{"text": "Pode encurtar o texto do subtítulo na slide de 'Preços' e traduzir a lista de bullets para o inglês?", "labels": ["notes", "text"], "source": "generated"}
+{"text": "Format the text box on slide 5, changing the font size to 16pt and making the name bold.", "labels": ["notes", "text"], "source": "generated"}
+{"text": "Corrija a data no gráfico de 'Plano de Investimento' e escreva notas do orador detalhando a fonte de dados.", "labels": ["notes", "text"], "source": "generated"}
+{"text": "Shorten the bullet list under 'Product Features' and change the word 'robust' to something stronger.", "labels": ["notes", "text"], "source": "generated"}
+{"text": "Please rewrite the entire proposal summary, ensuring the tone is highly formal, and check the citation in the speaker notes.", "labels": ["notes", "text"], "source": "generated"}
+{"text": "Mudar o número no slide 3 para 45000 e alterar a cor do título para azul escuro.", "labels": ["notes", "text"], "source": "generated"}
+{"text": "I need you to add a new bullet point to the 'Market Risks' section and translate all existing bullets to Portuguese.", "labels": ["notes", "text"], "source": "generated"}
+{"text": "This slide needs its subtitle rewritten to focus more on ROI, and please check the formatting of the column data.", "labels": ["notes", "text"], "source": "generated"}
+{"text": "Change the name in the introduction slide and make the main heading bigger and bold.", "labels": ["notes", "text"], "source": "generated"}
+{"text": "Pode atualizar o preço na coluna de 'Serviços Premium' e adicionar uma nota de orador citando o relatório Q3?", "labels": ["notes", "text"], "source": "generated"}
+{"text": "Rewrite the entire section on 'Strategic Plans' to be more concise, and ensure all key figures are bolded.", "labels": ["notes", "text"], "source": "generated"}
+{"text": "Could you translate the text box content on the 'Compliance' slide into European Portuguese and correct any grammar?", "labels": ["notes", "text"], "source": "generated"}
+{"text": "Shorten the bullet points on the last slide and change the font color of the main title to green.", "labels": ["notes", "text"], "source": "generated"}
+{"text": "Rewrite the speaker notes for the 'Financial Report' slide to clearly cite the source document and make the text larger.", "labels": ["notes", "text"], "source": "generated"}
+{"text": "Lembra-te que o tom para o relatório de risco deve ser mais formal e cauteloso, agora reescreve os pontos da lista na slide 3 para refletir isso", "labels": ["memory", "text"], "source": "generated"}
+{"text": "Recall our agreement on the brand guidelines for the pricing proposal, please format the bullet points on the 'Product Features' slide to use bold text for key benefits", "labels": ["memory", "text"], "source": "generated"}
+{"text": "Define that all technical jargon must be simplified for the executive summary moving forward, now shorten the text in the main text box on this slide to be more accessible", "labels": ["memory", "text"], "source": "generated"}
+{"text": "Manter a regra de que os números de referência devem sempre ser apresentados com o prefixo 'Ref:' em toda a apresentação, corrige os números na lista de custos da slide 7", "labels": ["memory", "text"], "source": "generated"}
+{"text": "Remember we decided to highlight the competitive advantage in green, please change the color of the subtitle on the 'Market Analysis' slide to green", "labels": ["memory", "text"], "source": "generated"}
+{"text": "What we agreed earlier was to focus on potential risks, so rewrite the introductory paragraph on slide 1 to emphasize proactive mitigation strategies", "labels": ["memory", "text"], "source": "generated"}
+{"text": "Set the rule that all dates must be displayed in DD/MM/YYYY format for this entire proposal, please update the dates in the timeline graphic", "labels": ["memory", "text"], "source": "generated"}
+{"text": "Remember to keep the language strictly formal for this audit report, rewrite the text in the main body of the last slide to be more compliant", "labels": ["memory", "text"], "source": "generated"}
+{"text": "Recall the decision to use short, punchy language, shorten the bullet points about the project plan on slide 4", "labels": ["memory", "text"], "source": "generated"}
+{"text": "Please remember the preference for using metric units consistently, change the number 1000 meters to 1 km on the technical specifications slide", "labels": ["memory", "text"], "source": "generated"}
+{"text": "Lembre-se que a nossa prioridade é a sustentabilidade, por favor, traduzir os tópicos da lista sobre o produto da slide 5 para um Português mais sofisticado", "labels": ["memory", "text"], "source": "generated"}
+{"text": "Keep the tone consistent with the initial pitch, correct the grammatical errors in the main description text box on this slide", "labels": ["memory", "text"], "source": "generated"}
+{"text": "Remember the rule about minimizing jargon, change the word 'synergistic' to 'collaborative' in the risk assessment section", "labels": ["memory", "text"], "source": "generated"}
+{"text": "Recall we preferred a more direct approach, rewrite the title of the 'Financial Outlook' slide to be more assertive", "labels": ["memory", "text"], "source": "generated"}
+{"text": "In slide 5, change the value of the risk score cell in the main table, rewrite the subtitle to be more engaging, and make the 'Risks' section title bold.", "labels": ["table", "text"], "source": "generated"}
+{"text": "Could you please correct the date in the projections table on the 'Q3 Forecast' slide, and simultaneously shorten the description in the associated text box?", "labels": ["table", "text"], "source": "generated"}
+{"text": "This slide: change the name in the contact information table, make the product description text bigger, and translate the bullet points into European Portuguese.", "labels": ["table", "text"], "source": "generated"}
+{"text": "On the proposal summary slide, add a new column to the comparison table, correct the figure for 'Operational Costs', and ensure the main title is in Arial font.", "labels": ["table", "text"], "source": "generated"}
+{"text": "Please shorten the introduction text in the first slide, and change the word 'optimize' to 'streamline' throughout the text boxes.", "labels": ["table", "text"], "source": "generated"}
+{"text": "Rewrite the bullet points on the 'Market Analysis' slide to sound more authoritative, and change the color of the main title to blue.", "labels": ["table", "text"], "source": "generated"}
+{"text": "Slide 12: update the number in the financial metrics table, make the corresponding cell bold, and correct the associated risk statement.", "labels": ["table", "text"], "source": "generated"}
+{"text": "Can you format the pricing table on the 'Pricing Structure' slide by making the currency column bold, and correct a typo in one of the cell values?", "labels": ["table", "text"], "source": "generated"}
+{"text": "On the 'Project Plan' slide, remove a redundant row from the Gantt chart table and translate the task list to European Portuguese.", "labels": ["table", "text"], "source": "generated"}
+{"text": "This slide: change the name listed in the team table, make the supporting text smaller, and correct the numerical data in the third column.", "labels": ["table", "text"], "source": "generated"}
+{"text": "Please shorten the entire narrative text box on the 'Executive Summary' slide, and change a specific term in a bullet point.", "labels": ["table", "text"], "source": "generated"}
+{"text": "Translate the bulleted list on the current slide to European Portuguese, and ensure the main subtitle is formatted to be bold.", "labels": ["table", "text"], "source": "generated"}
+{"text": "For slide 8, update the date in the timelines table, make the header text larger, and correct the value in the corresponding cell.", "labels": ["table", "text"], "source": "generated"}
+{"text": "Change the value in the competitor analysis table on the 'Competitive Landscape' slide, and rewrite the associated commentary text to be more concise.", "labels": ["table", "text"], "source": "generated"}
+{"text": "On the product feature slide, add a new column to the feature comparison table and change the color of the feature names in the text box.", "labels": ["table", "text"], "source": "generated"}
+{"text": "Please rewrite the bullet points on the 'Risk Assessment' slide to sound more formal for the Q3 report.", "labels": ["images", "text"], "source": "generated"}
+{"text": "Can you change the price displayed in the 'Product Features' text box to 199.99 and make the title bold?", "labels": ["images", "text"], "source": "generated"}
+{"text": "Pode substituir a imagem da 'Planos de Expansão' por outra e também corrigir o texto do subtítulo?", "labels": ["images", "text"], "source": "generated"}
+{"text": "Shorten the introductory text on slide 3 and change the company name to 'Banco Central Europa'.", "labels": ["images", "text"], "source": "generated"}
+{"text": "Mude o título deste slide para 'Propostas de Investimento' e coloque uma imagem do relatório anexo.", "labels": ["images", "text"], "source": "generated"}
+{"text": "Fix the alt text for the chart image on the 'Market Analysis' slide and make the key numbers bigger.", "labels": ["images", "text"], "source": "generated"}
+{"text": "Could you translate the entire content of slide 7 into European Portuguese?", "labels": ["images", "text"], "source": "generated"}
+{"text": "Replace the current image with one showing risk diversification and ensure the alt text is descriptive.", "labels": ["images", "text"], "source": "generated"}
+{"text": "Change the date in the 'Timeline' section of this slide to 15/10/2024 and make all bullet points blue.", "labels": ["images", "text"], "source": "generated"}
+{"text": "Insere uma fotografia do nosso escritório na diapositivo de introdução e ajusta o tamanho do texto do título.", "labels": ["images", "text"], "source": "generated"}
+{"text": "Look at the image on the 'Loan Offer' slide and rewrite the accompanying text to emphasize security.", "labels": ["images", "text"], "source": "generated"}
+{"text": "Quickly correct grammar and shorten the column text on the pricing slide.", "labels": ["images", "text"], "source": "generated"}
+{"text": "Pode mudar a cor de todos os textos de lista neste slide para cinzento escuro?", "labels": ["images", "text"], "source": "generated"}
+{"text": "In this slide change the word 'potential' to 'guaranteed' and insert a relevant product photo.", "labels": ["images", "text"], "source": "generated"}
+{"text": "This slide title needs rewriting please make it punchier and fix the alt text for the main graphic", "labels": ["images", "text"], "source": "generated"}

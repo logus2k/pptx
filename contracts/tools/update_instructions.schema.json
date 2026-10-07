@@ -1,0 +1,18 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "tools/update_instructions",
+ "title": "update_instructions",
+ "description": "Propose new project instructions (rules for every deck and conversation of this project). They apply only after the person confirms.",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "text"
+ ],
+ "properties": {
+  "text": {
+   "type": "string",
+   "maxLength": 20000,
+   "description": "The whole new instructions."
+  }
+ }
+}

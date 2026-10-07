@@ -1,0 +1,57 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "storage/memory.schema.json",
+ "title": "DATA_DIR/projects/<pid>/memory.json: the project's memory (technical design section 4; spec PJ-9)",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "schema_version",
+  "items"
+ ],
+ "properties": {
+  "schema_version": {
+   "const": 1
+  },
+  "items": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "id",
+     "text",
+     "author",
+     "created_at",
+     "updated_at"
+    ],
+    "properties": {
+     "id": {
+      "type": "string"
+     },
+     "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+     },
+     "conversation_id": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "description": "the conversation it came from; null when a person wrote it on the project page"
+     },
+     "author": {
+      "type": "string",
+      "description": "who asked for it to be kept, or wrote it"
+     },
+     "created_at": {
+      "type": "string"
+     },
+     "updated_at": {
+      "type": "string"
+     }
+    }
+   }
+  }
+ }
+}

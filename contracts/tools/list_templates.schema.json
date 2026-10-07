@@ -1,0 +1,10 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "tools/list_templates",
+ "title": "list_templates",
+ "description": "The templates a new deck can be made from: the organisation's and the project's own.",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [],
+ "properties": {}
+}

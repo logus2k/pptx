@@ -1,0 +1,114 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "storage/message.schema.json",
+ "title": "One line of messages.jsonl: a message of the conversation, in order (technical design section 4)",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "seq",
+  "at",
+  "role"
+ ],
+ "properties": {
+  "seq": {
+   "type": "integer",
+   "minimum": 1
+  },
+  "at": {
+   "type": "string"
+  },
+  "role": {
+   "enum": [
+    "user",
+    "assistant",
+    "tool"
+   ]
+  },
+  "author": {
+   "type": "string",
+   "description": "user: who wrote it (shared projects)."
+  },
+  "content": {
+   "type": [
+    "string",
+    "null"
+   ]
+  },
+  "speakable": {
+   "type": "string",
+   "description": "assistant: the short version read aloud."
+  },
+  "tool_calls": {
+   "type": "array"
+  },
+  "tool_call_id": {
+   "type": "string"
+  },
+  "name": {
+   "type": "string"
+  },
+  "deck_id": {
+   "type": [
+    "string",
+    "null"
+   ]
+  },
+  "selection": {
+   "type": "object"
+  },
+  "proposal_id": {
+   "type": "string"
+  },
+  "attachments": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   }
+  },
+  "notice": {
+   "enum": [
+    "nothing_changed"
+   ],
+   "description": "assistant: what the application adds from its own record (nothing_changed: the turn's edits all failed, whatever the reply says)."
+  },
+  "sources": {
+   "type": "array",
+   "description": "assistant: the knowledge-base documents the turn read, with the sections and pages read (spec KB-3).",
+   "items": {
+    "type": "object",
+    "required": [
+     "document"
+    ],
+    "properties": {
+     "domain": {
+      "type": "string"
+     },
+     "document": {
+      "type": "string"
+     },
+     "title": {
+      "type": "string"
+     },
+     "updated": {
+      "type": "string"
+     },
+     "link": {
+      "type": "string"
+     },
+     "sections": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "pages": {
+      "type": "array",
+      "items": {
+       "type": "integer"
+      }
+     }
+    }
+   }
+  }
+ }
+}

@@ -1,0 +1,29 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "tools/decide_changes",
+ "title": "decide_changes",
+ "description": "The person's decision on the changes waiting in review, said in words (\"yes, apply them\", \"reject slide five\"): the same as the review buttons.",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "decision"
+ ],
+ "properties": {
+  "decision": {
+   "enum": [
+    "accept_all",
+    "reject_all",
+    "accept_only",
+    "reject_only"
+   ],
+   "description": "accept_only / reject_only: just the slides given."
+  },
+  "slides": {
+   "type": "array",
+   "items": {
+    "type": "integer"
+   },
+   "description": "accept_only, reject_only: slide numbers as the review shows them (1 = first)."
+  }
+ }
+}

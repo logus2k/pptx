@@ -1,0 +1,99 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "tools/insert_image",
+ "title": "insert_image",
+ "description": "Insert an image: into a picture placeholder (it fills it) or inside a box (its proportions kept).",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "slide_id",
+  "image",
+  "target"
+ ],
+ "properties": {
+  "deck_id": {
+   "type": "string",
+   "description": "Left out: the active deck."
+  },
+  "slide_id": {
+   "type": "integer",
+   "description": "The slide: its number in the deck (1 = first, as the deck map and the person say it) or its ID."
+  },
+  "image": {
+   "type": "object",
+   "additionalProperties": false,
+   "description": "An image the person attached or uploaded (asset_id), or a picture of a knowledge-base document (kb_domain, kb_document, kb_image_id from kb_list_images). Never a URL.",
+   "properties": {
+    "asset_id": {
+     "type": "string"
+    },
+    "kb_domain": {
+     "type": "string"
+    },
+    "kb_document": {
+     "type": "string"
+    },
+    "kb_image_id": {
+     "type": "string"
+    }
+   },
+   "anyOf": [
+    {
+     "required": [
+      "asset_id"
+     ]
+    },
+    {
+     "required": [
+      "kb_domain",
+      "kb_document",
+      "kb_image_id"
+     ]
+    }
+   ]
+  },
+  "target": {
+   "type": "object",
+   "additionalProperties": false,
+   "description": "Either placeholder_idx or box.",
+   "properties": {
+    "placeholder_idx": {
+     "type": "integer"
+    },
+    "box": {
+     "type": "object",
+     "required": [
+      "x",
+      "y",
+      "w",
+      "h"
+     ],
+     "additionalProperties": false,
+     "description": "Position and size as fractions (0 to 1) of the slide's width and height.",
+     "properties": {
+      "x": {
+       "type": "number",
+       "minimum": 0,
+       "maximum": 1
+      },
+      "y": {
+       "type": "number",
+       "minimum": 0,
+       "maximum": 1
+      },
+      "w": {
+       "type": "number",
+       "minimum": 0,
+       "maximum": 1
+      },
+      "h": {
+       "type": "number",
+       "minimum": 0,
+       "maximum": 1
+      }
+     }
+    }
+   }
+  }
+ }
+}

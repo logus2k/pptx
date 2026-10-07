@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "templates": [
+    {
+      "id": "bancoctt",
+      "file": "bancoctt.pptx",
+      "name": {
+        "pt": "Banco CTT",
+        "en": "Banco CTT"
+      },
+      "description": {
+        "pt": "O modelo do Banco CTT (de Dev.AI v1.1): capas, separadores, agendas, texto, tabelas, gráficos, cronogramas e mensagem final, em Arial Nova.",
+        "en": "Banco CTT's template (from Dev.AI v1.1): covers, section dividers, agendas, text, tables, charts, timelines and closing message, in Arial Nova."
+      },
+      "default": true
+    },
+    {
+      "id": "default",
+      "file": "default.pptx",
+      "name": {
+        "pt": "Modelo simples",
+        "en": "Plain template"
+      },
+      "description": {
+        "pt": "Modelo genérico 16:9, até serem fornecidos os modelos do Banco CTT.",
+        "en": "Generic 16:9 template, until Banco CTT's templates are supplied."
+      },
+      "default": false
+    }
+  ]
+}

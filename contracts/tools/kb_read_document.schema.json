@@ -1,0 +1,26 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "tools/kb_read_document",
+ "title": "kb_read_document",
+ "description": "Read a knowledge-base document in reading order, a page of passages at a time (never all at once): call again with `after` set to the answer's `next` for more.",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "domain",
+  "path"
+ ],
+ "properties": {
+  "domain": {
+   "type": "string"
+  },
+  "path": {
+   "type": "string",
+   "description": "The document, as a passage's `document` gives it."
+  },
+  "after": {
+   "type": "integer",
+   "minimum": 0,
+   "description": "The passage index to start from; left out: 0."
+  }
+ }
+}

@@ -1,0 +1,5 @@
+/* Slides: copied verbatim from Cortex (static/css/fonts.css). */
+/* Inter, self-hosted (the Banco CTT design system's family: Regular 400 and Bold 700 are used). The variable font
+   and its licence (SIL Open Font License 1.1) are in static/fonts/. Loaded right after tokens.css, which names the
+   family in --font-sans. */
+@font-face { font-family: 'Inter'; src: url('../fonts/InterVariable.ttf') format('truetype'); font-weight: 100 900; font-style: normal; font-display: swap; }

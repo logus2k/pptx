@@ -1,0 +1,30 @@
+# Versions shared with Cortex are pinned to Cortex's (~/env/assets/cortex/constraints.txt), so both run the same code.
+fastapi==0.141.1
+starlette==1.7.0
+uvicorn==0.54.0
+python-socketio==5.17.0
+python-engineio==4.14.0
+wsproto==1.3.2
+python-multipart==0.0.32
+pydantic==2.13.5
+requests==2.34.2
+httpx==0.28.1
+# the configuration file's schema (contracts/config.schema.json)
+jsonschema==4.26.0
+# the document engine (technical design section 9)
+python-pptx==1.0.2
+lxml==6.1.3
+pillow==12.3.0
+pypdfium2==5.14.0
+# Banco CTT's logging standard (app/telemetry.py, copied from Cortex)
+opentelemetry-api==1.45.0
+opentelemetry-sdk==1.45.0
+opentelemetry-exporter-otlp-proto-http==1.45.0
+opentelemetry-instrumentation-asgi==0.66b0
+opentelemetry-instrumentation-httpx==0.66b0
+opentelemetry-instrumentation-requests==0.66b0
+# Claude models, when ANTHROPIC_API_KEY is set (app/agent/llm.py; the version Cortex uses)
+anthropic==1.8.0
+# speech (app/speech.py, as Cortex): the level of a spoken request, and socket.io's async client to stt_server
+numpy==2.5.3
+aiohttp==3.14.3

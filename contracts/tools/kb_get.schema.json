@@ -1,0 +1,18 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "tools/kb_get",
+ "title": "kb_get",
+ "description": "One knowledge-base passage in full, by the id a search gave (valid in this conversation only).",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "id"
+ ],
+ "properties": {
+  "id": {
+   "type": "string",
+   "minLength": 8,
+   "maxLength": 40
+  }
+ }
+}

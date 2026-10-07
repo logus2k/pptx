@@ -1,0 +1,310 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "slide.schema.json",
+  "title": "A slide as the assistant sees it (spec 5.1, technical design 6.5): get_slide's answer",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "slide_id",
+    "index",
+    "layout",
+    "hidden",
+    "size",
+    "shapes",
+    "notes"
+  ],
+  "properties": {
+    "deck_id": {
+      "type": "string"
+    },
+    "slide_id": {
+      "type": "integer",
+      "description": "The file's slide ID: stable when slides are reordered."
+    },
+    "index": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "layout": {
+      "type": "string"
+    },
+    "hidden": {
+      "type": "boolean"
+    },
+    "size": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "width_emu",
+        "height_emu"
+      ],
+      "properties": {
+        "width_emu": {
+          "type": "integer"
+        },
+        "height_emu": {
+          "type": "integer"
+        }
+      }
+    },
+    "shapes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/shape"
+      }
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "$defs": {
+    "box": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "x",
+        "y",
+        "w",
+        "h"
+      ],
+      "description": "Position and size as fractions of the slide's width and height.",
+      "properties": {
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "w": {
+          "type": "number"
+        },
+        "h": {
+          "type": "number"
+        }
+      }
+    },
+    "emu": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "x",
+        "y",
+        "w",
+        "h"
+      ],
+      "properties": {
+        "x": {
+          "type": "integer"
+        },
+        "y": {
+          "type": "integer"
+        },
+        "w": {
+          "type": "integer"
+        },
+        "h": {
+          "type": "integer"
+        }
+      }
+    },
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "text"
+      ],
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "A line break inside a paragraph is a run whose text is \"\\n\"."
+        },
+        "bold": {
+          "type": "boolean"
+        },
+        "italic": {
+          "type": "boolean"
+        },
+        "size_pt": {
+          "type": "number",
+          "description": "Only when the run sets it; otherwise it comes from the layout."
+        },
+        "theme_color": {
+          "enum": [
+            "text1",
+            "text2",
+            "background1",
+            "background2",
+            "accent1",
+            "accent2",
+            "accent3",
+            "accent4",
+            "accent5",
+            "accent6",
+            "hyperlink",
+            "followed_hyperlink"
+          ]
+        }
+      }
+    },
+    "paragraph": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "level",
+        "runs"
+      ],
+      "properties": {
+        "level": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 8
+        },
+        "alignment": {
+          "enum": [
+            "left",
+            "center",
+            "right",
+            "justify"
+          ]
+        },
+        "runs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/run"
+          }
+        }
+      }
+    },
+    "shape": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "shape_id",
+        "name",
+        "type",
+        "locked"
+      ],
+      "properties": {
+        "shape_id": {
+          "type": "integer",
+          "description": "The shape's ID within its slide."
+        },
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "placeholder",
+            "text_box",
+            "shape",
+            "picture",
+            "table",
+            "chart",
+            "group",
+            "connector",
+            "other"
+          ]
+        },
+        "subtype": {
+          "type": "string",
+          "description": "For other and chart: smartart, chart, media, ole, ink, content_part..."
+        },
+        "placeholder": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "idx"
+          ],
+          "properties": {
+            "type": {
+              "type": "string"
+            },
+            "idx": {
+              "type": "integer"
+            }
+          }
+        },
+        "box": {
+          "$ref": "#/$defs/box"
+        },
+        "emu": {
+          "$ref": "#/$defs/emu"
+        },
+        "paragraphs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/paragraph"
+          }
+        },
+        "table": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "rows",
+            "cols",
+            "cells"
+          ],
+          "properties": {
+            "rows": {
+              "type": "integer"
+            },
+            "cols": {
+              "type": "integer"
+            },
+            "cells": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "alt_text": {
+          "type": "string"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "A picture's description from the vision model (M3); null until made."
+        },
+        "overflow": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "Whether the text overflows its frame; null when not estimated (SP-3)."
+        },
+        "locked": {
+          "type": "boolean",
+          "description": "true: the engine cannot safely change it; it is kept as it is."
+        },
+        "shapes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/shape"
+          },
+          "description": "A group's members."
+        },
+        "image_sha256": {
+          "type": "string",
+          "description": "picture: its image's SHA-256: what a description (spec IM-4) is kept by."
+        },
+        "connects": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "A connector attached at both ends: the IDs of the shapes it links, from and to."
+        }
+      }
+    }
+  }
+}

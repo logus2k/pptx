@@ -1,0 +1,111 @@
+/* Slides: copied verbatim from Cortex (static/css/cv-controls.css). */
+/* Assistant control pad: copied verbatim from ~/env/assets/cv/widget/cv-chat.css
+   (.cvchat-root tokens, input bar, mic/speaker/send states, hint). The avatar
+   button is not used here. */
+.cvchat-root {
+    --cv-accent: #0e7490;
+    --cv-accent-deep: #0c5e6e;
+    --cv-accent-soft: #ecfeff;
+    --cv-text: #0f172a;
+    --cv-text-soft: #334155;
+    --cv-text-mute: #64748b;
+    --cv-border: #e2e8f0;
+    --cv-bg-soft: #f6f7f9;
+    --cv-user: #0e7490;
+    --cv-radius: 12px;
+
+    font-family: "Inter", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--cv-text);
+}
+
+/* ---------- input bar ---------- */
+
+.cvchat-inputbar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 20px 5px 20px;
+    border-top: 1px solid var(--cv-border);
+    background: #fff;
+    flex: none;
+}
+
+.cvchat-input {
+    flex: 1;
+    resize: none;
+    border: 1px solid var(--cv-border);
+    border-radius: 10px;
+    padding: 9px 11px;
+    font: inherit;
+    font-size: 13.5px;
+    color: var(--cv-text);
+    max-height: 110px;
+    outline: none;
+    scrollbar-width: none;
+}
+.cvchat-input:focus { border-color: var(--cv-accent); }
+
+.cvchat-iconbtn {
+    flex: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 0.5px solid #b8b8b8;
+    background: #fff;
+    color: var(--cv-text-soft);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.13s ease, color 0.13s ease, border-color 0.13s ease;
+    border-style: outset;
+}
+.cvchat-iconbtn:hover { background: var(--cv-bg-soft); }
+.cvchat-iconbtn svg { width: 17px; height: 17px; }
+.cvchat-iconbtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.cvchat-send {
+    background: #5aa098;
+    border-color: var(--cv-accent);
+    color: #fff;
+}
+.cvchat-send:hover { background: var(--cv-accent-deep); border-color: var(--cv-accent-deep); }
+.cvchat-send:disabled { background: var(--cv-accent); border-color: var(--cv-accent); }
+
+/* mic active (capturing) */
+.cvchat-mic.active {
+    background: #ffcdd2;
+    border-color: #ef9a9a;
+    color: #b71c1c;
+    border-style: inset;
+}
+/* mic active + speech detected */
+.cvchat-mic.listening {
+    animation: cvchat-mic-pulse 1s ease-in-out infinite;
+}
+@keyframes cvchat-mic-pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(229, 115, 115, 0.5); }
+    70%  { box-shadow: 0 0 0 7px rgba(229, 115, 115, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(229, 115, 115, 0); }
+}
+
+/* speaker active (TTS on) */
+.cvchat-speaker.active {
+    background: #c8e6c9;
+    border-color: #a5d6a7;
+    color: #1b5e20;
+    border-style: inset;
+}
+.cvchat-speaker.speaking {
+    animation: cvchat-mic-pulse 1s ease-in-out infinite;
+}
+
+.cvchat-hint {
+    font-size: 10.5px;
+    color: #5d5d5d;
+    text-align: center;
+    padding: 2px 10px 3px 10px;
+    background: #ffefdb;
+}

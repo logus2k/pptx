@@ -1,0 +1,126 @@
+/* Slides: copied verbatim from Cortex (static/css/menubar.css). */
+#menubar {
+    position: absolute;
+    top: 6px;
+    left: 40px;
+    right: 0;
+    height: 20px;
+    z-index: 7;
+    pointer-events: auto;
+}
+
+.menubar {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    user-select: none;
+    color: #c5cece;
+    font-family: var(--font-sans);
+    font-size: 12px;
+    padding-left: 8px;
+}
+
+.menu {
+    position: relative;
+}
+
+.menu-btn {
+    padding: 2px 8px 1px;
+    margin-right: 2px;
+    cursor: pointer;
+    border-radius: 3px;
+}
+
+.menu-btn:hover,
+.menu-btn.active {
+    background: #2A2D2E;
+    color: #ffffff;
+}
+
+.dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background: #1f1f1f;
+    color: #c5cece;
+    border: 0.5px solid #424646;
+    min-width: 200px;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    border-radius: 5px;
+    font-size: 13px;
+}
+
+.menu.open > .dropdown {
+    display: block;
+}
+
+.menu-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 12px;
+    margin: 3px;
+    cursor: pointer;
+    white-space: nowrap;
+    position: relative;
+}
+
+.menu-item:hover,
+.menu-item.focus {
+    background: #2A2D2E;
+    border-radius: 5px;
+}
+
+.menu-item:hover .shortcut,
+.menu-item.focus .shortcut,
+.menu-item:hover .arrow,
+.menu-item.focus .arrow {
+    color: inherit;
+}
+
+.menu-item.disabled {
+    color: #666;
+    pointer-events: none;
+}
+
+.menubar .separator {
+    height: 0.5px;
+    background: #424646;
+    margin: 4px 0;
+}
+
+.check {
+    width: 16px;
+    display: inline-block;
+}
+
+.menubar .shortcut {
+    margin-left: 30px;
+    color: #939A9A;
+    margin-right: 12px;
+}
+
+.arrow {
+    margin-left: 20px;
+    width: 16px;
+    text-align: center;
+    color: #969E9F;
+}
+
+.submenu {
+    display: none;
+    position: absolute;
+    background: #1f1f1f;
+    color: #c5cece;
+    border: 0.5px solid #424646;
+    min-width: 200px;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    border-radius: 5px;
+}
+
+.has-sub {
+    position: relative;
+}

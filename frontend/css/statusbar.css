@@ -1,0 +1,90 @@
+/* Slides: copied verbatim from Cortex (static/css/statusbar.css). */
+/* Status bar rules copied verbatim from ~/env/assets/noted/frontend/css/base.css */
+
+#status-bar {
+    height: 20px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    padding: 0;
+    background: #181818;
+    font-size: 10px;
+    font-family: var(--font-sans);
+    color: #9d9d9d;
+    border-top: 0.5px solid #666666;
+    z-index: 3;
+    background: url("../images/low-contrast-linen.png");
+    background-color: #1f1f1ffe;
+}
+
+#status-bar .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 10px;
+    height: 100%;
+    font-size: 10px;
+    color: #333333;
+}
+
+#status-bar .status-pill.host {
+    background: #ffe39e;
+}
+
+#status-bar .status-pill.container {
+    background: #b8e6c4;
+    border-radius: 0px 7px 7px 0px;
+    clip-path: polygon(0% 0%, 95% 0%, 100% 50%, 95% 100%, 0% 100%);
+    padding-right: 15px;
+}
+
+#status-bar .status-pill.pipeline {
+    background: #bbdefb;
+    border-radius: 7px;
+    color: #1565c0;
+    margin-left: 6px;
+}
+
+#status-bar .status-pill.serving {
+    background: #c8e6c0;
+    border-radius: 7px;
+    color: #2e7d32;
+    margin-left: 6px;
+}
+
+#status-bar .status-pill.problems {
+    background: transparent;
+    margin-left: 6px;
+    gap: 6px;
+    color: #9d9d9d;
+}
+
+#status-bar .status-pill.problems:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+#status-bar .status-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0px 0px 0px 12px;
+    font-size: 10px;
+    color: #fefefe;
+}
+
+#status-bar .status-spacer {
+    flex: 1;
+}
+
+#status-bar .status-right {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 8px;
+    font-size: 10px;
+    color: #fefefe;
+}
+
+#status-bar .status-right:last-child {
+    margin-right: 8px;
+}

@@ -1,0 +1,15 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "tools/get_deck_outline",
+ "title": "get_deck_outline",
+ "description": "The outline of a deck (each slide's ID, number, layout, title and a summary): for decks other than the active one, which your context shows in full.",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [],
+ "properties": {
+  "deck_id": {
+   "type": "string",
+   "description": "Left out: the active deck."
+  }
+ }
+}

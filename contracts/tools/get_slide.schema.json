@@ -1,0 +1,21 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "tools/get_slide",
+ "title": "get_slide",
+ "description": "One slide in full: its layout and each shape with ID, type, position, text (paragraphs and runs), alt text, and whether it is locked (cannot be changed).",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "slide_id"
+ ],
+ "properties": {
+  "deck_id": {
+   "type": "string",
+   "description": "Left out: the active deck."
+  },
+  "slide_id": {
+   "type": "integer",
+   "description": "The slide: its number in the deck (1 = first, as the deck map and the person say it) or its ID."
+  }
+ }
+}

@@ -56,6 +56,7 @@ Priority uses MoSCoW: **M** must, **S** should, **C** could.
 | PM-7 | Allow simple manual edits without the assistant: edit text in place, reorder slides by drag-and-drop, delete slides. | S |
 | PM-8 | Persist presentations as part of their project (see 3.6); a presentation always belongs to exactly one project. | M |
 | PM-9 | Each presentation has its own template, chosen when it is created, so decks in one project can use different templates. Users can upload their own templates (.pptx or .potx, macro-free) into a project, where they are listed next to the administrators' templates and can be used for any of its decks. An uploaded .pptx is used for its masters, layouts and theme; its slides are not copied. | M |
+| PM-10 | Change the template of an existing presentation: its slides are re-mapped onto the new template's layouts and theme (matching layouts by kind, placeholders by type), content that could not be mapped is reported, and the change follows the plan-and-confirm rule (NL-8) and produces a proposal like any other change. | S |
 
 ### 3.2 Natural-language editing
 
@@ -255,6 +256,7 @@ The model never edits raw XML or writes code that runs against the file. It work
 | `add_slide(layout, position, placeholders)` | Insert a slide from a layout and fill its placeholders. |
 | `duplicate_slide`, `delete_slide`, `move_slide` | Structural changes. |
 | `change_layout(slide_id, layout)` | Re-map content onto a new layout, reporting anything that could not be mapped. |
+| `change_template(template)` | Re-map the whole deck onto another template (PM-10), reporting anything that could not be mapped. |
 | `add_shape`, `move_resize_shape`, `delete_shape` | Free-form shapes and text boxes within slide bounds. |
 | `insert_image(slide_id, target, image_ref, fit)` | Insert into a placeholder or at a position; `image_ref` points to an uploaded, KB or generated asset, never an arbitrary URL. |
 | `replace_image(slide_id, shape_id, image_ref)` | Swap an image keeping geometry. |
@@ -346,10 +348,10 @@ Scenarios S1 to S10 shall pass end to end on the reference deployment with the c
 
 **Phase 1 (MVP)** covers projects with multiple decks and persistent, resumable conversations, project instructions, rolling conversation summaries, upload, preview, download, text editing via chat, add/delete/move slides, slides generated from a user-supplied outline, image insert and replace from uploads, alt text on request, proposals with accept/reject, version history with undo and redo, push-to-talk STT, TTS playback with barge-in on the mic button, KB search with citations, administrator configuration and templates from files (AD-1 to AD-3), per-presentation templates including the user's own (PM-9), logging to the bank's standard and the audit trail, and the model client tested with at least one model endpoint. Scenarios S1 to S7 and S10 pass.
 
-**Phase 2** adds project memory, cross-deck operations (copy and move slides, duplicate decks, multi-deck changes), project assets and reference documents, conversation and document search, deck generation from documents and KB topics, tables, hands-free voice, voice confirmations, alt-text automation, PDF export, the render self-check loop and manual editing in the UI. Scenarios S8 and S9 pass, and the full acceptance criteria of section 10 are met.
+**Phase 2** adds project memory, cross-deck operations (copy and move slides, duplicate decks, multi-deck changes), project assets and reference documents, conversation and document search, deck generation from documents and KB topics, tables, hands-free voice, voice confirmations, alt-text automation, PDF export, the render self-check loop manual editing in the UI, and changing a deck's template (PM-10). Scenarios S8 and S9 pass, and the full acceptance criteria of section 10 are met.
 
 **Phase 3** adds project sharing with edit leases, project export and import, native charts, image generation, the template management screen (AD-4), the usage screen (AD-5) and the audit log screen (AD-6).
 
 ## 12. Open questions
 
-The following points need decisions from stakeholders. What retention period applies to conversations and versions? Should Google Slides import and export be in scope, given the round-trip limitations? In shared projects, should memory and instructions be editable by all editors or only the owner? Should a user be able to move a deck or conversation between projects, and what happens to memory that referred to it? Are there default limits on decks, conversations and storage per project? Which real Banco CTT decks can be provided for the test set (section 10)? Can a deck's template be changed after it is created (re-mapping its slides onto the new template's layouts)?
+The following points need decisions from stakeholders. What retention period applies to conversations and versions? Should Google Slides import and export be in scope, given the round-trip limitations? In shared projects, should memory and instructions be editable by all editors or only the owner? Should a user be able to move a deck or conversation between projects, and what happens to memory that referred to it? Are there default limits on decks, conversations and storage per project? Which real Banco CTT decks can be provided for the test set (section 10)?

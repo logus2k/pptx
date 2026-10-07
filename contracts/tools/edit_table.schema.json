@@ -1,0 +1,126 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "tools/edit_table",
+ "title": "edit_table",
+ "description": "Change a table: set cells, add or delete rows and columns, in the order given.",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "slide_id",
+  "shape_id",
+  "operations"
+ ],
+ "properties": {
+  "deck_id": {
+   "type": "string",
+   "description": "Left out: the active deck."
+  },
+  "slide_id": {
+   "type": "integer",
+   "description": "The slide: its number in the deck (1 = first, as the deck map and the person say it) or its ID."
+  },
+  "shape_id": {
+   "type": "integer",
+   "description": "From the deck map."
+  },
+  "operations": {
+   "type": "array",
+   "minItems": 1,
+   "maxItems": 100,
+   "items": {
+    "type": "object",
+    "required": [
+     "op"
+    ],
+    "additionalProperties": false,
+    "properties": {
+     "op": {
+      "enum": [
+       "set_cell",
+       "add_row",
+       "delete_row",
+       "add_column",
+       "delete_column"
+      ],
+      "description": "set_cell needs row, col and text; add_row and add_column take at and cells (the new row's or column's text); delete_row needs row; delete_column needs col."
+     },
+     "row": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "set_cell, delete_row: the row, counted from 0 (row 0 is the first row, usually the header), as the deck map numbers them."
+     },
+     "col": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "set_cell, delete_column: the column, counted from 0 (column 0 is the leftmost)."
+     },
+     "at": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "add_row, add_column: where the new row or column goes, counted from 0; left out, at the end."
+     },
+     "text": {
+      "type": "string",
+      "maxLength": 2000,
+      "description": "set_cell: the cell's new text."
+     },
+     "cells": {
+      "type": "array",
+      "maxItems": 50,
+      "items": {
+       "type": "string",
+       "maxLength": 2000
+      },
+      "description": "add_row: the new row's cells, left to right; add_column: the new column's cells, top to bottom (header first). Left out, the new cells are empty."
+     }
+    },
+    "allOf": [
+     {
+      "if": {
+       "properties": {
+        "op": {
+         "const": "set_cell"
+        }
+       }
+      },
+      "then": {
+       "required": [
+        "row",
+        "col",
+        "text"
+       ]
+      }
+     },
+     {
+      "if": {
+       "properties": {
+        "op": {
+         "const": "delete_row"
+        }
+       }
+      },
+      "then": {
+       "required": [
+        "row"
+       ]
+      }
+     },
+     {
+      "if": {
+       "properties": {
+        "op": {
+         "const": "delete_column"
+        }
+       }
+      },
+      "then": {
+       "required": [
+        "col"
+       ]
+      }
+     }
+    ]
+   }
+  }
+ }
+}

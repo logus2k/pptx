@@ -1,0 +1,11 @@
+.venv
+.git
+data
+documentation
+.claude
+**/__pycache__
+.pytest_cache
+.ruff_cache
+.env
+fonts
+tests/ui/node_modules

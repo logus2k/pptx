@@ -1,0 +1,18 @@
+# To add to route-entra.conf, beside /oauth2-entra/auth-cortex. Who may enter the AI Slide Assistant at /slides/: the
+# same rule as Cortex (any bancoctt.pt account, of the tenants oauth2-proxy-entra admits) unless decided otherwise.
+location = /oauth2-entra/auth-slides {
+	internal;
+	# at least as large as /slides/'s own limit: the auth subrequest is size-checked first
+	client_max_body_size 100m;
+	set $oauth_entra_upstream "http://oauth2-proxy-entra:4180";
+	rewrite ^.*$ /oauth2-entra/auth?allowed_email_domains=bancoctt.pt break;
+	proxy_pass $oauth_entra_upstream;
+	proxy_set_header Host $host;
+	proxy_set_header X-Real-IP $remote_addr;
+	proxy_set_header X-Scheme $scheme;
+	proxy_set_header Content-Length "";
+	proxy_pass_request_body off;
+	proxy_buffer_size 32k;
+	proxy_buffers 8 32k;
+	proxy_busy_buffers_size 64k;
+}

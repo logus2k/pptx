@@ -1,0 +1,305 @@
+/* Slides: copied verbatim from Cortex (static/css/vendor-theme.css). */
+/* vendor-theme.css — the Banco CTT design system's look for the stylesheets Cortex copied verbatim from other
+   projects and libraries, which are never edited here:
+     menubar.css, icon-bar.css, sidebar.css, right-panel.css, statusbar.css   (noted)
+     cv-controls.css, kb/cv-document-viewer.css, kb/cv-pdf-viewer.css          (cv / docbro)
+     vendor/notyf, vendor/jspanel, vendor/wunderbaum                           (libraries)
+   Loaded right after them and before Cortex's own stylesheets. Every colour is a role of tokens.css; the specs are
+   the bancoctt-design skill's DESIGN.md (Layout, Components) and design-mockups/bancoctt/DESIGN.cortex.md §6.
+   (Figma) / (tokens) / (ours) say where a spec comes from, as in DESIGN.md. */
+
+/* cv-pdf-viewer.css pins `html, body { color-scheme: light }`: the page follows the theme (tokens.css sets :root) */
+body { color-scheme: inherit; }
+
+/* Icons drawn as masks take the colour of the element (currentColor): the shape is the mask, never a colour. */
+:root {
+  --icon-close: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M6 6l12 12M18 6L6 18'/%3E%3C/svg%3E");
+  --icon-chevron-down: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  --icon-chevron-right: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 6l6 6-6 6'/%3E%3C/svg%3E");
+}
+
+/* The wordmark: Banco CTT's for light, ours for dark (DESIGN.md, Implementation > Logo files) */
+.logo-dark { display: none; }
+:root[data-theme="dark"] .logo-light { display: none; }
+:root[data-theme="dark"] .logo-dark { display: block; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .logo-light { display: none; }
+  :root:not([data-theme="light"]) .logo-dark { display: block; }
+}
+
+/* ── The top bar's menus (menubar.css) ───────────────────────────────────────────────────────────────────────────
+   Menu buttons: Subtitle 2 in --text, 40px tall, 4px radius, hover --surface-hover, open --brand-text. Dropdown:
+   --surface-raised, 10px radius, --shadow-float; items Paragraph 2, hover --surface-hover; shortcuts Caption in
+   --text-secondary; ticked items --brand-text Bold. (Cortex-specific: Banco CTT's top bar has no menus.) */
+#menubar { position: static; height: 40px; flex: 1 1 auto; min-width: 0; z-index: 5000; }   /* above floating windows (jsPanel starts at 100) */
+.menubar { height: 40px; padding-left: 0; gap: 4px; color: var(--text);
+  font: var(--fw-bold) var(--fs-subtitle)/var(--lh-subtitle) var(--font-sans); letter-spacing: var(--ls-subtitle); }
+.menu-btn { display: flex; align-items: center; height: 40px; padding: 0 12px; margin: 0; border-radius: var(--radius-sm); white-space: nowrap; }
+.menu-btn:hover, .menu-btn.active { background: var(--surface-hover); color: var(--text); }
+.menu.open > .menu-btn { background: var(--surface); color: var(--brand-text); }
+.dropdown, .submenu { background: var(--surface-raised); color: var(--text); border: 1px solid var(--card-outline);
+  border-radius: var(--radius-xl); box-shadow: var(--shadow-float); min-width: 240px; padding: 8px 0;
+  font: var(--fw-regular) var(--fs-p2)/var(--lh-p2) var(--font-sans); letter-spacing: var(--ls-p2); }
+.dropdown { top: calc(100% + 8px); }
+.menu-item { padding: 8px 16px; margin: 0; gap: 24px; }
+.menu-item:hover, .menu-item.focus { background: var(--surface-hover); border-radius: 0; }
+.menu-item.disabled { color: var(--text-disabled); }
+.menu-item:has(> span > .check:not(:empty)) { color: var(--brand-text); font-weight: var(--fw-bold); }
+.menubar .separator { height: 1px; margin: 8px 0; background: var(--divider); }
+.check { width: 20px; }
+.menubar .shortcut { margin: 0; color: var(--text-secondary); font-size: var(--fs-caption); line-height: var(--lh-caption); letter-spacing: var(--ls-caption); font-weight: var(--fw-regular); }
+.menu-item:hover .shortcut, .menu-item.focus .shortcut { color: var(--text-secondary); }
+.arrow { margin-left: 16px; color: var(--text-secondary); }
+.menu-item:hover .arrow, .menu-item.focus .arrow { color: var(--text); }
+
+/* ── The side menu (icon-bar.css) ────────────────────────────────────────────────────────────────────────────────
+   (Figma) 200px, --surface, padding 26px top and 16px sides; the wordmark, then sections 16px apart, each a Caption
+   title in --text-section with its items 8px below. Items: 48px, 10px radius, padding 7 x 11px, a 24px icon, 12px
+   gap, a Paragraph 2 label; the view on screen has a red icon and label and NO background. The collapse button is a
+   32px circle on the menu's right edge, 56px from the top. Collapsed (ours for tablet): a 72px rail of icons. */
+#icon-bar { width: auto; min-width: 0; margin-top: 0; align-items: stretch; padding: 26px var(--space-4) var(--space-4);
+  background: var(--surface); border-right: 0; position: relative; z-index: 21; }
+.menu-logo { margin: 0 11px 26px; }
+.menu-logo img { width: 83px; height: 18px; }
+.menu-logo .product { display: block; margin-top: var(--space-2); color: var(--text-section);
+  font: var(--fw-bold) var(--fs-subtitle)/var(--lh-subtitle) var(--font-sans); letter-spacing: var(--ls-subtitle); }
+.icon-bar-group { align-items: stretch; gap: 0; padding: 0; }
+.menu-section { margin: var(--space-4) 0 var(--space-2); color: var(--text-section); white-space: nowrap; overflow: hidden;
+  font: var(--fw-regular) var(--fs-caption)/var(--lh-caption) var(--font-sans); letter-spacing: var(--ls-caption); }
+.icon-bar-group > .menu-section:first-child { margin-top: 0; }
+.icon-bar-btn { width: 100%; height: 48px; justify-content: flex-start; gap: var(--space-3); padding: 7px 11px; border-radius: var(--radius-xl);
+  color: var(--text); text-align: left; font: var(--fw-regular) var(--fs-p2)/var(--lh-p2) var(--font-sans); letter-spacing: var(--ls-p2); }
+.icon-bar-btn:hover { background: var(--surface-hover); }
+.icon-bar-btn .menu-icon { flex: none; }
+.icon-bar-label { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.icon-bar-btn-active { color: var(--brand-text); }
+.icon-bar-btn-active .menu-icon { color: var(--primary); }
+.icon-bar-btn-active::before { content: none; }
+/* Assistants shows or hides a pane; it is not the view on screen: only one item is red */
+#icon-bar .icon-bar-btn[data-key="assistant"].icon-bar-btn-active { color: var(--text); }
+#icon-bar .icon-bar-btn[data-key="assistant"].icon-bar-btn-active .menu-icon { color: var(--text); }
+.icon-bar-bottom { padding-bottom: 0; }
+/* count badge (ours): an 18px --primary pill with white Badge text */
+.menu-badge { flex: none; min-width: 18px; height: 18px; padding: 0 5px; border-radius: var(--radius-pill); background: var(--primary); color: var(--text-on-primary);
+  font: var(--fw-bold) var(--fs-badge)/18px var(--font-sans); letter-spacing: var(--ls-badge); text-align: center; }
+.menu-collapse { position: absolute; right: -16px; top: 56px; z-index: 22; width: 32px; height: 32px; padding: 0; border-radius: 50%;
+  display: grid; place-items: center; background: var(--surface); border: 1px solid var(--divider); box-shadow: var(--shadow); color: var(--text); cursor: pointer; }
+.menu-collapse:hover { background: var(--surface-hover); }
+.menu-collapse::before { content: ''; width: 16px; height: 16px; background: currentColor; transform: rotate(180deg);
+  -webkit-mask: var(--icon-chevron-right) center / 16px 16px no-repeat; mask: var(--icon-chevron-right) center / 16px 16px no-repeat; }
+.menu-collapse[aria-expanded="false"]::before { transform: none; }
+
+/* ── The side panes (sidebar.css, right-panel.css) and the middle pane's title bar ──────────────────────────────
+   Panel: --surface with a --divider border. Tabs: DESIGN.md, Components > Tabs - Bold labels, --text-secondary,
+   the active one --brand-text with a 2px --primary line; the row scrolls sideways and never wraps. Header: an H6
+   title in --text-title and icon buttons. No title-bar colour. */
+#sidebar-panel { margin-top: 0; box-shadow: none; background: var(--surface); border-right: 1px solid var(--divider); }
+.sidebar-header, .right-panel-header { height: 48px; align-items: stretch; gap: 0; padding: 0 var(--space-2); border-bottom: 1px solid var(--divider);
+  box-shadow: none; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+.sidebar-header::-webkit-scrollbar, .right-panel-header::-webkit-scrollbar { display: none; }
+.sidebar-tabs, .right-panel-tabs { align-items: stretch; gap: 0; }
+/* (ours) the side panes are narrow: their tabs use 12px Bold labels with no minimum width, as the mockup's */
+.sidebar-tab, .right-panel-tab, .sidebar-tab.active, .right-panel-tab.active {
+  align-items: center; gap: var(--space-1); height: auto; margin: 0; padding: 0 var(--space-2); background: none; border: 0; border-bottom: 2px solid transparent; border-radius: 0;
+  color: var(--text-secondary); font: var(--fw-bold) var(--fs-caption)/var(--lh-subtitle) var(--font-sans); letter-spacing: var(--ls-subtitle); z-index: auto; }
+.sidebar-tab.open, .right-panel-tab.open { display: inline-flex; }
+.sidebar-tab:hover, .right-panel-tab:hover { color: var(--text); }
+.sidebar-tab.active, .right-panel-tab.active { color: var(--brand-text); border-bottom-color: var(--primary); }
+.sidebar-title-bar, .right-panel-title-bar { gap: var(--space-2); min-height: 56px; padding: 0 var(--space-3) 0 var(--space-4); background: var(--surface);
+  border: 0; border-bottom: 1px solid var(--divider); border-radius: 0; }
+.sidebar-title, .right-panel-title { padding: 0; min-width: 0; color: var(--text-title); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font: var(--fw-bold) var(--fs-h6)/var(--lh-h6) var(--font-sans); letter-spacing: var(--ls-h6); }
+.right-panel-status-label { color: var(--text-secondary); font: var(--fw-regular) var(--fs-caption)/var(--lh-caption) var(--font-sans); letter-spacing: var(--ls-caption); }
+.right-panel-status-led { background: var(--text-disabled); }
+.right-panel-status-led:not(.connected):not(.disconnected):not(.connecting) { display: none; }   /* no state to show */
+.right-panel-status-led.connected { background: var(--success); box-shadow: none; }
+.right-panel-status-led.disconnected { background: var(--primary); }
+.right-panel-status-led.connecting { background: var(--alert); }
+/* The Assistants pane's views have no title (it would repeat the tab's name): its bar holds only the status and
+   the icon buttons, so it sits at the right end of the tab row instead of taking a row of its own. */
+#right-panel { position: relative; }
+#right-panel .right-panel-title-bar { position: absolute; top: 0; right: 0; z-index: 2; height: 47px; min-height: 0; padding: 0 var(--space-2) 0 var(--space-1); gap: var(--space-1); border: 0; }
+#right-panel .right-panel-title { display: none; }
+#right-panel .right-panel-status-label { display: none; }
+#right-panel .right-panel-header { padding-right: 96px; }
+.sidebar-content { padding-right: 0; background: var(--surface); border-right: 0; color: var(--text); overflow-y: auto; }
+.right-panel-content { background: var(--surface); border-left: 0; box-shadow: none; }
+
+/* Icon buttons in the panes' headers and the windows' bars (Detach, Reattach, Close): 32px round, a 20px icon in
+   --text-secondary; hover --surface-active with --text (Close does not turn red: red means "action", not "close"). */
+.sidebar-close-btn, .panel-undock-btn, .jsPanel .dock-back-btn, .jsPanel.cortex-window .jsPanel-btn-close, .jsPanel.cortex-dialog .jsPanel-btn-close {
+  flex: none; display: inline-grid; place-items: center; width: 32px; height: 32px; min-width: 32px; padding: 0; margin: 0; border: 0; border-radius: 50%;
+  background: transparent; color: var(--text-secondary); cursor: pointer; transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
+.sidebar-close-btn:hover, .panel-undock-btn:hover, .jsPanel .dock-back-btn:hover, .jsPanel.cortex-window .jsPanel-btn-close:hover, .jsPanel.cortex-dialog .jsPanel-btn-close:hover {
+  background: var(--surface-active); color: var(--text); }
+.sidebar-close-btn svg, .panel-undock-btn .dock-icon, .jsPanel .dock-back-btn .dock-icon { width: 20px; height: 20px; }
+.panel-undock-btn { margin-left: auto; }
+/* jsPanel writes color: #000 inline on its close button: the role colours above, over it (else black beside a grey
+   Reattach, and nearly invisible in the dark theme) */
+.jsPanel.cortex-window .jsPanel-btn-close, .jsPanel.cortex-dialog .jsPanel-btn-close { color: var(--text-secondary) !important; }
+.jsPanel.cortex-window .jsPanel-btn-close:hover, .jsPanel.cortex-dialog .jsPanel-btn-close:hover { color: var(--text) !important; }
+/* and drawn as the panes' close is (its 20px icon, 12px of glyph: measured): the shared 14px mask box draws it at 9-10px */
+.jsPanel.cortex-window .jsPanel-controlbar .jsPanel-btn-close::before, .jsPanel.cortex-dialog .jsPanel-controlbar .jsPanel-btn-close::before { width: 20px; height: 20px; }
+.sidebar-close-btn { margin-left: 0; }
+/* a tab's close: 20px round, in the tab's flow; in the side panes only the tab in front shows it (ours: they are narrow) */
+.sidebar-tab-close, .right-panel-tab-close, .main-tab-close {
+  position: static; align-self: center; flex: none; display: none; width: 20px; height: 20px; padding: 0; border: 0; border-radius: 50%; background: transparent;
+  color: var(--text-secondary); font-size: 0; line-height: 0; cursor: pointer; }
+.sidebar-tab.active .sidebar-tab-close, .right-panel-tab.active .right-panel-tab-close, .main-tab-close { display: inline-grid; place-items: center; }
+.sidebar-tab:hover .sidebar-tab-close, .right-panel-tab:hover .right-panel-tab-close { display: none; }
+.sidebar-tab.active:hover .sidebar-tab-close, .right-panel-tab.active:hover .right-panel-tab-close { display: inline-grid; }
+.sidebar-tab-close::before, .right-panel-tab-close::before, .main-tab-close::before, .jsPanel.cortex-window .jsPanel-btn-close::before, .jsPanel.cortex-dialog .jsPanel-btn-close::before {
+  content: ''; width: 14px; height: 14px; background: currentColor;
+  -webkit-mask: var(--icon-close) center / 100% 100% no-repeat; mask: var(--icon-close) center / 100% 100% no-repeat; }
+.sidebar-tab-close:hover, .right-panel-tab-close:hover, .main-tab-close:hover { background: var(--surface-active); color: var(--text); }
+
+/* The resizers between the panes: a --divider line that becomes --control-border under the pointer */
+#sidebar-resizer { margin-top: 0; background: transparent; }
+#sidebar-resizer:hover, #sidebar-resizer.dragging { background: var(--control-border); border-left-color: transparent; border-right-color: transparent; }
+#sidebar-resizer::before { content: none; }
+.sidebar-content:hover::-webkit-scrollbar-thumb { background: var(--scroll-thumb); }                        /* sidebar.css's own scrollbar: its colours only */
+.sidebar-content::-webkit-scrollbar-thumb:hover, .sidebar-content::-webkit-scrollbar-thumb:active { background: var(--text-secondary); }
+
+/* ── The status bar (statusbar.css) ──────────────────────────────────────────────────────────────────────────────
+   (Cortex-specific: Banco CTT's screens have none.) --surface, a --divider line above, Caption in --text-secondary,
+   values in --text Bold. From the left: the project (--primary, white text), the tab with the focus (--text Bold) and
+   its details; at the right what concerns the whole page. The connection dot: --success on, --primary off. */
+#status-bar { height: 28px; gap: var(--space-4); padding: 0 var(--space-2) 0 0; background: var(--surface); border-top: 1px solid var(--divider); color: var(--text-secondary);
+  font: var(--fw-regular) var(--fs-caption)/var(--lh-caption) var(--font-sans); letter-spacing: var(--ls-caption); white-space: nowrap; overflow: hidden; z-index: 3; }
+#status-bar .status-pill, #status-bar .status-item, #status-bar .status-right { padding: 0; font-size: var(--fs-caption); color: var(--text-secondary); }
+#status-bar .status-pill.host { padding: 0 var(--space-4); background: var(--primary); color: var(--text-on-primary); font-weight: var(--fw-bold); }
+#status-bar .status-pill.container { padding: 0; background: none; border-radius: 0; clip-path: none; color: var(--text-secondary); }
+#status-bar .status-right:last-child { margin-right: 0; }
+#status-bar b { color: var(--text); font-weight: var(--fw-bold); }
+#status-bar .status-item.conn::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; background: var(--primary); }
+#status-bar .status-item.conn.on::before { background: var(--success); }
+#status-bar .metrics { gap: var(--space-3); margin-left: 0; }
+/* the tab with the focus: its name, then its details (statusbar.js); a long name is cut */
+#status-bar .focus-name { display: inline-block; max-width: 40ch; overflow: hidden; text-overflow: ellipsis; color: var(--text); font-weight: var(--fw-bold); }
+#status-bar .status-details { display: inline-flex; align-items: center; gap: var(--space-4); min-width: 0; }
+#status-bar .status-details:empty, #status-bar .status-item:empty { display: none; }
+/* the Recording tab's own details: only while it has the focus */
+#status-bar:not([data-kind="recording"]) .rec-only { display: none; }
+/* a session running in a tab without the focus: a plain text button that brings its tab forward */
+#status-bar #sb-activity { border: 0; background: none; font: inherit; letter-spacing: inherit; color: var(--text); cursor: pointer; }
+#status-bar #sb-activity::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; background: var(--primary); }
+#status-bar #sb-activity:focus-visible { outline-offset: -2px; }   /* the ring inside the bar, which clips */
+
+/* ── The Assistants' control pad (cv-controls.css) ───────────────────────────────────────────────────────────────
+   The composer: a filled field (--surface-field, an underline, 4px top corners) and a 48px --primary send button
+   with a 4px radius. Microphone and speaker are icon buttons; on: --primary-tint with --brand-text-on-tint
+   (microphone), --container-info with --text (speaker). */
+.cvchat-root { font-family: var(--font-sans); font-size: var(--fs-p2); line-height: var(--lh-p2); color: var(--text); }
+.cvchat-inputbar { align-items: flex-end; gap: var(--space-2); padding: var(--space-3) var(--space-4) var(--space-2); background: var(--surface); border-top: 1px solid var(--divider); }
+.cvchat-input, .cvchat-root textarea.cvchat-input { min-height: 48px; padding: 14px var(--space-3) 13px; border: 0; border-bottom: 1px solid var(--field-line); border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  background: var(--surface-field); color: var(--text); font-size: var(--fs-p2); line-height: var(--lh-p2); letter-spacing: var(--ls-p2); }
+.cvchat-input:hover { background: var(--surface-field-hover); }
+.cvchat-input::placeholder { color: var(--text-weak); }
+.cvchat-input:focus, .cvchat-root textarea.cvchat-input:focus { outline: none; padding-bottom: 12px; border-bottom: 2px solid var(--field-line-selected); }
+.cvchat-iconbtn { width: 48px; height: 48px; border: 0; border-radius: 50%; background: transparent; color: var(--text); }
+.cvchat-iconbtn:hover { background: var(--surface-hover); }
+.cvchat-iconbtn svg { width: 24px; height: 24px; stroke-width: 1.6; }
+.cvchat-iconbtn:disabled { opacity: 1; color: var(--text-disabled); }
+.cvchat-send, .cvchat-send:disabled { border-radius: var(--radius-sm); background: var(--primary); color: var(--text-on-primary); }
+.cvchat-send:hover { background: var(--primary-hover); }
+.cvchat-send:active { background: var(--primary-active); }
+.cvchat-send:disabled { background: var(--primary-disabled); }
+.cvchat-mic.active { background: var(--primary-tint); color: var(--brand-text-on-tint); }
+.cvchat-speaker.active { background: var(--container-info); color: var(--text); }
+@keyframes cvchat-mic-pulse { 0% { box-shadow: 0 0 0 0 var(--primary-hover); } 70%, 100% { box-shadow: 0 0 0 7px transparent; } }
+.cvchat-hint { padding: 0 var(--space-4) var(--space-2); background: var(--surface); color: var(--text-weak); border-top: 0; text-align: left;
+  font-size: var(--fs-caption); line-height: var(--lh-caption); letter-spacing: var(--ls-caption); }
+.cvchat-hint.busy { color: var(--text); }
+.cvchat-hint.error { color: var(--text); font-weight: var(--fw-bold); }
+
+/* ── Toasts (vendor/notyf) ───────────────────────────────────────────────────────────────────────────────────────
+   (Figma) --surface-inverse with --text-on-inverse Paragraph 2, 4px radius, padding 12 x 16px, 343px wide, 48px from
+   the bottom and right. Success and error look the same: the text carries the meaning. */
+.notyf { padding: 0 48px 48px 0; }
+.notyf__toast { width: 343px; max-width: calc(100vw - 32px); min-width: 0; margin-top: var(--space-2); padding: 0; border-radius: var(--radius-sm); box-shadow: none;
+  background: var(--surface-inverse) !important; color: var(--text-on-inverse); }
+.notyf__ripple { display: none; }
+.notyf__wrapper { padding: var(--space-3) 40px var(--space-3) var(--space-4); }
+.notyf__message { font: var(--fw-regular) var(--fs-p2)/var(--lh-p2) var(--font-sans); letter-spacing: var(--ls-p2); user-select: text; }
+.notyf__message b { font-weight: var(--fw-bold); }
+.notyf__dismiss { width: 40px; margin-right: 0; }
+.notyf__dismiss-btn { background: transparent; opacity: 1; color: var(--text-on-inverse); }
+.notyf__dismiss-btn::before, .notyf__dismiss-btn::after { background: var(--text-on-inverse); }
+
+/* ── Floating windows and dialogs (vendor/jspanel) ───────────────────────────────────────────────────────────────
+   A floating tool window keeps its drag header: --surface with the title in Subtitle 2 and a --divider line below,
+   --shadow-float, a 10px radius. A dialog follows DESIGN.md, Components > Modal: a --surface-overlay panel with a
+   10px radius, a centred Subtitle 2 title in --text-title, its buttons a centred stack, over the --overlay scrim.
+   jsPanel writes colours and fonts inline and with its own rules: hence the !important. */
+.jsPanel.cortex-window, .jsPanel.cortex-dialog { border: 1px solid var(--card-outline) !important; border-radius: var(--radius-xl) !important; box-shadow: var(--shadow-float) !important;
+  color: var(--text); font-family: var(--font-sans) !important; overflow: visible; }
+/* not clipped: jsPanel's resize handles straddle the edges and corners, and a clipped window left only a 3-4px strip
+   inside its edge to grab (none at the rounded corners). Its parts are rounded instead, and the edge handles centred on
+   the edge (jsPanel puts them 5-9px out) */
+.jsPanel.cortex-window .jsPanel-hdr, .jsPanel.cortex-dialog .jsPanel-hdr { border-radius: var(--radius-xl) var(--radius-xl) 0 0; }
+.jsPanel.cortex-window .jsPanel-content, .jsPanel.cortex-dialog .jsPanel-content,
+.jsPanel.cortex-dialog .jsPanel-ftr { overflow: hidden; border-radius: 0 0 var(--radius-xl) var(--radius-xl); }
+.jsPanel.cortex-window .jsPanel-resizeit-n, .jsPanel.cortex-dialog .jsPanel-resizeit-n { top: -6px; }
+.jsPanel.cortex-window .jsPanel-resizeit-s, .jsPanel.cortex-dialog .jsPanel-resizeit-s { bottom: -6px; }
+.jsPanel.cortex-window .jsPanel-resizeit-e, .jsPanel.cortex-dialog .jsPanel-resizeit-e { right: -6px; }
+.jsPanel.cortex-window .jsPanel-resizeit-w, .jsPanel.cortex-dialog .jsPanel-resizeit-w { left: -6px; }
+.jsPanel.cortex-window { background: var(--surface) !important; }
+/* a floating panel stands out from the page and from the panels under it: a --control-border outline and the card
+   shadow under the floating glow (DESIGN.md Elevation & Depth has no floating window; closest: a floating layer) */
+.jsPanel.cortex-window { border-color: var(--control-border) !important; box-shadow: var(--shadow), var(--shadow-float) !important; }
+.jsPanel.cortex-dialog { background: var(--surface-overlay) !important; }
+.jsPanel.cortex-window .jsPanel-hdr, .jsPanel.cortex-dialog .jsPanel-hdr, .jsPanel.cortex-window .jsPanel-content, .jsPanel.cortex-dialog .jsPanel-content,
+.jsPanel.cortex-window .jsPanel-ftr, .jsPanel.cortex-dialog .jsPanel-ftr { font-family: var(--font-sans) !important; color: var(--text) !important; }
+.jsPanel.cortex-window .jsPanel-hdr { height: 48px; background: var(--surface) !important; border-bottom: 1px solid var(--divider); }
+/* the title and the buttons in the middle of the header's height (jsPanel's 32px header bar sat at its top: measured
+   13px left below it) */
+.jsPanel.cortex-window .jsPanel-hdr, .jsPanel.cortex-dialog .jsPanel-hdr { display: flex; flex-direction: column; justify-content: center; flex: none; box-sizing: border-box; }
+.jsPanel.cortex-window .jsPanel-headerbar, .jsPanel.cortex-dialog .jsPanel-headerbar { flex: none; }
+.jsPanel.cortex-window .jsPanel-titlebar, .jsPanel.cortex-dialog .jsPanel-titlebar { height: 100%; }
+.jsPanel.cortex-window .jsPanel-title, .jsPanel.cortex-dialog .jsPanel-title { margin: 0 var(--space-2) 0 var(--space-4); color: var(--text-title) !important; font-variant: normal;
+  font: var(--fw-bold) var(--fs-subtitle)/var(--lh-subtitle) var(--font-sans); letter-spacing: var(--ls-subtitle); }
+.jsPanel.cortex-window .jsPanel-controlbar, .jsPanel.cortex-dialog .jsPanel-controlbar { align-self: center; gap: var(--space-1); margin: 0 var(--space-2) 0 0; }
+.jsPanel.cortex-window .jsPanel-btn-close svg, .jsPanel.cortex-dialog .jsPanel-btn-close svg { display: none !important; }
+.jsPanel.cortex-window .jsPanel-btn-close, .jsPanel.cortex-dialog .jsPanel-btn-close { display: inline-grid !important; }
+.jsPanel.cortex-window .jsPanel-btn-close::before, .jsPanel.cortex-dialog .jsPanel-btn-close::before { width: 16px; height: 16px; }
+.jsPanel.cortex-window .jsPanel-content { background: var(--surface) !important; border-top: 0 !important; font-size: inherit; }
+.jsPanel.cortex-window .jsPanel-ftr { background: var(--surface) !important; border-top: 1px solid var(--divider); }
+/* the dialog */
+.jsPanel.cortex-dialog .jsPanel-hdr { height: 64px; background: transparent !important; border-bottom: 0; }
+.jsPanel.cortex-dialog .jsPanel-titlebar { justify-content: center; }
+.jsPanel.cortex-dialog .jsPanel-title { margin: 0 0 0 48px; text-align: center; flex: 1 1 auto; }     /* centred between the edge and Close */
+.jsPanel.cortex-dialog .jsPanel-content { background: transparent !important; border-top: 0 !important; font-size: inherit; text-align: left; }
+.jsPanel.cortex-dialog .jsPanel-ftr { background: transparent !important; border-top: 0; padding: var(--space-4) var(--space-4) var(--space-6); }
+.jsPanel-modal-backdrop { background: var(--overlay) !important; animation: none !important; opacity: 1 !important; }
+.jsPanel-modal-backdrop-out { opacity: 0 !important; }
+
+/* ── The PDF viewer (kb/cv-document-viewer.css, kb/cv-pdf-viewer.css) ────────────────────────────────────────────
+   Pages are white sheets with a 4px radius and the paper's shadow. The floating control box becomes the document
+   bar's look: --surface, pill segments in --surface-field; focus is the --primary outline. The cited passage is
+   --container-alert with an --alert line (kb.css has the Markdown and Word highlight). */
+.document-viewer-wrapper .pdf-page { border: 0; border-radius: var(--radius-sm); box-shadow: var(--paper-shadow); margin-bottom: var(--space-4); }
+.document-viewer-wrapper .document-content-inner.pdf-content.pdf-cols .pdf-page { box-shadow: var(--paper-shadow); }
+.document-viewer-wrapper .pdf-page:empty { background-color: var(--paper); }
+.document-viewer-wrapper .pdf-page .textLayer ::selection { background: var(--container-alert); }
+.document-viewer-wrapper .document-content-inner.pdf-content:has(.pdf-page:hover)::-webkit-scrollbar-thumb,
+.document-viewer-wrapper .document-content-inner.pdf-content::-webkit-scrollbar-thumb:hover { background-color: var(--scroll-thumb); }
+.document-viewer-wrapper .pdf-bbox-highlight { background: color-mix(in srgb, var(--alert) 28%, transparent); border: 0; border-bottom: 2px solid var(--alert); border-radius: 0; box-shadow: none; }
+/* the document bar: the control box pinned along the top of the viewer and always shown (it floated over the
+   pages' foot and hid after 2 s), as the Markdown and Word viewers' bar; the pages start below it */
+.document-viewer-wrapper .pdf-controlbox, .document-viewer-wrapper .pdf-controlbox.visible {
+  top: 0; bottom: auto; left: 0; right: 0; transform: none; opacity: 1; pointer-events: auto; justify-content: safe center; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none;
+  min-height: 48px; gap: var(--space-1); padding: var(--space-1) var(--space-4); background: var(--surface); border: 0; border-bottom: 1px solid var(--divider); border-radius: 0;
+  box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; color: var(--text); font-family: var(--font-sans); font-size: var(--fs-p2); }
+.document-viewer-wrapper .pdf-controlbox::-webkit-scrollbar { display: none; }
+.document-viewer-wrapper .pdf-controlbox > * { flex: none; }
+.document-viewer-wrapper .document-content.active.pdf-doc { padding-top: 64px; }
+.document-viewer-wrapper .pcb-btn { min-width: 32px; height: 32px; border-radius: 50%; color: var(--text); }
+.document-viewer-wrapper .pcb-btn:hover { background-color: var(--surface-hover); color: var(--text); }
+.document-viewer-wrapper .pcb-sep { background: var(--divider); }
+.document-viewer-wrapper .pcb-page-input, .document-viewer-wrapper .pcb-zoom-input { height: 28px; background: var(--surface-field); border: 0; border-radius: var(--radius-pill); color: var(--text);
+  font-size: var(--fs-p2); font-weight: var(--fw-bold); }
+.document-viewer-wrapper .pcb-page-input:focus, .document-viewer-wrapper .pcb-zoom-input:focus { border-color: transparent; outline: 2px solid var(--primary); outline-offset: 2px; }
+.document-viewer-wrapper .pcb-page-sep, .document-viewer-wrapper .pcb-page-total, .document-viewer-wrapper .pcb-zoom,
+.document-viewer-wrapper .pcb-cols-icon, .document-viewer-wrapper .pcb-cols-value { color: var(--text-secondary); }
+.document-viewer-wrapper .pcb-cols { accent-color: var(--primary); }
+.document-viewer-wrapper .document-viewer-error { color: var(--text); font: var(--fw-regular) var(--fs-p2)/var(--lh-p2) var(--font-sans); }

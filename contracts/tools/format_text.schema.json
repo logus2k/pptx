@@ -1,0 +1,80 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "tools/format_text",
+ "title": "format_text",
+ "description": "Format the text of one shape: size, bold, italic, a theme colour, alignment. Body text may not go below 14 pt.",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "slide_id",
+  "shape_id",
+  "style"
+ ],
+ "properties": {
+  "deck_id": {
+   "type": "string",
+   "description": "Left out: the active deck."
+  },
+  "slide_id": {
+   "type": "integer",
+   "description": "The slide: its number in the deck (1 = first, as the deck map and the person say it) or its ID."
+  },
+  "shape_id": {
+   "type": "integer",
+   "description": "From the deck map."
+  },
+  "style": {
+   "type": "object",
+   "additionalProperties": false,
+   "minProperties": 1,
+   "properties": {
+    "size_pt": {
+     "type": "number",
+     "minimum": 8,
+     "maximum": 96
+    },
+    "bold": {
+     "type": "boolean"
+    },
+    "italic": {
+     "type": "boolean"
+    },
+    "theme_color": {
+     "enum": [
+      "text1",
+      "text2",
+      "accent1",
+      "accent2",
+      "accent3",
+      "accent4",
+      "accent5",
+      "accent6"
+     ]
+    },
+    "alignment": {
+     "enum": [
+      "left",
+      "center",
+      "right",
+      "justify"
+     ]
+    }
+   }
+  },
+  "range": {
+   "type": "object",
+   "additionalProperties": false,
+   "description": "Paragraphs to format (0-based, inclusive); all when left out.",
+   "properties": {
+    "first_paragraph": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "last_paragraph": {
+     "type": "integer",
+     "minimum": 0
+    }
+   }
+  }
+ }
+}

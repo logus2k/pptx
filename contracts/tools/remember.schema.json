@@ -1,0 +1,19 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "tools/remember",
+ "title": "remember",
+ "description": "Keep a durable fact or decision in the project's memory (\"prices in EUR, no discounts shown\"), with this conversation as its source. Only when the person asked you to remember it, or when it is a lasting decision you then mention in your reply: nothing is kept silently.",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "text"
+ ],
+ "properties": {
+  "text": {
+   "type": "string",
+   "minLength": 1,
+   "maxLength": 500,
+   "description": "One short fact, in the person's language."
+  }
+ }
+}

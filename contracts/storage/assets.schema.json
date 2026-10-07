@@ -1,0 +1,85 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "storage/assets.schema.json",
+ "title": "DATA_DIR/projects/<pid>/assets/assets.json (technical design section 4)",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "schema_version",
+  "assets"
+ ],
+ "properties": {
+  "schema_version": {
+   "const": 1
+  },
+  "assets": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "id",
+     "kind",
+     "file",
+     "name",
+     "sha256",
+     "size",
+     "created_by",
+     "created_at"
+    ],
+    "properties": {
+     "id": {
+      "type": "string"
+     },
+     "kind": {
+      "enum": [
+       "template",
+       "image",
+       "document"
+      ]
+     },
+     "file": {
+      "type": "string",
+      "description": "The stored file's name in the assets folder (<id>.<ext>)."
+     },
+     "name": {
+      "type": "string",
+      "description": "The name it was uploaded with, or the one given since."
+     },
+     "sha256": {
+      "type": "string"
+     },
+     "size": {
+      "type": "integer",
+      "minimum": 0
+     },
+     "created_by": {
+      "type": "string"
+     },
+     "created_at": {
+      "type": "string"
+     },
+     "layouts": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "template: its layouts' names"
+     },
+     "missing_fonts": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "template: fonts it uses that the server lacks (A-5)"
+     },
+     "passages": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "document: how many passages its text gave (kept in <id>.passages.json)"
+     }
+    }
+   }
+  }
+ }
+}

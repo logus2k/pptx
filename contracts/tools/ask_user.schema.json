@@ -1,0 +1,25 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "tools/ask_user",
+ "title": "ask_user",
+ "description": "Ask the person one focused question and wait for the answer. Give options when there are a few clear choices.",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "question"
+ ],
+ "properties": {
+  "question": {
+   "type": "string",
+   "maxLength": 1000
+  },
+  "options": {
+   "type": "array",
+   "maxItems": 8,
+   "items": {
+    "type": "string",
+    "maxLength": 200
+   }
+  }
+ }
+}

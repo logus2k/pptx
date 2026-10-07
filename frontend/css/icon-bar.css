@@ -1,0 +1,121 @@
+/* Slides: copied verbatim from Cortex (static/css/icon-bar.css). */
+#icon-bar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 48px;
+    min-width: 48px;
+    background: #181818;
+    flex-shrink: 0;
+    z-index: 10;
+    user-select: none;
+    margin-top: 56px;
+    border-right: 0.5px solid #666666;
+    background: url("../images/low-contrast-linen.png");
+    background-color: #1f1f1ffe;
+}
+
+.icon-bar-menu {
+    position: absolute;
+    top: 10px;
+    left: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 16px;
+    padding: 0;
+    background: transparent;
+    color: #c5cece;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    flex-shrink: 0;
+    transition: color 0.15s, background 0.15s;
+    z-index: 20;
+}
+.icon-bar-menu:hover {
+    background: #3d3d3d;
+    color: #fff;
+}
+
+.icon-bar-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    gap: 18px;
+    padding: 10px 0;
+}
+
+.icon-bar-spacer {
+    flex: 1;
+}
+
+.icon-bar-bottom {
+    padding-bottom: 8px;
+}
+
+.icon-bar-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    background: transparent;
+    color: #9d9d9d;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: color 0.15s, background 0.15s;
+    position: relative;
+}
+
+.icon-bar-btn:hover {
+    background: #3d3d3d;
+}
+
+.icon-bar-btn-active {
+    background: transparent;
+}
+
+/* Left accent bar for active icon */
+.icon-bar-btn-active::before {
+    content: '';
+    position: absolute;
+    left: -4px;
+    top: 8px;
+    bottom: 8px;
+    width: 2px;
+    background: #fff2bc;
+    border-radius: 0 1px 1px 0;
+}
+
+.icon-bar-btn-disabled {
+    color: #555555;
+    cursor: default;
+    opacity: 0.4;
+}
+
+.icon-bar-btn-disabled:hover {
+    background: transparent;
+    color: #555555;
+}
+
+.icon-bar-service img {
+    display: block;
+    filter: none;
+    /* opacity: 0.7; */
+    transition: opacity 0.15s;
+}
+
+.icon-bar-btn:hover .icon-bar-service img,
+.icon-bar-service:hover img {
+    opacity: 1;
+}
+
+.icon-bar-btn-active.icon-bar-service img {
+    opacity: 1;
+}

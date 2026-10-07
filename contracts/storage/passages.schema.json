@@ -1,0 +1,36 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "storage/passages.schema.json",
+ "title": "DATA_DIR/projects/<pid>/assets/<asset_id>.passages.json: a reference document's text, as search scores it (technical design section 4)",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "schema_version",
+  "passages"
+ ],
+ "properties": {
+  "schema_version": {
+   "const": 1
+  },
+  "passages": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "where",
+     "text"
+    ],
+    "properties": {
+     "where": {
+      "type": "string",
+      "description": "p. N (PDF), the heading it is under (DOCX, MD), or empty"
+     },
+     "text": {
+      "type": "string"
+     }
+    }
+   }
+  }
+ }
+}

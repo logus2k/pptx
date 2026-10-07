@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "storage/audit-line.schema.json",
+  "title": "One line of DATA_DIR/audit.jsonl: who changed which data and when, never the change itself (technical design section 11.2)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["at", "user", "action", "target"],
+  "properties": {
+    "at": { "type": "string" },
+    "user": { "type": "string" },
+    "action": { "type": "string", "description": "METHOD /route/template, or 'socket <event>'" },
+    "label": { "type": "string" },
+    "target": { "type": "object", "description": "Identifiers only: route parameters, the query, and what the handler names." }
+  }
+}

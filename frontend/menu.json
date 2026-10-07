@@ -1,0 +1,71 @@
+[
+  {
+    "label": "Project",
+    "key": "p",
+    "items": [
+      {
+        "label": "New project...",
+        "command": "project.new"
+      },
+      {
+        "label": "Projects",
+        "command": "project.list"
+      }
+    ]
+  },
+  {
+    "label": "Assistant",
+    "key": "a",
+    "items": [
+      {
+        "label": "Show the assistant",
+        "command": "assistant.show",
+        "enabled": "projectOpen"
+      },
+      {
+        "label": "New conversation",
+        "command": "assistant.new",
+        "enabled": "projectOpen"
+      }
+    ]
+  },
+  {
+    "label": "View",
+    "key": "v",
+    "items": [
+      {
+        "label": "Home",
+        "command": "view.home"
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "label": "Undock All",
+        "command": "view.undockAll"
+      },
+      {
+        "label": "Dock All",
+        "command": "view.dockAll",
+        "enabled": "anyFloating"
+      }
+    ]
+  },
+  {
+    "label": "Help",
+    "key": "h",
+    "items": [
+      {
+        "label": "Design system",
+        "command": "help.designSystem"
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "label": "About",
+        "command": "help.about"
+      }
+    ]
+  }
+]

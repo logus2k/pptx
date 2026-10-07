@@ -1,0 +1,60 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "tools/replace_image",
+ "title": "replace_image",
+ "description": "Swap a picture for another image, keeping its place, size and alt text.",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "slide_id",
+  "shape_id",
+  "image"
+ ],
+ "properties": {
+  "deck_id": {
+   "type": "string",
+   "description": "Left out: the active deck."
+  },
+  "slide_id": {
+   "type": "integer",
+   "description": "The slide: its number in the deck (1 = first, as the deck map and the person say it) or its ID."
+  },
+  "shape_id": {
+   "type": "integer",
+   "description": "From the deck map."
+  },
+  "image": {
+   "type": "object",
+   "additionalProperties": false,
+   "description": "An image the person attached or uploaded (asset_id), or a picture of a knowledge-base document (kb_domain, kb_document, kb_image_id from kb_list_images). Never a URL.",
+   "properties": {
+    "asset_id": {
+     "type": "string"
+    },
+    "kb_domain": {
+     "type": "string"
+    },
+    "kb_document": {
+     "type": "string"
+    },
+    "kb_image_id": {
+     "type": "string"
+    }
+   },
+   "anyOf": [
+    {
+     "required": [
+      "asset_id"
+     ]
+    },
+    {
+     "required": [
+      "kb_domain",
+      "kb_document",
+      "kb_image_id"
+     ]
+    }
+   ]
+  }
+ }
+}

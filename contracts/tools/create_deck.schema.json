@@ -1,0 +1,38 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "tools/create_deck",
+ "title": "create_deck",
+ "description": "Create a new, empty deck in the project from a template, and make it the active deck.",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "title"
+ ],
+ "properties": {
+  "title": {
+   "type": "string",
+   "minLength": 1,
+   "maxLength": 200
+  },
+  "template": {
+   "type": "object",
+   "required": [
+    "kind",
+    "id"
+   ],
+   "additionalProperties": false,
+   "properties": {
+    "kind": {
+     "enum": [
+      "admin",
+      "asset"
+     ]
+    },
+    "id": {
+     "type": "string"
+    }
+   },
+   "description": "From list_templates; the project's default when left out."
+  }
+ }
+}

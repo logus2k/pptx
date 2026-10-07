@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- where the app is served (the server sets it: /slides/ behind the proxy, / when reached directly), so that
+       relative addresses resolve the same under every page route -->
+  <base href="/">
+  <!-- the interface language, before anything is built: European Portuguese unless English was chosen (i18n.js) -->
+  <script src="static/js/i18n/i18n.js"></script>
+  <script src="static/js/i18n/pt.js"></script>
+  <!-- the theme (Light / Dark / System; Light by default), applied BEFORE the stylesheets paint, as Cortex does -->
+  <script>
+    (function () {
+      try {
+        var theme = localStorage.getItem('slides.theme');
+        if (theme !== 'system') document.documentElement.setAttribute('data-theme', theme === 'dark' ? 'dark' : 'light');
+      } catch (e) { document.documentElement.setAttribute('data-theme', 'light'); }
+    })();
+  </script>
+  <title>Slides</title>
+  <link rel="icon" href="data:,">
+  <!-- the Banco CTT design tokens and Inter first (the bancoctt-design skill's setup) -->
+  <link rel="stylesheet" href="static/css/tokens.css">
+  <link rel="stylesheet" href="static/css/fonts.css">
+  <!-- stylesheets copied verbatim from Cortex (which took them from noted and cv) and the vendored libraries: never
+       edited here; vendor-theme.css, right after them, gives them the design system's look -->
+  <link rel="stylesheet" href="static/css/menubar.css">
+  <link rel="stylesheet" href="static/css/icon-bar.css">
+  <link rel="stylesheet" href="static/css/sidebar.css">
+  <link rel="stylesheet" href="static/css/statusbar.css">
+  <link rel="stylesheet" href="static/css/right-panel.css">
+  <link rel="stylesheet" href="static/css/cv-controls.css">
+  <link rel="stylesheet" href="static/vendor/notyf/notyf.min.css">
+  <link rel="stylesheet" href="static/vendor/jspanel/jspanel.min.css">
+  <link rel="stylesheet" href="static/css/vendor-theme.css">
+  <!-- the shell's share of Cortex's style.css, then this app's own, then the frame and its widths (layout.css) -->
+  <link rel="stylesheet" href="static/css/notifications.css">
+  <link rel="stylesheet" href="static/css/shell.css">
+  <link rel="stylesheet" href="static/css/app.css">
+  <link rel="stylesheet" href="static/css/layout.css">
+</head>
+<body>
+<div id="app">
+  <!-- the side menu (side-menu.js): the Banco CTT wordmark and the product name, then the views under section titles.
+       Desktop: 200px, collapsible to a 72px rail. Tablet: the rail, expanding as an overlay. Phone: the bottom bar. -->
+  <nav id="icon-bar" aria-label="Views"></nav>
+  <header>
+    <!-- tablet and phone: the menus are in a drawer behind this button (menus.js) -->
+    <button type="button" id="menu-toggle" class="menu-toggle" aria-label="Menus" title="Menus" aria-expanded="false"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+    <!-- the phone's header carries the wordmark (on wider screens it is at the top of the side menu) -->
+    <h1 class="brand"><img class="logo-light" src="static/images/bancoctt-logo.svg" alt="Banco CTT" width="83" height="18"><img class="logo-dark" src="static/images/bancoctt-logo-dark.svg" alt="Banco CTT" width="83" height="18"><span class="brand-name notranslate">Slides</span></h1>
+    <nav id="menubar" aria-label="Main menu"></nav>
+    <div class="identity" id="identity" hidden></div>
+  </header>
+
+  <!-- side panel | resizer | content -->
+  <div id="below-bar">
+    <aside id="sidebar-panel"></aside>
+    <div id="sidebar-resizer"></div>
+    <main id="content-area">
+      <div id="center-column">
+        <!-- the main area's tabs (main-tabs.js): the home, then one per opened deck, settings, the design system page -->
+        <div id="main-tabs" class="main-tabs" role="tablist" aria-label="Open views"></div>
+        <div id="main-views"></div>
+      </div>
+      <!-- the right pane (RightPanel.js): the assistant (milestone M3) -->
+      <div id="right-resizer" title="Drag to resize the right pane"></div>
+      <div id="right-panel" style="display:none"></div>
+    </main>
+  </div>
+
+  <footer id="status-bar">
+    <!-- from the left: the project, the tab with the focus and its details (statusbar.js); at the right: the connection -->
+    <span class="status-pill host notranslate" id="sb-project" title="The open project">—</span>
+    <span class="status-item focus-name" id="sb-focus" hidden></span>
+    <span class="status-details" id="sb-details"></span>
+    <span class="status-spacer"></span>
+    <span class="status-item conn off" id="status">disconnected</span>
+  </footer>
+</div>
+<div id="toast" class="toast" role="status" hidden></div>
+
+<!-- vendored libraries (classic scripts; versions and licences in docs/licenses.md) -->
+<script src="static/vendor/socket.io.min.js"></script>
+<script src="static/vendor/notyf/notyf.min.js"></script>
+<script src="static/vendor/marked.min.js"></script>
+<script src="static/vendor/purify.min.js"></script>
+<script src="static/vendor/jspanel/jspanel.min.js"></script>
+<script src="static/vendor/jspanel/jspanel.modal.min.js"></script>
+<!-- classic scripts whose names the modules use: the socket (core/socket.js) and the dialogs (modal.js) -->
+<script src="static/js/core/socket.js"></script>
+<script src="static/js/shell/modal.js"></script>
+<!-- the shell, then the app (main.js: the views and the router) -->
+<script type="module" src="static/js/shell/main-tabs.js"></script>
+<script type="module" src="static/js/shell/window-fit.js"></script>
+<script type="module" src="static/js/shell/menus.js"></script>
+<script type="module" src="static/js/shell/user.js"></script>
+<script type="module" src="static/js/shell/side-menu.js"></script>
+<script type="module" src="static/js/shell/statusbar.js"></script>
+<script type="module" src="static/js/shell/right-pane.js"></script>
+<script type="module" src="static/js/main.js"></script>
+</body>
+</html>

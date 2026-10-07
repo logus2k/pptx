@@ -1,0 +1,95 @@
+/* Banco CTT design tokens — CSS custom properties (see references/DESIGN.md in the bancoctt-design skill).
+   Light = Banco CTT's Figma token export + the values in its real screens (Figma file KT4rQSWoBxvuOCBHyWLm76).
+   Dark = the theme defined in DESIGN.md, section Colors (Banco CTT has none).
+   Theme switch: <html data-theme="light|dark">; no attribute = follow the OS. */
+
+:root {
+  /* type */
+  --font-sans: 'Inter', system-ui, sans-serif;
+  /* size / line height / letter spacing, as used in the real screens */
+  --fs-h4: 34px;       --lh-h4: 38.1px;      --ls-h4: 0.25px;
+  --fs-h5: 24px;       --lh-h5: 28.8px;      --ls-h5: 0;
+  --fs-h6: 20px;       --lh-h6: 22.4px;      --ls-h6: 0.15px;
+  --fs-p1: 16px;       --lh-p1: 24px;        --ls-p1: 0.44px;
+  --fs-p2: 14px;       --lh-p2: 20px;        --ls-p2: 0.25px;
+  --fs-subtitle: 14px; --lh-subtitle: 16px;  --ls-subtitle: 0.1px;
+  --fs-button: 14px;   --lh-button: 24.5px;  --ls-button: 0;
+  --fs-caption: 12px;  --lh-caption: 16px;   --ls-caption: 0.4px;
+  --fs-badge: 12px;    --lh-badge: 14px;     --ls-badge: 0.29px;
+  --fs-navbar: 10px;   --lh-navbar: 16px;    --ls-navbar: 0.33px;
+  --fw-regular: 400; --fw-bold: 700;
+  /* spacing, radius, borders, icons */
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-6: 24px; --space-8: 32px; --space-10: 40px; --space-12: 48px;
+  --radius-sm: 4px; --radius-md: 6px; --radius-lg: 8px; --radius-xl: 10px; --radius-2xl: 40px; --radius-pill: 999px;
+  --border-default: 1px; --border-lg: 2px;
+  --icon-default: 24px; --icon-sm: 16px;
+  /* layout and control sizes (measured in the real screens) */
+  --menu-width: 200px; --menu-width-collapsed: 72px; --topbar-height: 72px; --content-width: 968px; --column-gap: 32px;
+  --control-height: 48px; --button-max-width: 343px; --list-item-min-height: 64px; --modal-width: 568px;
+  /* motion */
+  --ease: cubic-bezier(.2, 0, 0, 1); --dur-fast: 150ms; --dur-base: 200ms;
+
+  /* colour constants (same in both themes) */
+  --primary: #E00024; --primary-active: #C4001F; --text-on-primary: #FFFFFF;
+  --success: #00BFB4; --alert: #FFC800; --offline: #A681AB; --highlight: #B5CB32;
+
+  /* colour roles — light */
+  --surface-page: #F7F9FC; --surface: #FFFFFF; --surface-raised: #FFFFFF; --surface-bar: #F1F4F8; --surface-overlay: #F7F9FC;
+  --surface-field: #F1F4F8; --surface-field-hover: #F7F9FC; --surface-hover: #F7F9FC; --surface-active: #F1F4F8;
+  --surface-inverse: #333333;
+  --divider: #E4E9F2; --control-border: #C5CEE0; --card-outline: transparent;
+  --field-line: #CCCCCC; --field-line-filled: #666666; --field-line-selected: #000000;
+  --text: #000000; --text-strong: #000000; --text-title: #333333; --text-weak: #666666; --text-section: #999999; --text-disabled: #CCCCCC;
+  --text-secondary: #8F9BB3; --text-on-inverse: #FFFFFF;
+  --brand-text: #E00024; --brand-text-on-tint: #C4001F; --link: #00BFB4; --error-text: #EC677D; --alert-text: #CC9500;
+  --primary-hover: #EC677D; --primary-disabled: #FBDFE3; --primary-tint: #FBDFE3;
+  --container-primary: #FBDFE3; --container-info: #E3F0F0; --container-alert: #FFF1BF;
+  --container-offline: #F1EAF1; --container-highlight: #F0F0E3;
+  --chip-fixed: #6E7B93; --chip-fluid: #E4E9F2;
+  --overlay: rgba(51, 51, 51, 0.6); --skeleton: #EBEBEB;
+  --shadow: 0 5px 6px 0 rgba(197, 206, 224, 0.5); --shadow-float: 0 0 6px 0 rgba(197, 206, 224, 0.5);
+  --cat-0: #E00024; --cat-1: #00BFB4; --cat-2: #A681AB; --cat-3: #CC9500; --cat-4: #6E7B93; --cat-5: #A4BF00; --cat-6: #EC677D; --cat-7: #68396F;
+  color-scheme: light;
+}
+
+/* colour roles — dark (explicit choice) */
+:root[data-theme="dark"] {
+  --surface-page: #12151B; --surface: #1A1E26; --surface-raised: #232833; --surface-bar: #171B22; --surface-overlay: #171B22;
+  --surface-field: #242A35; --surface-field-hover: #2A303C; --surface-hover: #232833; --surface-active: #262B35;
+  --surface-inverse: #F1F4F8;
+  --divider: #2C3340; --control-border: #8F9BB3; --card-outline: #2C3340;
+  --field-line: #6E7B93; --field-line-filled: #C5CEE0; --field-line-selected: #F1F4F8;
+  --text: #F1F4F8; --text-strong: #FFFFFF; --text-title: #F1F4F8; --text-weak: #C5CEE0; --text-section: #8F9BB3; --text-disabled: #5C6578;
+  --text-secondary: #A9B4C9; --text-on-inverse: #12151B;
+  --brand-text: #EC677D; --brand-text-on-tint: #EC677D; --link: #66D8D3; --error-text: #FFA3B0; --alert-text: #FFC800;
+  --primary-hover: #C4001F; --primary-disabled: #4A1520; --primary-tint: #3A1520;
+  --container-primary: #4A1520; --container-info: #0F3B39; --container-alert: #3D3200;
+  --container-offline: #35213A; --container-highlight: #2E3410;
+  --chip-fixed: #C5CEE0; --chip-fluid: #2C3340;
+  --overlay: rgba(0, 0, 0, 0.6); --skeleton: #232833;
+  --shadow: none; --shadow-float: 0 4px 16px 0 rgba(0, 0, 0, 0.6);
+  --cat-0: #EC677D; --cat-1: #33CBC4; --cat-2: #C8B1CB; --cat-3: #FFC800; --cat-4: #C5CEE0; --cat-5: #B5CB32; --cat-6: #FFA3B0; --cat-7: #A681AB;
+  color-scheme: dark;
+}
+
+/* colour roles — dark (no explicit choice, the OS is dark) */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --surface-page: #12151B; --surface: #1A1E26; --surface-raised: #232833; --surface-bar: #171B22; --surface-overlay: #171B22;
+    --surface-field: #242A35; --surface-field-hover: #2A303C; --surface-hover: #232833; --surface-active: #262B35;
+    --surface-inverse: #F1F4F8;
+    --divider: #2C3340; --control-border: #8F9BB3; --card-outline: #2C3340;
+    --field-line: #6E7B93; --field-line-filled: #C5CEE0; --field-line-selected: #F1F4F8;
+    --text: #F1F4F8; --text-strong: #FFFFFF; --text-title: #F1F4F8; --text-weak: #C5CEE0; --text-section: #8F9BB3; --text-disabled: #5C6578;
+    --text-secondary: #A9B4C9; --text-on-inverse: #12151B;
+    --brand-text: #EC677D; --brand-text-on-tint: #EC677D; --link: #66D8D3; --error-text: #FFA3B0; --alert-text: #FFC800;
+    --primary-hover: #C4001F; --primary-disabled: #4A1520; --primary-tint: #3A1520;
+    --container-primary: #4A1520; --container-info: #0F3B39; --container-alert: #3D3200;
+    --container-offline: #35213A; --container-highlight: #2E3410;
+    --chip-fixed: #C5CEE0; --chip-fluid: #2C3340;
+    --overlay: rgba(0, 0, 0, 0.6); --skeleton: #232833;
+    --shadow: none; --shadow-float: 0 4px 16px 0 rgba(0, 0, 0, 0.6);
+    --cat-0: #EC677D; --cat-1: #33CBC4; --cat-2: #C8B1CB; --cat-3: #FFC800; --cat-4: #C5CEE0; --cat-5: #B5CB32; --cat-6: #FFA3B0; --cat-7: #A681AB;
+    color-scheme: dark;
+  }
+}

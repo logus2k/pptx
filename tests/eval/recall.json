@@ -1,0 +1,88 @@
+{
+  "about": "SP-7 (technical design section 13): is reranking alone good enough for conversation and document search? 30 questions, half in Portuguese, phrased without the words of the passage they look for; each names the conversation (by index) or document it expects and a phrase the right passage contains. Pass: the right passage in the top 3 for >= 90%.",
+  "documents": ["fixtures/docs/precario-2026.md", "fixtures/docs/politica-viagens.md"],
+  "conversations": [
+    {"title": "Proposta Cliente X - preços", "messages": [
+      ["user", "Vamos tratar da secção de preços da proposta para o Cliente X."],
+      ["assistant", "Claro. Que moeda e que nível de detalhe quer mostrar?"],
+      ["user", "Tudo em euros. E nunca mostramos descontos ao cliente, isso negocia-se à parte."],
+      ["assistant", "Combinado: valores em EUR e sem descontos visíveis. Vou lembrar-me disso."],
+      ["user", "O escalão Pro fica a 2 800 euros por mês."],
+      ["assistant", "Atualizei a tabela: Pro passa a € 2 800 mensais."],
+      ["user", "Põe uma nota de que os valores não incluem IVA."],
+      ["assistant", "Acrescentei nas notas do orador: valores sem IVA."]
+    ]},
+    {"title": "Tom e público", "messages": [
+      ["user", "Who is the audience for the onboarding deck?"],
+      ["assistant", "From the brief: new joiners in the IT department, mostly junior engineers."],
+      ["user", "Keep the tone informal and friendly, no corporate jargon."],
+      ["assistant", "Understood: informal, friendly, plain words."],
+      ["user", "And at most four bullets per slide, people skim these."],
+      ["assistant", "I'll keep every slide to four bullets or fewer."]
+    ]},
+    {"title": "Calendário do projeto", "messages": [
+      ["user", "Qual é o calendário que combinámos com o cliente?"],
+      ["assistant", "Arranque em janeiro, piloto em março, entrada em produção em junho."],
+      ["user", "O piloto passa para abril, o cliente pediu mais tempo."],
+      ["assistant", "Atualizei: piloto em abril; a produção mantém-se em junho."],
+      ["user", "A reunião de acompanhamento é sempre à quinta-feira de manhã."],
+      ["assistant", "Fica registado: acompanhamento semanal às quintas de manhã."]
+    ]},
+    {"title": "Template and branding", "messages": [
+      ["user", "Which template should the Q3 report use?"],
+      ["assistant", "The bank's 2026 corporate template; it has the new logo."],
+      ["user", "Use the red accent only for the key figures, nothing else."],
+      ["assistant", "Agreed: accent red only on key figures."],
+      ["user", "The cover photo must be the Lisbon headquarters, not stock images."],
+      ["assistant", "I'll use the headquarters photo from the project's images on the cover."]
+    ]},
+    {"title": "Riscos e mitigação", "messages": [
+      ["user", "Quais são os riscos principais do relatório?"],
+      ["assistant", "Subida das taxas de juro, concorrência digital e dependência de um fornecedor de TI."],
+      ["user", "Para o fornecedor de TI, a mitigação é um segundo contrato com outra empresa até ao fim do ano."],
+      ["assistant", "Acrescentei: contratar um segundo fornecedor até dezembro."],
+      ["user", "Para as taxas, cobertura com swaps de 3 anos."],
+      ["assistant", "Registado: cobertura do risco de taxa com swaps a três anos."]
+    ]},
+    {"title": "KB and sources", "messages": [
+      ["user", "Where did the warranty figures on slide 4 come from?"],
+      ["assistant", "From the knowledge base: Warranty policy 2026, section Coverage, updated 1 September."],
+      ["user", "Always cite the KB document in the speaker notes with its link."],
+      ["assistant", "I'll cite source, section, date and link in the notes every time."],
+      ["user", "Don't use the old 2024 policy, it's withdrawn."],
+      ["assistant", "Noted: the 2024 warranty policy is withdrawn and won't be used."]
+    ]}
+  ],
+  "questions": [
+    {"q": "Em que moeda ficaram os valores da proposta?", "conversation": 0, "contains": "Tudo em euros"},
+    {"q": "Podemos mostrar reduções de preço ao cliente?", "conversation": 0, "contains": "nunca mostramos descontos"},
+    {"q": "Quanto custa por mês o nível intermédio?", "conversation": 0, "contains": "2 800"},
+    {"q": "Os montantes incluem impostos?", "conversation": 0, "contains": "IVA"},
+    {"q": "Who are the people reading the new-starter presentation?", "conversation": 1, "contains": "new joiners"},
+    {"q": "How formal should the writing be?", "conversation": 1, "contains": "informal and friendly"},
+    {"q": "Is there a limit on list items per page?", "conversation": 1, "contains": "four bullets"},
+    {"q": "Quando começa o projeto?", "conversation": 2, "contains": "Arranque em janeiro"},
+    {"q": "Para quando foi adiada a fase de testes?", "conversation": 2, "contains": "piloto passa para abril"},
+    {"q": "Em que dia da semana é o ponto de situação?", "conversation": 2, "contains": "quinta-feira"},
+    {"q": "Quando é o go-live?", "conversation": 2, "contains": "produção em junho"},
+    {"q": "Which design should the quarterly results deck be based on?", "conversation": 3, "contains": "corporate template"},
+    {"q": "Where may we use the brand colour?", "conversation": 3, "contains": "red accent only"},
+    {"q": "What picture goes on the first page?", "conversation": 3, "contains": "headquarters"},
+    {"q": "Como reduzimos a dependência tecnológica de uma só empresa?", "conversation": 4, "contains": "segundo contrato"},
+    {"q": "O que fazemos quanto ao risco de subida de juros?", "conversation": 4, "contains": "swaps"},
+    {"q": "Quais foram as ameaças identificadas no relatório?", "conversation": 4, "contains": "concorrência digital"},
+    {"q": "What is the origin of the guarantee numbers in the deck?", "conversation": 5, "contains": "Warranty policy 2026"},
+    {"q": "How should references to company documents be recorded?", "conversation": 5, "contains": "speaker notes with its link"},
+    {"q": "Can we still rely on the previous warranty rules?", "conversation": 5, "contains": "withdrawn"},
+    {"q": "Quanto paga por mês um cliente com a conta mais simples?", "document": "precario-2026.md", "contains": "4 euros por mês"},
+    {"q": "Os jovens têm alguma vantagem no primeiro ano?", "document": "precario-2026.md", "contains": "menos de 26 anos"},
+    {"q": "Por quanto tempo estão cobertos os aparelhos?", "document": "precario-2026.md", "contains": "dois anos de garantia"},
+    {"q": "Onde são acordadas as condições especiais?", "document": "precario-2026.md", "contains": "negociadas à parte"},
+    {"q": "Which class may employees fly on long trips?", "document": "politica-viagens.md", "contains": "business class"},
+    {"q": "How much can be spent on an evening meal while travelling?", "document": "politica-viagens.md", "contains": "45 euros"},
+    {"q": "Who has to approve a trip abroad?", "document": "politica-viagens.md", "contains": "director"},
+    {"q": "How soon must receipts be submitted?", "document": "politica-viagens.md", "contains": "30 days"},
+    {"q": "Is a rental car allowed?", "document": "politica-viagens.md", "contains": "public transport"},
+    {"q": "What hotel level is acceptable?", "document": "politica-viagens.md", "contains": "four stars"}
+  ]
+}

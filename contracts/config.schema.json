@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "config.schema.json",
+  "title": "AI Slide Assistant configuration (technical design section 1.2)",
+  "description": "What administrators configure, read at start-up from CONFIG_FILE. Secrets are never here: they come from the environment (.env). Sections are added as the milestones need them.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "public_url",
+    "administrators",
+    "identity",
+    "limits",
+    "retention",
+    "templates_dir"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "public_url": {
+      "type": "string",
+      "minLength": 9,
+      "description": "Where people open the app, behind the proxy (e.g. https://logus2k.com/slides/). Starts with http:// or https:// and ends with / (checked by app/config.py)."
+    },
+    "administrators": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 3
+      },
+      "uniqueItems": true,
+      "description": "Sign-in addresses of the administrators (spec AD-1), compared without regard to case."
+    },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "userinfo_url",
+        "photo_url",
+        "sign_out_url"
+      ],
+      "properties": {
+        "userinfo_url": {
+          "type": "string",
+          "description": "OpenID Connect UserInfo endpoint asked for the person's name with the token the proxy forwards."
+        },
+        "photo_url": {
+          "type": "string",
+          "description": "Where the person's photo is downloaded with the same token (Microsoft Graph). Empty: the UserInfo picture."
+        },
+        "sign_out_url": {
+          "type": "string",
+          "description": "The proxy's sign-out address; may hold {logout_hint} and {id_token_hint}."
+        },
+        "profile": {
+          "type": "boolean",
+          "default": true,
+          "description": "Fetch name and photo; false: the name is the start of the address."
+        }
+      }
+    },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "upload_mb"
+      ],
+      "properties": {
+        "upload_mb": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1024
+        },
+        "decks_per_project": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 50
+        },
+        "conversations_per_project": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 100
+        },
+        "lease_idle_minutes": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 10
+        }
+      }
+    },
+    "retention": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "trash_days": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 30,
+          "description": "Days a deleted project stays in DATA_DIR/trash."
+        },
+        "audit_keep_days": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0,
+          "description": "0 = for ever."
+        },
+        "version_days": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0,
+          "description": "0 = keep every version."
+        }
+      }
+    },
+    "templates_dir": {
+      "type": "string",
+      "description": "Administrator templates and templates.json (spec AD-3)."
+    },
+    "services": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The environment's shared services (technical design sections 6.1, 7, 8). Filled in by the milestone that uses each.",
+      "properties": {
+        "agent_server": {
+          "type": "string"
+        },
+        "tokenizer": {
+          "type": "string"
+        },
+        "stt": {
+          "type": "string"
+        },
+        "cortex_api": {
+          "type": "string",
+          "description": "Cortex's integration API through the proxy's internal service route."
+        },
+        "tts_voices": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "reranker": {
+          "type": "string",
+          "description": "embeddings-server: its /v1/rerank (bge-reranker) scores conversation and document passages against a query."
+        }
+      }
+    }
+  }
+}

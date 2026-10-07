@@ -1,0 +1,22 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "tools/propose_plan",
+ "title": "propose_plan",
+ "description": "Before changing several slides or deleting content: present the steps and wait for the person to approve.",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "steps"
+ ],
+ "properties": {
+  "steps": {
+   "type": "array",
+   "minItems": 1,
+   "maxItems": 30,
+   "items": {
+    "type": "string",
+    "maxLength": 300
+   }
+  }
+ }
+}

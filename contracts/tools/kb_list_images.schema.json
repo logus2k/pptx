@@ -1,0 +1,20 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "tools/kb_list_images",
+ "title": "kb_list_images",
+ "description": "The pictures of a knowledge-base document (id, page or section, caption, size), to put one on a slide with insert_image or replace_image.",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "domain",
+  "path"
+ ],
+ "properties": {
+  "domain": {
+   "type": "string"
+  },
+  "path": {
+   "type": "string"
+  }
+ }
+}

@@ -1,0 +1,19 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "tools/duplicate_deck",
+ "title": "duplicate_deck",
+ "description": "A new deck in the project, a copy of a deck (its slides and template). It becomes the active deck.",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [],
+ "properties": {
+  "deck_id": {
+   "type": "string",
+   "description": "The deck to copy; left out: the active deck."
+  },
+  "title": {
+   "type": "string",
+   "maxLength": 200
+  }
+ }
+}

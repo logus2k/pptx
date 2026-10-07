@@ -1,0 +1,115 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "tools/edit_paragraphs",
+ "title": "edit_paragraphs",
+ "description": "Add, change or remove single paragraphs (bullets) of one shape, keeping all the others exactly as they are. Better than update_text for adding or removing a bullet. Indices are the [n] the deck map shows.",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "slide_id",
+  "shape_id",
+  "operations"
+ ],
+ "properties": {
+  "deck_id": {
+   "type": "string",
+   "description": "Left out: the active deck."
+  },
+  "slide_id": {
+   "type": "integer",
+   "description": "The slide: its number in the deck (1 = first, as the deck map and the person say it) or its ID."
+  },
+  "shape_id": {
+   "type": "integer",
+   "description": "From the deck map."
+  },
+  "operations": {
+   "type": "array",
+   "minItems": 1,
+   "maxItems": 40,
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "op"
+    ],
+    "properties": {
+     "op": {
+      "enum": [
+       "insert",
+       "set",
+       "delete"
+      ],
+      "description": "insert a new paragraph after `after`; set paragraph `index` to `text`; delete paragraph `index`."
+     },
+     "index": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "set, delete: the paragraph's [n] in the deck map."
+     },
+     "after": {
+      "type": "integer",
+      "minimum": -1,
+      "description": "insert: after this [n]; -1 puts it first; left out: at the end."
+     },
+     "text": {
+      "type": "string",
+      "maxLength": 4000,
+      "description": "insert, set: the paragraph's text."
+     },
+     "level": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 4,
+      "description": "Bullet level (0 top); left out: the neighbour's."
+     }
+    },
+    "allOf": [
+     {
+      "if": {
+       "properties": {
+        "op": {
+         "const": "set"
+        }
+       }
+      },
+      "then": {
+       "required": [
+        "index",
+        "text"
+       ]
+      }
+     },
+     {
+      "if": {
+       "properties": {
+        "op": {
+         "const": "delete"
+        }
+       }
+      },
+      "then": {
+       "required": [
+        "index"
+       ]
+      }
+     },
+     {
+      "if": {
+       "properties": {
+        "op": {
+         "const": "insert"
+        }
+       }
+      },
+      "then": {
+       "required": [
+        "text"
+       ]
+      }
+     }
+    ]
+   }
+  }
+ }
+}

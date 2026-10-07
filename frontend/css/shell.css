@@ -1,0 +1,328 @@
+/* Slides: the shell's share of Cortex's static/css/style.css, copied verbatim by line range (each range says which).
+   Cortex's recording, knowledge-base, learning and review styles are not copied. */
+
+/* ── Cortex style.css lines 1-141 ── */
+/* Cortex on the Banco CTT design system (the bancoctt-design skill; design-mockups/bancoctt/DESIGN.cortex.md).
+   Every colour, size of type, space, radius and shadow is a role of tokens.css (loaded first, with fonts.css); the
+   specs are the skill's references/DESIGN.md. (Figma) / (tokens) / (ours) say where a spec comes from, as there.
+   The page's frame and its three widths are in layout.css; the look of the vendored stylesheets in vendor-theme.css. */
+
+/* Cortex's own tokens, beside the design system's (no new colours: each points at a role) */
+:root {
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;   /* the clock, prompts, ids */
+  --scroll-thumb: var(--control-border);       /* scrollbars: grey-blue-400 in light, grey-blue-600 in dark (DESIGN.cortex.md §6) */
+  --control-compact: 40px;                     /* (ours) inputs in toolbars and tables; forms use --control-height (48px) */
+  --button-compact: 32px;                      /* (ours) buttons in toolbars */
+}
+:root[data-theme="dark"] { --scroll-thumb: var(--field-line); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --scroll-thumb: var(--field-line); } }
+
+/* ── base (DESIGN.md, Implementation > Base styles) ── */
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0; padding: 0; overflow: hidden;
+  background: var(--surface-page); color: var(--text);
+  font: var(--fw-regular) var(--fs-p2)/var(--lh-p2) var(--font-sans); letter-spacing: var(--ls-p2);   /* Paragraph 2: the default UI text */
+  -webkit-font-smoothing: antialiased;
+}
+:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+[hidden] { display: none !important; }
+b, strong, th { font-weight: var(--fw-bold); }
+h1 { margin: 0; font: var(--fw-bold) var(--fs-h6)/var(--lh-h6) var(--font-sans); letter-spacing: var(--ls-h6); }
+/* a card's title: H6 in --text-title */
+h2 { margin: 0 0 var(--space-2); color: var(--text-title); font: var(--fw-bold) var(--fs-h6)/var(--lh-h6) var(--font-sans); letter-spacing: var(--ls-h6); }
+h3 { font: var(--fw-bold) var(--fs-subtitle)/var(--lh-subtitle) var(--font-sans); letter-spacing: var(--ls-subtitle); }
+.muted { color: var(--text-weak); }
+a { color: var(--link); }
+
+/* ── Buttons (DESIGN.md, Components > Buttons) ──────────────────────────────────────────────────────────────────
+   4px radius, Bold 14 / 24.5px. Primary: --primary with white text; one per view. Secondary: a --primary outline
+   with --brand-text. Ghost (the default here: Cortex's panels carry several actions each): --brand-text only.
+   A destructive action is a Primary with an explicit verb: there is no danger colour. In forms and dialogs they are
+   48px tall; in toolbars and panels the compact 32px (ours). */
+button, .file span {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
+  min-height: var(--button-compact); padding: 3px var(--space-4); border: 1px solid transparent; border-radius: var(--radius-sm);
+  background: transparent; color: var(--brand-text); cursor: pointer; white-space: nowrap;
+  font: var(--fw-bold) var(--fs-button)/var(--lh-button) var(--font-sans); letter-spacing: var(--ls-button);
+  transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+button:hover:not(:disabled), .file:hover span { background: var(--surface-active); }
+button:active:not(:disabled) { background: var(--primary-tint); }
+button:disabled { color: var(--text-disabled); cursor: default; }
+button.primary, button.danger, .ac-btn.ac-primary, .rv-btn.rv-primary { background: var(--primary); border-color: var(--primary); color: var(--text-on-primary); }
+button.primary:hover:not(:disabled), button.danger:hover:not(:disabled), .ac-btn.ac-primary:hover:not(:disabled), .rv-btn.rv-primary:hover:not(:disabled) { background: var(--primary-hover); border-color: var(--primary-hover); }
+button.primary:active:not(:disabled), button.danger:active:not(:disabled), .ac-btn.ac-primary:active:not(:disabled), .rv-btn.rv-primary:active:not(:disabled) { background: var(--primary-active); border-color: var(--primary-active); }
+button.primary:disabled, button.danger:disabled, .ac-btn.ac-primary:disabled, .rv-btn.rv-primary:disabled { background: var(--primary-disabled); border-color: var(--primary-disabled); color: var(--text-on-primary); }
+button.secondary { border-color: var(--primary); }
+button.secondary:disabled { border-color: var(--primary-disabled); color: var(--primary-disabled); }
+/* icon buttons: transparent, the icon in --text; hover --surface-hover */
+button.icon-button, .undock-btn, .player-detach, .rec-settings, .kb-chat-gear, .rv-refresh, .kb-jobs-close {
+  min-height: 0; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 50%; color: var(--text); }
+button.icon-button:hover:not(:disabled), .undock-btn:hover, .player-detach:hover, .rec-settings:hover, .kb-chat-gear:hover, .rv-refresh:hover, .kb-jobs-close:hover { background: var(--surface-hover); }
+.file input { display: none; }
+
+/* ── Fields (DESIGN.md, Components > Text input and select) ─────────────────────────────────────────────────────
+   Filled: --surface-field with an underline (--field-line; 2px --field-line-selected when focused), 4px top
+   corners, the value in Paragraph 2. A form's field is 48px with its label inside, above the value (.field-box
+   and the dialogs' field wrappers below); in toolbars and tables the compact 40px without a label (ours). */
+select, input[type="text"], input[type="number"], input[type="email"], input[type="search"], input[type="date"], input:not([type]), textarea {
+  min-height: var(--control-compact); padding: 9px var(--space-3) 8px; border: 0; border-bottom: 1px solid var(--field-line); border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  background-color: var(--surface-field); color: var(--text);
+  font: var(--fw-regular) var(--fs-p2)/var(--lh-p2) var(--font-sans); letter-spacing: var(--ls-p2);
+}
+select:hover, input[type="text"]:hover, input[type="number"]:hover, input[type="email"]:hover, input[type="search"]:hover, input[type="date"]:hover, input:not([type]):hover, textarea:hover { background-color: var(--surface-field-hover); }
+select:focus, input[type="text"]:focus, input[type="number"]:focus, input[type="email"]:focus, input[type="search"]:focus, input[type="date"]:focus, input:not([type]):focus, textarea:focus {
+  outline: none; padding-bottom: 7px; border-bottom: 2px solid var(--field-line-selected); }
+select:disabled, input:disabled, textarea:disabled { color: var(--text-disabled); cursor: default; }
+::placeholder { color: var(--text-weak); opacity: 1; }
+/* the select's chevron, in --text-section: two gradient halves, so it follows the theme without an image */
+select {
+  -webkit-appearance: none; -moz-appearance: none; appearance: none; cursor: pointer; padding-right: 36px;
+  background-image: linear-gradient(45deg, transparent 50%, var(--text-section) 50%), linear-gradient(135deg, var(--text-section) 50%, transparent 50%);
+  background-position: right 17px center, right 12px center; background-size: 5px 5px; background-repeat: no-repeat;
+}
+/* a field with its label inside (the wrapper is the box: a label line in --text-weak over the borderless control) */
+.kb-field, .ps-field, .ac-field, .field-box {
+  display: flex; flex-direction: column; justify-content: center; gap: 0; min-height: var(--control-height); padding: 7px var(--space-3) 0;
+  background: var(--surface-field); border-bottom: 1px solid var(--field-line); border-radius: var(--radius-sm) var(--radius-sm) 0 0; }
+.kb-field:hover, .ps-field:hover, .ac-field:hover, .field-box:hover { background: var(--surface-field-hover); }
+.kb-field:focus-within, .ps-field:focus-within, .ac-field:focus-within, .field-box:focus-within { border-bottom: 2px solid var(--field-line-selected); }
+.kb-field > span, .kb-field-label, .ps-field > span, .ac-field > label, .field-box > span {
+  color: var(--text-weak); font-size: var(--fs-caption); line-height: 14px; letter-spacing: 0.11px; }
+.kb-field :is(input, select, textarea), .ps-field :is(input, select, textarea), .ac-field :is(input, select, textarea), .field-box :is(input, select, textarea),
+.kb-field :is(input, select, textarea):is(:hover, :focus), .ps-field :is(input, select, textarea):is(:hover, :focus), .ac-field :is(input, select, textarea):is(:hover, :focus), .field-box :is(input, select, textarea):is(:hover, :focus) {
+  min-height: 26px; padding: 2px 0 4px; border: 0; background-color: transparent; }
+.kb-field select, .ps-field select, .ac-field select, .field-box select { padding-right: 28px; background-position: right 9px center, right 4px center; }
+/* checkbox and radio (tokens + ours): 20px, --surface-field with a --control-border outline; on: --primary */
+input[type="checkbox"], input[type="radio"] {
+  -webkit-appearance: none; appearance: none; flex: none; display: inline-grid; place-content: center; width: 20px; height: 20px; margin: 0;
+  background: var(--surface-field); border: 1px solid var(--control-border); border-radius: var(--radius-sm); cursor: pointer; vertical-align: -5px; }
+input[type="radio"] { border-radius: 50%; }
+input[type="checkbox"]:checked { background: var(--primary); border-color: var(--primary); }
+input[type="checkbox"]:checked:hover { background: var(--primary-active); border-color: var(--primary-active); }
+input[type="checkbox"]:checked::before { content: ''; width: 10px; height: 6px; margin-top: -2px; border-left: 2px solid var(--text-on-primary); border-bottom: 2px solid var(--text-on-primary); transform: rotate(-45deg); }
+input[type="radio"]:checked { background: transparent; border-color: var(--primary); }
+input[type="radio"]:checked::before { content: ''; width: 12px; height: 12px; border-radius: 50%; background: var(--primary); }
+input[type="checkbox"]:disabled, input[type="radio"]:disabled { cursor: not-allowed; opacity: .5; }
+fieldset { border: 0; margin: 0; padding: 0; }
+
+/* ── Tabs (DESIGN.md, Components > Tabs) ────────────────────────────────────────────────────────────────────────
+   A row with a --divider line below; labels in Subtitle 2, --text-secondary; the active one --brand-text with a
+   2px --primary line. The row scrolls sideways when it does not fit, and never wraps. Every tab row of the page:
+   the middle pane's, the articles', the managers' and the settings' (the side panes': vendor-theme.css). */
+.main-tabs, .article-tabs, .kbm-tabs, .ac-subtabs, .ps-tabs, .rv-boxes, .sheet-tabs {
+  display: flex; align-items: stretch; gap: 0; border-bottom: 1px solid var(--divider); overflow-x: auto; overflow-y: hidden; scrollbar-width: none; flex: 0 0 auto; }
+.main-tabs::-webkit-scrollbar, .article-tabs::-webkit-scrollbar, .kbm-tabs::-webkit-scrollbar, .ac-subtabs::-webkit-scrollbar, .ps-tabs::-webkit-scrollbar,
+.rv-boxes::-webkit-scrollbar, .sheet-tabs::-webkit-scrollbar { display: none; }
+.main-tab, .article-tab, .kbm-tab, .ac-subtab, .ps-tab, .rv-box, .sheet-tab {
+  flex: none; position: relative; display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
+  min-height: 46px; padding: 0 var(--space-3); margin: 0 0 -1px; border: 0; border-bottom: 2px solid transparent; border-radius: 0;
+  background: none; color: var(--text-secondary); cursor: pointer; white-space: nowrap;
+  font: var(--fw-bold) var(--fs-subtitle)/var(--lh-subtitle) var(--font-sans); letter-spacing: var(--ls-subtitle); }
+.main-tab:hover:not(:disabled), .article-tab:hover:not(:disabled), .kbm-tab:hover:not(:disabled), .ac-subtab:hover:not(:disabled), .ps-tab:hover:not(:disabled),
+.rv-box:hover:not(:disabled), .sheet-tab:hover:not(:disabled) { background: none; color: var(--text); }
+.main-tab.active, .article-tab.active, .kbm-tab.active, .ac-subtab.on, .ps-tab.on, .rv-box.on, .sheet-tab.active,
+.main-tab.active:hover, .article-tab.active:hover, .kbm-tab.active:hover, .ac-subtab.on:hover, .ps-tab.on:hover, .rv-box.on:hover, .sheet-tab.active:hover {
+  color: var(--brand-text); border-bottom-color: var(--primary); }
+
+/* ── Cards, status tags, feedback blocks, chips (DESIGN.md, Components) ──────────────────────────────────────────
+   A card: --surface, a 10px radius, 16px padding, flat (a --card-outline in dark). */
+.controls, .settings, .timeline-wrap, .workspace > .log:not(.floating), .workspace > .article-panel:not(.floating),
+.kbm-card, .ac-card, .rv-card, .about-area, .download-card, .tr-study, .article-progress {
+  background: var(--surface); border: 1px solid var(--card-outline); border-radius: var(--radius-xl); }
+/* a status tag (ours): a 22px pill in a container colour with --text, Badge text */
+.pill, .ac-badge, .ac-chip, .ps-chip, .review-badge, .edited, .lang, .rec-project, .tr-chip {
+  display: inline-flex; align-items: center; height: 22px; padding: 0 10px; border: 0; border-radius: var(--radius-pill);
+  background: var(--chip-fluid); color: var(--text); white-space: nowrap;
+  font: var(--fw-bold) var(--fs-badge)/var(--lh-badge) var(--font-sans); letter-spacing: var(--ls-badge); }
+/* a feedback block: a container colour, a 10px radius, 16px padding, text in --text-title */
+.approved, .review-state, .ac-callout, .tr-complete, .banner {
+  padding: var(--space-4); border: 0; border-radius: var(--radius-xl); background: var(--container-info); color: var(--text-title);
+  font-size: var(--fs-p2); line-height: var(--lh-p2); }
+.approved a, .review-state a { color: inherit; }
+
+
+/* ── Cortex style.css lines 362-371 ── */
+/* a tab's view in its own window (undock.js floatView) */
+.floating-view { flex: 1 1 auto; min-height: 0; height: 100%; overflow: auto; background: var(--surface); }
+.floating-view.kb-chat, .floating-view.assistant-view, .floating-view.kb-tree-host { overflow: hidden; }
+.floating-view.main-view { display: block; }
+/* a document's tab floating keeps the column it has docked (.doc-view): its viewer fills the window and scrolls inside
+   it - as a block the PDF viewer grew to the whole document, its own scroller never scrolled and its page and zoom
+   controls moved nothing */
+.floating-view.doc-view { display: flex; flex-direction: column; }
+.dock-icon { display: block; }
+
+
+/* ── Cortex style.css lines 413-433 ── */
+/* ── the side panel's views (sidebar.js) ── */
+.sb-view { padding: var(--space-4); }
+.sb-view h3 { margin: var(--space-4) 0 var(--space-2); color: var(--text-section); }      /* a section title above a list */
+.sb-view ul { list-style: none; margin: 0; padding: 0; }
+.sb-view li { padding: 0; }
+.sb-view dl { display: grid; grid-template-columns: auto 1fr; gap: var(--space-2) var(--space-4); margin: 0; }
+.sb-view dt { color: var(--text-weak); font-size: var(--fs-caption); line-height: var(--lh-p2); letter-spacing: var(--ls-caption); }
+.sb-view dd { margin: 0; overflow-wrap: anywhere; }
+/* the Outline panel: the table of contents of the document with the focus (sidebar.js renderOutline) - its name, then
+   its headings indented by level (a PDF's with the page they start on), or a manual's chapters and pages */
+.sb-view .outline a, .outline a.toc-page { display: block; padding: var(--space-2) var(--space-3); border-radius: var(--radius-xl); color: var(--text); text-decoration: none; cursor: pointer; }
+.sb-view .outline a:hover, .outline a.toc-page:hover { background: var(--surface-hover); }
+.sb-view .outline .h2 { padding-left: var(--space-6); }
+.sb-view .outline .h3 { padding-left: var(--space-10); font-size: var(--fs-caption); }
+.sb-view .outline .h4 { padding-left: var(--space-12); font-size: var(--fs-caption); }
+.outline .outline-doc { margin-bottom: var(--space-2); padding: 0 var(--space-3) var(--space-2); border-bottom: 1px solid var(--divider); color: var(--text-title);
+  font: var(--fw-bold) var(--fs-subtitle)/var(--lh-subtitle) var(--font-sans); letter-spacing: var(--ls-subtitle); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.outline .outline-at { float: right; margin-left: var(--space-2); color: var(--text-weak); font-size: var(--fs-caption); }
+.outline .toc-chapter { margin: var(--space-4) 0 var(--space-1); padding: 0 var(--space-3); color: var(--text-section); font: var(--fw-bold) var(--fs-subtitle)/var(--lh-subtitle) var(--font-sans); letter-spacing: var(--ls-subtitle); }
+.outline .toc-chapter:first-child { margin-top: 0; }
+.outline a.toc-page.current { background: var(--surface-active); color: var(--brand-text); font-weight: var(--fw-bold); }
+
+/* ── Cortex style.css lines 459-499 ── */
+/* ── the middle pane: its tabs, its title bar, its views ── */
+/* (48px, as the side panel's and the Assistants' tab strips: the three title bars below them start on one line) */
+.main-tabs { box-sizing: border-box; height: 48px; flex: none; align-items: stretch; padding: 0 var(--space-4); background: var(--surface); }
+.main-tabs[hidden] { display: none; }
+.main-tab { max-width: 280px; min-width: 100px; }
+.main-tab-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.main-tab-undock { display: none; }
+.main-title-bar { margin: 0; border-radius: 0; }
+.main-title-bar[hidden] { display: none; }
+.main-title-bar .sidebar-close-btn[hidden] { display: none !important; }
+#main-views { flex: 1 1 auto; min-height: 0; position: relative; display: flex; flex-direction: column; }
+.main-view { flex: 1 1 auto; min-height: 0; overflow-y: auto; background: var(--surface-page); }
+.main-view[hidden] { display: none; }
+.doc-view { display: flex; flex-direction: column; }
+
+/* ── Progress bars (DESIGN.md, Components > Progress bar): 12px, fully rounded, a --skeleton track ── */
+.kb-progress { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+.kb-progress-bar, .learn-mbar { height: 12px; border-radius: 6px; background: var(--skeleton); overflow: hidden; }
+.kb-progress-bar i, .learn-mbar i { display: block; height: 100%; width: 0; border-radius: 6px; background: var(--cat-1); transition: width .25s ease; }
+.kb-progress.finished .kb-progress-bar i { background: var(--success); }
+.kb-progress.failed .kb-progress-bar i { background: var(--primary); }
+.kb-progress-text { color: var(--text-weak); font-size: var(--fs-caption); font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kb-progress.failed .kb-progress-text { color: var(--text); font-weight: var(--fw-bold); white-space: normal; }
+
+/* ── knowledge bases: where an article or a document goes (kb-target.js) ── */
+.kb-target { display: flex; flex-direction: column; gap: var(--space-3); padding: 0 var(--space-4) var(--space-2); color: var(--text); }
+.kb-note { margin: 0; color: var(--text-weak); }
+.kb-hint, .kbm-hint, .settings-hint, .ac-note, .ps-why { color: var(--text-weak); font-size: var(--fs-caption); line-height: var(--lh-caption); letter-spacing: var(--ls-caption); }
+.kb-folders { height: 190px; overflow: auto; padding: var(--space-2); border-radius: var(--radius-xl); background: var(--surface); border: 1px solid var(--card-outline); }
+.kb-folders ul { list-style: none; margin: 0; padding: 0; }
+.kb-folder-row { display: flex; align-items: center; gap: var(--space-2); height: 40px; padding: 0 var(--space-3); cursor: pointer; border-radius: var(--radius-xl); user-select: none; }
+.kb-folder-row:hover { background: var(--surface-hover); }
+.kb-folder-row.selected { background: var(--surface-active); color: var(--brand-text); font-weight: var(--fw-bold); }
+.kb-twist { width: 14px; text-align: center; color: var(--text-secondary); flex: 0 0 14px; }
+.kb-twist.empty { visibility: hidden; }
+.kb-folder-icon { display: inline-flex; color: var(--text-secondary); }
+.kb-folder-row.selected .kb-folder-icon { color: var(--primary); }
+.kb-folder-add { display: flex; gap: var(--space-2); }
+.kb-folder-add input { flex: 1; }
+.kb-where { color: var(--text); font-size: var(--fs-caption); }
+.kb-error, .rv-error, .document-error { color: var(--text); font-weight: var(--fw-bold); min-height: 1em; }
+
+/* ── Cortex style.css lines 548-562 ── */
+/* ── Data tables (DESIGN.md, Components > Data table, ours): a --surface card; the header row in Subtitle 2
+   --text-section with a --divider below and no fill; body rows separated by --divider; numbers right, tabular ── */
+.kbm-table-wrap, .ac-matrix-wrap { flex: 1; min-height: 0; overflow: auto; border: 1px solid var(--card-outline); border-radius: var(--radius-xl); background: var(--surface); }
+.kbm-table, .learn-fame, .ps-members, .health table, table.ac-matrix { width: 100%; border-collapse: collapse; }
+.kbm-table th, .learn-fame th, .ps-members th, .assistant-models th { position: sticky; top: 0; background: var(--surface); text-align: left; color: var(--text-section); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--divider);
+  font: var(--fw-bold) var(--fs-subtitle)/var(--lh-subtitle) var(--font-sans); letter-spacing: var(--ls-subtitle); }
+.kbm-table td, .learn-fame td, .ps-members td, .health td { padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--divider); vertical-align: top; }
+.kbm-table tr:hover td { background: var(--surface-hover); }
+.kbm-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.kbm-table td:last-child { white-space: nowrap; font-variant-numeric: tabular-nums; }   /* the date */
+.kbm-table td.kbm-folder { color: var(--text-weak); max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kbm-table a { color: var(--text); }
+.kbm-table caption { caption-side: bottom; padding: var(--space-3); color: var(--text-weak); }
+.kbm-del { min-height: 28px; padding: 0 var(--space-3); }
+
+
+/* ── Cortex style.css lines 683-689 ── */
+/* ── custom Assistants (assistants.js): the "+" tab and its menu, the prompt editor ── */
+.right-panel-tab.rp-plus { font-size: var(--fs-p1); font-weight: var(--fw-regular); }
+.rp-plus-menu { position: fixed; z-index: 5100; min-width: 220px; padding: var(--space-2) 0; display: flex; flex-direction: column; }
+.rp-plus-item { justify-content: flex-start; min-height: 36px; padding: 0 var(--space-4); border-radius: 0; color: var(--text); font: var(--fw-regular) var(--fs-p2)/var(--lh-p2) var(--font-sans); letter-spacing: var(--ls-p2); }
+.rp-plus-item:hover:not(:disabled) { background: var(--surface-hover); }
+.rp-plus-item.rp-plus-new { color: var(--brand-text); font-weight: var(--fw-bold); }
+.rp-plus-title { margin-top: var(--space-2); padding: var(--space-2) var(--space-4) var(--space-1); border-top: 1px solid var(--divider); color: var(--text-section); font-size: var(--fs-caption); letter-spacing: var(--ls-caption); }
+
+/* ── Cortex style.css lines 708-751 ── */
+/* ── the user menu (identity.js): the top bar's profile - a 24px avatar, the name in Subtitle 2, a chevron ── */
+.identity { position: relative; flex: 0 0 auto; display: flex; align-items: center; margin-left: auto; }
+.identity-btn { min-height: 0; height: 48px; gap: var(--space-2); padding: 0 var(--space-2); border: 0; border-radius: var(--radius-sm); color: var(--text); }
+.identity-btn:hover:not(:disabled) { background: var(--surface-hover); }
+.identity-face { position: relative; flex: none; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; overflow: hidden; background: var(--container-primary); color: var(--text); }
+.identity-initials { font: var(--fw-bold) 10px/1 var(--font-sans); letter-spacing: 0; }
+.identity-avatar { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.identity-btn-name { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: var(--fw-bold) var(--fs-subtitle)/var(--lh-subtitle) var(--font-sans); letter-spacing: var(--ls-subtitle); }
+.identity-chevron { flex: none; width: 24px; height: 24px; background: currentColor; -webkit-mask: var(--icon-chevron-down) center / 24px 24px no-repeat; mask: var(--icon-chevron-down) center / 24px 24px no-repeat; }
+.identity-menu { position: absolute; top: calc(100% + 4px); right: 0; z-index: 5000; min-width: 15rem; padding: var(--space-2) 0; }
+/* Settings in the header: only on a phone (layout.css), where the side menu is the app's bottom bar */
+.header-settings { display: none; place-items: center; flex: none; width: 44px; height: 44px; min-height: 0; margin-left: auto; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--text); cursor: pointer; }
+.header-settings:hover { background: var(--surface-hover); }
+/* the Settings menu (settings.js): the same menu, placed by the script beside the side menu's item */
+.identity-menu.settings-menu { position: fixed; right: auto; }
+.identity-who { padding: var(--space-2) var(--space-4) var(--space-3); }
+.identity-name { font: var(--fw-bold) var(--fs-subtitle)/var(--lh-subtitle) var(--font-sans); letter-spacing: var(--ls-subtitle); }
+.identity-email { margin-top: var(--space-1); color: var(--text-weak); overflow-wrap: anywhere; font-size: var(--fs-caption); line-height: var(--lh-caption); letter-spacing: var(--ls-caption); }
+.identity-divider { height: 1px; margin: var(--space-2) 0; background: var(--divider); }
+.identity-item { display: flex; align-items: center; justify-content: flex-start; gap: var(--space-3); width: 100%; min-height: 36px; padding: 0 var(--space-4); border: 0; border-radius: 0;
+  background: transparent; color: var(--text); text-decoration: none; text-align: left; cursor: pointer; font: var(--fw-regular) var(--fs-p2)/var(--lh-p2) var(--font-sans); letter-spacing: var(--ls-p2); }
+.identity-item:hover, .identity-item:hover:not(:disabled) { background: var(--surface-hover); }
+.identity-icon { display: inline-flex; width: 16px; justify-content: center; }
+
+/* ── a transient message of the page's own (app.js toast): the Banco CTT toast ── */
+.toast { position: fixed; right: 48px; bottom: 48px; z-index: 2000; width: 343px; max-width: calc(100vw - 32px); padding: var(--space-3) var(--space-4); border-radius: var(--radius-sm);
+  background: var(--surface-inverse); color: var(--text-on-inverse); }
+
+/* ── Scrollbars: Cortex's own styling, kept as it was (by request, 2026-10-03) - 8px, no track, the thumb hidden
+   until the area is hovered, darker under the pointer; the KB's PDF viewers keep their page-hover variant. Only the
+   colours are the design system's: grey-blue-400 in light, grey-blue-600 in dark (--scroll-thumb). ── */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; margin: 4px 0; }
+::-webkit-scrollbar-corner { background: transparent; }
+::-webkit-scrollbar-thumb { background: transparent; border-radius: 4px; cursor: pointer; transition: background 0.2s ease; }
+*:hover::-webkit-scrollbar-thumb { background: var(--scroll-thumb); }
+::-webkit-scrollbar-thumb:hover, ::-webkit-scrollbar-thumb:active { background: var(--text-secondary); }
+/* Firefox has no ::-webkit-scrollbar (not set where it exists: in Chromium the standard properties would switch the rules above off) */
+@supports not selector(::-webkit-scrollbar) { * { scrollbar-width: thin; scrollbar-color: var(--scroll-thumb) transparent; } }
+/* the tab row's sideways bar stays slim: it must not take the tabs' height */
+.main-tabs::-webkit-scrollbar { display: block; height: 4px; }
+/* the chat logs stand 6px in from their pane's edge: their scrollbar sits inside the pane, clear of its border */
+#assistant-log, .kb-chat .chat-log, .la-log { margin-right: 6px; }
+
+
+/* ── Cortex style.css lines 764-774 ── */
+/* ── Dialogs (modal.js and the windows that ask): DESIGN.md, Components > Modal ──────────────────────────────────
+   The body has 16px side padding; the actions are a centred stack, at most 343px wide, 8px apart, the Primary on
+   top (the markup has it last: Enter takes it) and the others Secondary. A tool window's footer keeps a row. */
+.jsPanel.cortex-dialog .modal-text { padding: 0 var(--space-4) var(--space-2); text-align: center; color: var(--text-title); }
+.jsPanel.cortex-dialog .modal-text p { margin: 0 0 var(--space-3); white-space: pre-line; }
+.jsPanel.cortex-dialog .modal-buttons { display: flex; flex-direction: column-reverse; align-items: center; gap: var(--space-2); width: 100%; }
+.jsPanel.cortex-dialog .modal-buttons button { width: 100%; max-width: var(--button-max-width); min-height: var(--control-height); padding: var(--space-3) var(--space-6); }
+.jsPanel.cortex-dialog .modal-buttons button:not(.primary):not(.danger) { border-color: var(--primary); }
+.jsPanel.cortex-dialog .modal-buttons button:not(.primary):not(.danger):disabled { border-color: var(--primary-disabled); color: var(--primary-disabled); }
+.jsPanel.cortex-window .modal-buttons { display: flex; justify-content: flex-end; gap: var(--space-2); padding: var(--space-3) var(--space-4); width: 100%; }
+.kbm-window .jsPanel-content { color: var(--text); }
+
+/* ── Cortex style.css line 513 (the pop-up panels: the user menu's panel, the right pane's "+" menu) ── */
+.kb-chat-pop, .rp-plus-menu, .identity-menu { background: var(--surface-raised); border: 1px solid var(--card-outline); border-radius: var(--radius-xl); box-shadow: var(--shadow-float); color: var(--text); }
+
+/* ── Cortex style.css lines 387-401 (the chat: the person's message, the answer, an error) ── */
+/* ── Chat (the Assistants: Cortex-specific, built from the system's parts) ───────────────────────────────────────
+   The person's message: --surface-inverse with --text-on-inverse. An answer: a flat --surface card (10px radius,
+   --card-outline) on the --surface-page ground. Citations: citation pills. Sources: --link in Caption. */
+.assistant-view, .interview-view { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.assistant-log, .chat-log, .la-log, .interview-view .interview-log {
+  flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: var(--space-4); overflow-y: auto; padding: var(--space-4);
+  background: var(--surface-page); color: var(--text); }
+.assistant-log:empty::before { content: "Questions to the Assistant and its answers appear here."; color: var(--text-weak); }
+.bubble, .chat-msg, .la-msg { max-width: 92%; padding: var(--space-3) var(--space-4); border-radius: var(--radius-xl); overflow-wrap: anywhere; }
+.bubble.me, .chat-msg.me, .la-me { align-self: flex-end; background: var(--surface-inverse); color: var(--text-on-inverse); border-bottom-right-radius: var(--radius-sm); white-space: pre-wrap; }
+.bubble.bot, .chat-msg.bot, .la-bot { align-self: flex-start; background: var(--surface); border: 1px solid var(--card-outline); border-bottom-left-radius: var(--radius-sm); }
+.bubble.err, .chat-msg.err { align-self: flex-start; background: var(--container-primary); color: var(--text-title); }
+.bubble .who { margin-bottom: var(--space-1); color: var(--text-section); font: var(--fw-bold) var(--fs-caption)/var(--lh-caption) var(--font-sans); letter-spacing: var(--ls-subtitle); }
+.bubble .markdown { background: none; border: 0; padding: 0; max-height: none; min-height: 0; }
+.la-bot p:first-child, .chat-msg.bot p:first-child { margin-top: 0; } .la-bot p:last-child, .chat-msg.bot p:last-child { margin-bottom: 0; }

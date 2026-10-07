@@ -1,0 +1,107 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "storage/proposal.schema.json",
+ "title": "DATA_DIR/projects/<pid>/conversations/<cid>/proposals/<id>/proposal.json (technical design section 5.1)",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "schema_version",
+  "id",
+  "conversation_id",
+  "status",
+  "created_at",
+  "decks"
+ ],
+ "properties": {
+  "schema_version": {
+   "const": 1
+  },
+  "id": {
+   "type": "string"
+  },
+  "conversation_id": {
+   "type": "string"
+  },
+  "status": {
+   "enum": [
+    "drafting",
+    "pending",
+    "accepted",
+    "partially_accepted",
+    "rejected",
+    "superseded",
+    "stale",
+    "failed"
+   ]
+  },
+  "created_at": {
+   "type": "string"
+  },
+  "decided_at": {
+   "type": "string"
+  },
+  "decided_by": {
+   "type": "string"
+  },
+  "summary": {
+   "type": "string"
+  },
+  "decks": {
+   "type": "object",
+   "additionalProperties": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "base_version",
+     "operations"
+    ],
+    "properties": {
+     "base_version": {
+      "type": "integer"
+     },
+     "operations": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "required": [
+        "name",
+        "args",
+        "slides"
+       ],
+       "additionalProperties": false,
+       "properties": {
+        "name": {
+         "type": "string"
+        },
+        "args": {
+         "type": "object"
+        },
+        "slides": {
+         "type": "array",
+         "items": {
+          "type": "integer"
+         }
+        },
+        "removed": {
+         "type": "array",
+         "items": {
+          "type": "integer"
+         }
+        }
+       }
+      }
+     },
+     "accepted_slides": {
+      "type": "array",
+      "items": {
+       "type": "integer"
+      }
+     },
+     "result_version": {
+      "type": "integer"
+     }
+    }
+   }
+  }
+ }
+}

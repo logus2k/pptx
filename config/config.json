@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "public_url": "https://logus2k.com/slides/",
+  "administrators": [
+    "logus2k@gmail.com",
+    "antonio.s.cruz@bancoctt.pt"
+  ],
+  "identity": {
+    "userinfo_url": "https://graph.microsoft.com/oidc/userinfo",
+    "photo_url": "https://graph.microsoft.com/v1.0/me/photos/96x96/$value",
+    "sign_out_url": "/oauth2-entra/sign_out?rd=https%3A%2F%2Flogin.microsoftonline.com%2Fcommon%2Foauth2%2Fv2.0%2Flogout%3Fpost_logout_redirect_uri%3Dhttps%253A%252F%252Flogus2k.com%252Fslides%252F{logout_hint}",
+    "profile": true
+  },
+  "limits": {
+    "upload_mb": 100,
+    "decks_per_project": 50,
+    "conversations_per_project": 100,
+    "lease_idle_minutes": 10
+  },
+  "retention": {
+    "trash_days": 30,
+    "audit_keep_days": 0,
+    "version_days": 0
+  },
+  "templates_dir": "/slides/templates",
+  "services": {
+    "agent_server": "http://agent_server:7701",
+    "tokenizer": "http://llama-vision:8500/tokenize",
+    "stt": "http://stt_server:2700",
+    "cortex_api": "http://proxy_server:8710/cortex/api/v1",
+    "reranker": "http://embeddings-server:8600"
+  }
+}

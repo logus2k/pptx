@@ -1,0 +1,34 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "tools/duplicate_slide",
+ "title": "duplicate_slide",
+ "description": "Duplicate a slide (its shapes, images, charts, notes); the copy goes right after it unless a position is given.",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "slide_id"
+ ],
+ "properties": {
+  "deck_id": {
+   "type": "string",
+   "description": "Left out: the active deck."
+  },
+  "slide_id": {
+   "type": "integer",
+   "description": "The slide: its number in the deck (1 = first, as the deck map and the person say it) or its ID."
+  },
+  "position": {
+   "type": "integer",
+   "minimum": 0,
+   "description": "Only when the person says where the copy goes: its place counted from 0. Left out: right after the original."
+  },
+  "after_slide_id": {
+   "type": "integer",
+   "description": "Only when the person says where the copy goes: right after this slide (its number or ID). Left out: right after the original."
+  },
+  "before_slide_id": {
+   "type": "integer",
+   "description": "Only when the person says where the copy goes: right before this slide (its number or ID)."
+  }
+ }
+}

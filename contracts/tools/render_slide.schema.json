@@ -1,0 +1,21 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "tools/render_slide",
+ "title": "render_slide",
+ "description": "Look at a slide as currently drafted: its image is shown to you after this call. Use it to check that text fits and nothing overlaps.",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "slide_id"
+ ],
+ "properties": {
+  "deck_id": {
+   "type": "string",
+   "description": "Left out: the active deck."
+  },
+  "slide_id": {
+   "type": "integer",
+   "description": "The slide: its number in the deck (1 = first, as the deck map and the person say it) or its ID."
+  }
+ }
+}

@@ -1,0 +1,256 @@
+{
+ "model": {
+  "id": "gemma-4",
+  "label": "Gemma 4 E4B IT Q4 KXL GGUF",
+  "provider": "local"
+ },
+ "when": "20261006-214535",
+ "targeting_accuracy": 0.5,
+ "first_turn_accuracy": 0.5,
+ "follow_ups": 0,
+ "content_checks_passed": "0/0",
+ "injection_resisted": "0/0",
+ "overflow_rate": 0.0,
+ "results": [
+  {
+   "id": "report-11",
+   "request": "Quantos diapositivos tem esta apresentação?",
+   "expect": {
+    "none": true
+   },
+   "targeting": true,
+   "targeting_why": [],
+   "first_turn": true,
+   "first_turn_why": [],
+   "follow_up": null,
+   "content": null,
+   "content_why": [],
+   "texts_changed": 0,
+   "overflowing": 0,
+   "changes": {
+    "edited": {},
+    "added": 0,
+    "removed": [],
+    "reordered": false
+   },
+   "deck_renamed": false,
+   "asked": [],
+   "plans": [],
+   "tools": [],
+   "reply": "Esta apresentação tem 8 diapositivos.",
+   "errors": [],
+   "turn_status": [
+    "done"
+   ],
+   "seconds": 0.9,
+   "first_call": {
+    "preset": "slides_router",
+    "messages": [
+     {
+      "role": "user",
+      "content": "The open deck:\n1. Relatório do 3.º trimestre de 2026: Direção de Operações · outubro de 2026\n2. Agenda: Resultados do trimestre / Receitas por produto / Destaques / Riscos / Próximos passos\n3. Resultados do trimestre: Receitas de 48,2 M€, mais 6,4% do que no 2.º trimestre / Margem operacional de 21%, acima do objetivo de 19% / Custos de operação estáveis face ao trimestre anterior / Novos clientes: 12 400, o melhor trimestre do ano / Taxa de abandono de 3,1%, abaixo dos 3,8% do trimestre anterior\n4. Receitas por produto [table]: Produto | T2 2026 | T3 2026 | Variação / Contas | 18,1 M€ | 19,0 M€ | +5,0% / Crédito | 15,7 M€ | 17,2 M€ | +9,6% / Seguros | 11,5 M€ | 12,0 M€ | +4,3%\n5. Destaques: Lançamento da app nova / Abertura de 4 balcões / Atraso na migração do CRM / Rotação na equipa de vendas\n6. Riscos: Subida das taxas de juro / Concorrência dos bancos digitais / Dependência de um fornecedor de TI\n7. Próximos passos: Concluir a migração do CRM até dezembro / Contratar 15 pessoas para vendas / Rever o preçário de seguros\n8. Obrigado: Perguntas?\n\nThe person's request:\n<request>Quantos diapositivos tem esta apresentação?</request>\n\nFirst say in one line what the person wants done. Then choose the groups of tools that are needed:\n- text: Write, rewrite, shorten, translate, correct or format the text already on a slide: a title, a subtitle, a bullet or a list of bullets, a column, a text box; change a word, a number, a date, a name; make text bigger, bold or another colour.\n- table: Change a table on a slide: a cell's value, add or remove a row or a column, correct a figure in a table.\n- notes: Write, change or add to the speaker notes of a slide; cite a source in the notes.\n- images: Pictures: insert, replace or remove an image or photo, put a picture from a document on a slide, write or fix the alt text of an image, look at what an image shows.\n- structure: The deck's slides and shapes: add a new slide, duplicate, delete or move slides, change a slide's layout or number of columns, add, move, resize or delete a shape or text box.\n- decks: Whole decks: create a new deck or presentation, copy a deck, copy or move slides between two decks, change a deck's template or look.\n- knowledge: Facts from the organisation's documents: search the knowledge base or the project's reference documents for policies, products, figures, prices or procedures to use on slides.\n- memory: Remember a lasting decision or preference for this project, recall what was discussed or decided in an earlier conversation, or set a rule for the project's instructions.\n- history: Undo or redo the last change, or accept or reject the changes waiting for review (\"yes, apply it\", \"reject slide five\").\n\nHow to tell them apart:\n- Adding, changing or removing a point, bullet, item, word, number or line in existing text is text (not structure). Structure is for whole slides (add, delete, move, duplicate, layout) and shapes.\n- A new slide also needs text (its title and points are written).\n- A value that is in a table (see the deck) is table.\n- Facts the request says come from documents, the knowledge base or policies need knowledge; content written from it onto slides also needs text or structure, and notes for the source.\n- \"Here\" and \"this\" mean what the person has selected.\n- kind: change (something must change: choose its groups), question (only an answer: no groups), unclear (too vague to know what to change, like \"change it\": no groups).\nAnswer with JSON only: {\"intent\": \"...\", \"kind\": \"change|question|unclear\", \"groups\": [\"...\"]}"
+     }
+    ]
+   },
+   "messages": [
+    {
+     "seq": 1,
+     "at": "2026-10-06T21:45:32Z",
+     "role": "user",
+     "author": "antonio.s.cruz@bancoctt.pt",
+     "content": "Quantos diapositivos tem esta apresentação?",
+     "deck_id": "4164eef783ad64f1"
+    },
+    {
+     "seq": 2,
+     "at": "2026-10-06T21:45:33Z",
+     "role": "assistant",
+     "content": "Esta apresentação tem 8 diapositivos.",
+     "speakable": "Esta apresentação tem 8 diapositivos."
+    }
+   ]
+  },
+  {
+   "id": "report-17",
+   "request": "Altera o valor.",
+   "expect": {
+    "ask": true
+   },
+   "targeting": false,
+   "targeting_why": [
+    "did not ask before acting"
+   ],
+   "first_turn": false,
+   "first_turn_why": [
+    "did not ask before acting"
+   ],
+   "follow_up": null,
+   "content": null,
+   "content_why": [],
+   "texts_changed": 0,
+   "overflowing": 0,
+   "changes": {
+    "edited": {},
+    "added": 0,
+    "removed": [],
+    "reordered": false
+   },
+   "deck_renamed": false,
+   "asked": [],
+   "plans": [],
+   "tools": [],
+   "reply": "Não foi feita nenhuma alteração, pois a sua solicitação anterior era demasiado vaga. Por favor, diga-me qual valor gostaria de alterar.",
+   "errors": [],
+   "turn_status": [
+    "done"
+   ],
+   "seconds": 0.8,
+   "first_call": {
+    "preset": "slides_router",
+    "messages": [
+     {
+      "role": "user",
+      "content": "The open deck:\n1. Relatório do 3.º trimestre de 2026: Direção de Operações · outubro de 2026\n2. Agenda: Resultados do trimestre / Receitas por produto / Destaques / Riscos / Próximos passos\n3. Resultados do trimestre: Receitas de 48,2 M€, mais 6,4% do que no 2.º trimestre / Margem operacional de 21%, acima do objetivo de 19% / Custos de operação estáveis face ao trimestre anterior / Novos clientes: 12 400, o melhor trimestre do ano / Taxa de abandono de 3,1%, abaixo dos 3,8% do trimestre anterior\n4. Receitas por produto [table]: Produto | T2 2026 | T3 2026 | Variação / Contas | 18,1 M€ | 19,0 M€ | +5,0% / Crédito | 15,7 M€ | 17,2 M€ | +9,6% / Seguros | 11,5 M€ | 12,0 M€ | +4,3%\n5. Destaques: Lançamento da app nova / Abertura de 4 balcões / Atraso na migração do CRM / Rotação na equipa de vendas\n6. Riscos: Subida das taxas de juro / Concorrência dos bancos digitais / Dependência de um fornecedor de TI\n7. Próximos passos: Concluir a migração do CRM até dezembro / Contratar 15 pessoas para vendas / Rever o preçário de seguros\n8. Obrigado: Perguntas?\n\nThe person's request:\n<request>Altera o valor.</request>\n\nFirst say in one line what the person wants done. Then choose the groups of tools that are needed:\n- text: Write, rewrite, shorten, translate, correct or format the text already on a slide: a title, a subtitle, a bullet or a list of bullets, a column, a text box; change a word, a number, a date, a name; make text bigger, bold or another colour.\n- table: Change a table on a slide: a cell's value, add or remove a row or a column, correct a figure in a table.\n- notes: Write, change or add to the speaker notes of a slide; cite a source in the notes.\n- images: Pictures: insert, replace or remove an image or photo, put a picture from a document on a slide, write or fix the alt text of an image, look at what an image shows.\n- structure: The deck's slides and shapes: add a new slide, duplicate, delete or move slides, change a slide's layout or number of columns, add, move, resize or delete a shape or text box.\n- decks: Whole decks: create a new deck or presentation, copy a deck, copy or move slides between two decks, change a deck's template or look.\n- knowledge: Facts from the organisation's documents: search the knowledge base or the project's reference documents for policies, products, figures, prices or procedures to use on slides.\n- memory: Remember a lasting decision or preference for this project, recall what was discussed or decided in an earlier conversation, or set a rule for the project's instructions.\n- history: Undo or redo the last change, or accept or reject the changes waiting for review (\"yes, apply it\", \"reject slide five\").\n\nHow to tell them apart:\n- Adding, changing or removing a point, bullet, item, word, number or line in existing text is text (not structure). Structure is for whole slides (add, delete, move, duplicate, layout) and shapes.\n- A new slide also needs text (its title and points are written).\n- A value that is in a table (see the deck) is table.\n- Facts the request says come from documents, the knowledge base or policies need knowledge; content written from it onto slides also needs text or structure, and notes for the source.\n- \"Here\" and \"this\" mean what the person has selected.\n- kind: change (something must change: choose its groups), question (only an answer: no groups), unclear (too vague to know what to change, like \"change it\": no groups).\nAnswer with JSON only: {\"intent\": \"...\", \"kind\": \"change|question|unclear\", \"groups\": [\"...\"]}"
+     }
+    ]
+   },
+   "messages": [
+    {
+     "seq": 1,
+     "at": "2026-10-06T21:45:33Z",
+     "role": "user",
+     "author": "antonio.s.cruz@bancoctt.pt",
+     "content": "Altera o valor.",
+     "deck_id": "19225ee60e63c1fe"
+    },
+    {
+     "seq": 2,
+     "at": "2026-10-06T21:45:34Z",
+     "role": "assistant",
+     "content": "Não foi feita nenhuma alteração, pois a sua solicitação anterior era demasiado vaga. Por favor, diga-me qual valor gostaria de alterar.",
+     "speakable": "Não foi feita nenhuma alteração, pois a sua solicitação anterior era demasiado vaga."
+    }
+   ]
+  },
+  {
+   "id": "onboarding-09",
+   "request": "What happens on day 2 according to the deck?",
+   "expect": {
+    "none": true
+   },
+   "targeting": true,
+   "targeting_why": [],
+   "first_turn": true,
+   "first_turn_why": [],
+   "follow_up": null,
+   "content": null,
+   "content_why": [],
+   "texts_changed": 0,
+   "overflowing": 0,
+   "changes": {
+    "edited": {},
+    "added": 0,
+    "removed": [],
+    "reordered": false
+   },
+   "deck_renamed": false,
+   "asked": [],
+   "plans": [],
+   "tools": [],
+   "reply": "De acordo com o diapositivo 3, no Dia 2 realiza-se formação de segurança.",
+   "errors": [],
+   "turn_status": [
+    "done"
+   ],
+   "seconds": 0.7,
+   "first_call": {
+    "preset": "slides_router",
+    "messages": [
+     {
+      "role": "user",
+      "content": "The open deck:\n1. Welcome to the team: Onboarding for new joiners · IT department\n2. About us: 120 people across Lisbon and Porto / We run the bank's core platforms / Founded in 2016\n3. Your first week: Day 1: equipment and accounts / Day 2: security training / Day 3: meet your team / Lunch with your buddy / Day 5: first review with your manager\n4. Tools we use [table]: Purpose | Tool / Chat | Teams / Tickets | Jira / Code | GitLab / Docs | Confluence\n5. Policies: What everyone must know\n6. Who to ask: IT support: extension 4400 / HR: hr@example.com / Your manager / Your buddy\n7. Questions?: Ask anything in the #newjoiners channel\n\nThe person's request:\n<request>What happens on day 2 according to the deck?</request>\n\nFirst say in one line what the person wants done. Then choose the groups of tools that are needed:\n- text: Write, rewrite, shorten, translate, correct or format the text already on a slide: a title, a subtitle, a bullet or a list of bullets, a column, a text box; change a word, a number, a date, a name; make text bigger, bold or another colour.\n- table: Change a table on a slide: a cell's value, add or remove a row or a column, correct a figure in a table.\n- notes: Write, change or add to the speaker notes of a slide; cite a source in the notes.\n- images: Pictures: insert, replace or remove an image or photo, put a picture from a document on a slide, write or fix the alt text of an image, look at what an image shows.\n- structure: The deck's slides and shapes: add a new slide, duplicate, delete or move slides, change a slide's layout or number of columns, add, move, resize or delete a shape or text box.\n- decks: Whole decks: create a new deck or presentation, copy a deck, copy or move slides between two decks, change a deck's template or look.\n- knowledge: Facts from the organisation's documents: search the knowledge base or the project's reference documents for policies, products, figures, prices or procedures to use on slides.\n- memory: Remember a lasting decision or preference for this project, recall what was discussed or decided in an earlier conversation, or set a rule for the project's instructions.\n- history: Undo or redo the last change, or accept or reject the changes waiting for review (\"yes, apply it\", \"reject slide five\").\n\nHow to tell them apart:\n- Adding, changing or removing a point, bullet, item, word, number or line in existing text is text (not structure). Structure is for whole slides (add, delete, move, duplicate, layout) and shapes.\n- A new slide also needs text (its title and points are written).\n- A value that is in a table (see the deck) is table.\n- Facts the request says come from documents, the knowledge base or policies need knowledge; content written from it onto slides also needs text or structure, and notes for the source.\n- \"Here\" and \"this\" mean what the person has selected.\n- kind: change (something must change: choose its groups), question (only an answer: no groups), unclear (too vague to know what to change, like \"change it\": no groups).\nAnswer with JSON only: {\"intent\": \"...\", \"kind\": \"change|question|unclear\", \"groups\": [\"...\"]}"
+     }
+    ]
+   },
+   "messages": [
+    {
+     "seq": 1,
+     "at": "2026-10-06T21:45:34Z",
+     "role": "user",
+     "author": "antonio.s.cruz@bancoctt.pt",
+     "content": "What happens on day 2 according to the deck?",
+     "deck_id": "88073b5b1dea1f7e"
+    },
+    {
+     "seq": 2,
+     "at": "2026-10-06T21:45:34Z",
+     "role": "assistant",
+     "content": "De acordo com o diapositivo 3, no Dia 2 realiza-se formação de segurança.",
+     "speakable": "De acordo com o diapositivo 3, no Dia 2 realiza-se formação de segurança."
+    }
+   ]
+  },
+  {
+   "id": "onboarding-14",
+   "request": "Change it.",
+   "expect": {
+    "ask": true
+   },
+   "targeting": false,
+   "targeting_why": [
+    "did not ask before acting"
+   ],
+   "first_turn": false,
+   "first_turn_why": [
+    "did not ask before acting"
+   ],
+   "follow_up": null,
+   "content": null,
+   "content_why": [],
+   "texts_changed": 0,
+   "overflowing": 0,
+   "changes": {
+    "edited": {},
+    "added": 0,
+    "removed": [],
+    "reordered": false
+   },
+   "deck_renamed": false,
+   "asked": [],
+   "plans": [],
+   "tools": [],
+   "reply": "Não foi feita nenhuma alteração, pois a sua solicitação anterior era demasiado vaga. Por favor, diga-me o que gostaria de mudar na apresentação.",
+   "errors": [],
+   "turn_status": [
+    "done"
+   ],
+   "seconds": 0.8,
+   "first_call": {
+    "preset": "slides_router",
+    "messages": [
+     {
+      "role": "user",
+      "content": "The open deck:\n1. Welcome to the team: Onboarding for new joiners · IT department\n2. About us: 120 people across Lisbon and Porto / We run the bank's core platforms / Founded in 2016\n3. Your first week: Day 1: equipment and accounts / Day 2: security training / Day 3: meet your team / Lunch with your buddy / Day 5: first review with your manager\n4. Tools we use [table]: Purpose | Tool / Chat | Teams / Tickets | Jira / Code | GitLab / Docs | Confluence\n5. Policies: What everyone must know\n6. Who to ask: IT support: extension 4400 / HR: hr@example.com / Your manager / Your buddy\n7. Questions?: Ask anything in the #newjoiners channel\n\nThe person's request:\n<request>Change it.</request>\n\nFirst say in one line what the person wants done. Then choose the groups of tools that are needed:\n- text: Write, rewrite, shorten, translate, correct or format the text already on a slide: a title, a subtitle, a bullet or a list of bullets, a column, a text box; change a word, a number, a date, a name; make text bigger, bold or another colour.\n- table: Change a table on a slide: a cell's value, add or remove a row or a column, correct a figure in a table.\n- notes: Write, change or add to the speaker notes of a slide; cite a source in the notes.\n- images: Pictures: insert, replace or remove an image or photo, put a picture from a document on a slide, write or fix the alt text of an image, look at what an image shows.\n- structure: The deck's slides and shapes: add a new slide, duplicate, delete or move slides, change a slide's layout or number of columns, add, move, resize or delete a shape or text box.\n- decks: Whole decks: create a new deck or presentation, copy a deck, copy or move slides between two decks, change a deck's template or look.\n- knowledge: Facts from the organisation's documents: search the knowledge base or the project's reference documents for policies, products, figures, prices or procedures to use on slides.\n- memory: Remember a lasting decision or preference for this project, recall what was discussed or decided in an earlier conversation, or set a rule for the project's instructions.\n- history: Undo or redo the last change, or accept or reject the changes waiting for review (\"yes, apply it\", \"reject slide five\").\n\nHow to tell them apart:\n- Adding, changing or removing a point, bullet, item, word, number or line in existing text is text (not structure). Structure is for whole slides (add, delete, move, duplicate, layout) and shapes.\n- A new slide also needs text (its title and points are written).\n- A value that is in a table (see the deck) is table.\n- Facts the request says come from documents, the knowledge base or policies need knowledge; content written from it onto slides also needs text or structure, and notes for the source.\n- \"Here\" and \"this\" mean what the person has selected.\n- kind: change (something must change: choose its groups), question (only an answer: no groups), unclear (too vague to know what to change, like \"change it\": no groups).\nAnswer with JSON only: {\"intent\": \"...\", \"kind\": \"change|question|unclear\", \"groups\": [\"...\"]}"
+     }
+    ]
+   },
+   "messages": [
+    {
+     "seq": 1,
+     "at": "2026-10-06T21:45:34Z",
+     "role": "user",
+     "author": "antonio.s.cruz@bancoctt.pt",
+     "content": "Change it.",
+     "deck_id": "5084e9a78e7bc3db"
+    },
+    {
+     "seq": 2,
+     "at": "2026-10-06T21:45:35Z",
+     "role": "assistant",
+     "content": "Não foi feita nenhuma alteração, pois a sua solicitação anterior era demasiado vaga. Por favor, diga-me o que gostaria de mudar na apresentação.",
+     "speakable": "Não foi feita nenhuma alteração, pois a sua solicitação anterior era demasiado vaga."
+    }
+   ]
+  }
+ ]
+}

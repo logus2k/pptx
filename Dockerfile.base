@@ -1,0 +1,14 @@
+# The AI Slide Assistant's base image: the system packages (LibreOffice for rendering, fonts), built ONCE and kept as a
+# tagged image, as Cortex does (its Dockerfile.base): a tagged image is never garbage-collected with the build cache.
+# Rebuild it only when something here changes, then bump the tag (here and in docker-compose.yml):
+#   docker compose build slides-base
+FROM python:3.12-slim
+
+# LibreOffice Impress, headless, for slide previews and PDF export (technical design section 9); no Java, no GUI.
+# Fonts metric-compatible with Office's (Calibri -> Carlito, Cambria -> Caladea, Arial/Times -> Liberation) so previews
+# and overflow estimates keep PowerPoint's line breaks (assumption A-5).
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      libreoffice-impress-nogui \
+      fonts-crosextra-carlito fonts-crosextra-caladea fonts-liberation2 fonts-dejavu-core \
+ && rm -rf /var/lib/apt/lists/*

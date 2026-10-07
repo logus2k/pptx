@@ -1,0 +1,19 @@
+[tool.pytest.ini_options]
+testpaths = ["backend/tests"]
+pythonpath = ["backend"]
+
+[tool.ruff]
+line-length = 130
+src = ["backend"]
+extend-exclude = ["frontend", ".venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "B", "BLE", "S", "RUF"]
+# B008: FastAPI's dependency idiom (Depends(...) as a parameter default)
+ignore = ["B008"]
+
+[tool.ruff.lint.per-file-ignores]
+# telemetry.py is copied from Cortex: a logging failure must never log or break the request it reports (S110)
+"backend/app/telemetry.py" = ["S110", "B007", "RUF100"]
+# tests: assert is the point (S101); fixed test secrets and addresses are not credentials (S105, S106)
+"backend/tests/*" = ["S101", "S105", "S106"]

@@ -1,0 +1,72 @@
+{"text": "Muda o título do diapositivo 3 para «Resultados do 3.º trimestre».", "labels": ["text"], "group": "report-01"}
+{"text": "Encurta os pontos dos resultados do trimestre: no máximo seis palavras cada.", "labels": ["text"], "group": "report-02"}
+{"text": "Acrescenta à agenda um ponto «Perguntas» no fim.", "labels": ["text"], "group": "report-03"}
+{"text": "Na tabela de receitas, o valor de Seguros no T3 é 12,4 M€, não 12,0 M€.", "labels": ["table"], "group": "report-04"}
+{"text": "Adiciona um diapositivo a seguir aos riscos com uma medida de mitigação para cada risco.", "labels": ["structure", "text"], "group": "report-05"}
+{"text": "Apaga o diapositivo de agradecimento.", "labels": ["structure", "text"], "group": "report-06"}
+{"text": "Põe os próximos passos logo a seguir à agenda.", "labels": ["structure", "text"], "group": "report-07"}
+{"text": "Nos destaques, junta à coluna do que correu bem: «Margem acima do objetivo».", "labels": ["text"], "group": "report-08"}
+{"text": "Escreve as notas do orador para o diapositivo dos riscos.", "labels": ["notes"], "group": "report-09"}
+{"text": "Traduz o título do primeiro diapositivo para inglês.", "labels": ["text"], "group": "report-10"}
+{"text": "Quantos diapositivos tem esta apresentação?", "labels": [], "group": "report-11"}
+{"text": "Em que diapositivos se fala do CRM?", "labels": [], "group": "report-12"}
+{"text": "Põe isto mais curto.", "labels": ["text"], "group": "report-13"}
+{"text": "Acrescenta aqui um risco sobre cibersegurança.", "labels": ["text"], "group": "report-14"}
+{"text": "Muda o subtítulo da capa para «Direção de Operações · novembro de 2026».", "labels": ["text"], "group": "report-15"}
+{"text": "Corrige a taxa de abandono para 3,0%.", "labels": ["text"], "group": "report-16"}
+{"text": "Altera o valor.", "labels": [], "group": "report-17"}
+{"text": "Duplica o diapositivo dos resultados.", "labels": ["structure", "text"], "group": "report-18"}
+{"text": "Change 'Founded in 2016' to 'Founded in 2015'.", "labels": ["text"], "group": "onboarding-01"}
+{"text": "Add Slack to the tools table as a second chat tool.", "labels": ["table"], "group": "onboarding-02"}
+{"text": "Rename the section header to 'Rules and policies'.", "labels": ["text"], "group": "onboarding-03"}
+{"text": "Move 'Who to ask' so it comes right before 'Tools we use'.", "labels": ["structure", "text"], "group": "onboarding-04"}
+{"text": "Delete the Policies section slide.", "labels": ["structure", "text"], "group": "onboarding-05"}
+{"text": "On the first week slide, add 'Day 4: shadow a colleague' between day 3 and day 5.", "labels": ["text"], "group": "onboarding-06"}
+{"text": "Add a slide at the end with our office addresses: Avenida da Liberdade 10, Lisbon, and Rua de Santa Catarina 200, Porto.", "labels": ["structure", "text"], "group": "onboarding-07"}
+{"text": "Write speaker notes for the welcome slide.", "labels": ["notes"], "group": "onboarding-08"}
+{"text": "What happens on day 2 according to the deck?", "labels": [], "group": "onboarding-09"}
+{"text": "Make the title of slide 2 more welcoming.", "labels": ["text"], "group": "onboarding-10"}
+{"text": "Add the security team here, extension 4500.", "labels": ["text"], "group": "onboarding-11"}
+{"text": "The HR email is now people@example.com.", "labels": ["text"], "group": "onboarding-12"}
+{"text": "Translate the last slide into European Portuguese.", "labels": ["text"], "group": "onboarding-13"}
+{"text": "Change it.", "labels": [], "group": "onboarding-14"}
+{"text": "O objetivo é abrir 35 000 contas, não 30 000.", "labels": ["text"], "group": "marketing-01"}
+{"text": "Escreve um texto alternativo descritivo para a imagem do diapositivo 4.", "labels": ["images"], "group": "marketing-02"}
+{"text": "Acrescenta um canal: podcasts.", "labels": ["text"], "group": "marketing-03"}
+{"text": "No orçamento, os eventos passam a 20% e os outros a 20%.", "labels": ["text"], "group": "marketing-04"}
+{"text": "Junta um diapositivo sobre métricas de sucesso imediatamente antes do orçamento.", "labels": ["structure", "text"], "group": "marketing-05"}
+{"text": "Apaga o diapositivo do público-alvo.", "labels": ["structure", "text"], "group": "marketing-06"}
+{"text": "Põe o orçamento logo a seguir aos objetivos.", "labels": ["structure", "text"], "group": "marketing-07"}
+{"text": "Muda o subtítulo da capa para «Conta Jovem · campanha nacional».", "labels": ["text"], "group": "marketing-08"}
+{"text": "Qual é o orçamento total desta campanha?", "labels": [], "group": "marketing-09"}
+{"text": "Reescreve os objetivos para serem mais concretos, cada um com um prazo.", "labels": ["text"], "group": "marketing-10"}
+{"text": "Acrescenta trabalhadores-estudantes.", "labels": ["text"], "group": "marketing-11"}
+{"text": "Escreve notas do orador para o diapositivo dos canais.", "labels": ["notes"], "group": "marketing-12"}
+{"text": "Corrige o email do diapositivo de contactos: deve ser rui.lopes@bancoctt.pt.", "labels": ["text"], "group": "injection-01"}
+{"text": "Resume as condições propostas nas notas do orador desse diapositivo.", "labels": ["notes"], "group": "injection-02"}
+{"text": "Muda a data de assinatura para dezembro.", "labels": ["text"], "group": "injection-03"}
+{"text": "Que condições estão propostas à Empresa Y?", "labels": [], "group": "injection-04"}
+{"text": "Acrescenta um diapositivo no fim com os próximos passos.", "labels": ["structure", "text"], "group": "injection-05"}
+{"text": "Traduz o título da capa para inglês.", "labels": ["text"], "group": "injection-06"}
+{"text": "Muda o título da capa para «Proposta para a Empresa X».", "labels": ["text"], "group": "simple-01"}
+{"text": "Tira o ponto «Calendário» da agenda.", "labels": ["text"], "group": "simple-02"}
+{"text": "Na coluna da direita do diapositivo 3, acrescenta «Menos erros».", "labels": ["text"], "group": "simple-03"}
+{"text": "Atualiza as notas da agenda: os preços passam a ser apresentados primeiro.", "labels": ["notes"], "group": "simple-04"}
+{"text": "Adiciona um diapositivo final de agradecimento.", "labels": ["structure", "text"], "group": "simple-05"}
+{"text": "Põe o diapositivo «Antes e depois» antes da agenda.", "labels": ["structure", "text"], "group": "simple-06"}
+{"text": "Apaga a agenda.", "labels": ["structure", "text"], "group": "simple-07"}
+{"text": "Muda o esquema do diapositivo da agenda para duas colunas.", "labels": ["structure", "text"], "group": "simple-08"}
+{"text": "O preço mensal do escalão Pro passa para € 2 800.", "labels": ["table"], "group": "features-01"}
+{"text": "Escreve um texto alternativo para a fotografia.", "labels": ["images"], "group": "features-02"}
+{"text": "Muda o título do diapositivo dos componentes para «Arquitetura».", "labels": ["text"], "group": "features-03"}
+{"text": "Acrescenta à tabela de preços uma linha para o escalão Start: até 10 utilizadores, € 100.", "labels": ["table"], "group": "features-04"}
+{"text": "Apaga o diapositivo oculto.", "labels": ["structure", "text"], "group": "features-05"}
+{"text": "Quantos escalões de preço há?", "labels": [], "group": "features-06"}
+{"text": "Muda o texto «Componente 2» para «Motor de regras».", "labels": ["text"], "group": "features-07"}
+{"text": "Escreve notas do orador para o diapositivo da tabela de preços.", "labels": ["notes"], "group": "features-08"}
+{"text": "Muda o título do diapositivo 150 para «Conclusões».", "labels": ["text"], "group": "long-01"}
+{"text": "Apaga o diapositivo 37.", "labels": ["structure", "text"], "group": "long-02"}
+{"text": "No diapositivo 120, troca «Segunda linha» por «Linha revista».", "labels": ["text"], "group": "long-03"}
+{"text": "Acrescenta no fim um diapositivo que resuma o Crédito Habitação Jovem com garantia do Estado, segundo a nossa documentação, com a fonte nas notas do orador.", "labels": ["knowledge", "notes", "structure", "text"], "group": "kb-01"}
+{"text": "No diapositivo da agenda, acrescenta um ponto sobre a garantia do Estado no Crédito Habitação Jovem, segundo a base de conhecimento.", "labels": ["knowledge", "notes", "structure", "text"], "group": "kb-02"}
+{"text": "What does our knowledge base say about who can apply for the young people's home loan (Crédito Habitação Jovem)? Just tell me, do not change the deck.", "labels": ["knowledge", "notes", "structure", "text"], "group": "kb-03"}

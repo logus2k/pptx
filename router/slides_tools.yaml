@@ -1,0 +1,46 @@
+# Slides' tool-group router (labs/jev's router_clf format): which groups of tools a person's request needs, so the
+# assistant is offered only those (measured: with every tool offered gemma-4 E4B targeted ~60% of the evaluation
+# requests; offered only the right groups, ~75%). The core (ask_user, propose_plan, get_slide, get_deck_outline) is
+# always offered. Descriptions were written from each group's tools, not from the test requests.
+
+name: slides_tools
+mode: multi           # a request can need several groups ("add a slide summarising the KB policy")
+
+none:
+  name: none
+  description: >-
+    A question about the deck, the project or how to do something, answered in words without changing any
+    slide; or a greeting, a thank-you, or a request too vague to act on.
+
+labels:
+  text: >-
+    Write, rewrite, shorten, translate, correct or format the text already on a slide: a title, a subtitle, a
+    bullet or a list of bullets, a column, a text box; change a word, a number, a date, a name; make text bigger,
+    bold or another colour.
+  table: >-
+    Change a table on a slide: a cell's value, add or remove a row or a column, correct a figure in a table.
+  notes: >-
+    Write, change or add to the speaker notes of a slide; cite a source in the notes.
+  images: >-
+    Pictures: insert, replace or remove an image or photo, put a picture from a document on a slide, write or fix
+    the alt text of an image, look at what an image shows.
+  structure: >-
+    The deck's slides and shapes: add a new slide, duplicate, delete or move slides, change a slide's layout or
+    number of columns, add, move, resize or delete a shape or text box.
+  decks: >-
+    Whole decks: create a new deck or presentation, copy a deck, copy or move slides between two decks, change a
+    deck's template or look.
+  knowledge: >-
+    Facts from the organisation's documents: search the knowledge base or the project's reference documents for
+    policies, products, figures, prices or procedures to use on slides.
+  memory: >-
+    Remember a lasting decision or preference for this project, recall what was discussed or decided in an earlier
+    conversation, or set a rule for the project's instructions.
+  history: >-
+    Undo or redo the last change, or accept or reject the changes waiting for review ("yes, apply it", "reject
+    slide five").
+
+dataset: train.jsonl
+classifier: {C: 4.0, description_weight: 1.0}
+zero_shot: {scale: 30.0}
+embedder: {url: "http://127.0.0.1:8601/embed", model: bge-m3}

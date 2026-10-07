@@ -1,0 +1,67 @@
+services:
+  # The system packages (LibreOffice, fonts): a tagged image of their own (Dockerfile.base), as Cortex does, so a
+  # build-cache eviction never downloads them again. Built when missing; never runs (scale 0).
+  slides-base:
+    scale: 0
+    network_mode: none
+    build:
+      context: .
+      dockerfile: Dockerfile.base
+    image: slides-base:lo-1
+
+  slides:
+    restart: unless-stopped
+    build:
+      context: .
+      target: app
+      args:
+        BASE_IMAGE: slides-base
+      additional_contexts:
+        slides-base: service:slides-base
+    image: slides:0.1
+    container_name: slides
+    hostname: slides
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+    environment:
+      # dev | test | preprod | prod: the logs' env field; prod refuses to start without the proxy secret
+      - SLIDES_ENV=${SLIDES_ENV:-dev}
+      - SLIDES_VERSION=0.1
+      # the secret the proxy adds to every request (./.env); without it a request straight to port 2720 is refused
+      - SLIDES_PROXY_SECRET=${SLIDES_PROXY_SECRET:-}
+      # development only, and only without a secret: who the app acts as when no proxy forwards an identity
+      - SLIDES_DEV_USER=${SLIDES_DEV_USER:-}
+      # Cortex's integration API: this app's service key (./.env), used only through proxy_server:8710
+      - SLIDES_CORTEX_SERVICE_KEY=${SLIDES_CORTEX_SERVICE_KEY:-}
+      # Claude models, when a key is set (./.env)
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      # logging (Banco CTT's standard, app/telemetry.py): JSON on stdout, OTLP to the collector
+      - SLIDES_LOG_LEVEL=${SLIDES_LOG_LEVEL:-INFO}
+      - SLIDES_LOG_DEBUG_UNTIL=${SLIDES_LOG_DEBUG_UNTIL:-}
+      - SLIDES_LOG_PSEUDONYM_KEY=${SLIDES_LOG_PSEUDONYM_KEY:-}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}
+      - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+    networks:
+      # proxy_server (and its internal Cortex route on 8710), agent_server, stt_server, the collector
+      logus2k_network:
+      # embeddings-server's reranker (conversation and document search, technical design section 4), as Cortex reaches it
+      cortex-kb:
+    ports:
+      - "2720:2720"
+    volumes:
+      # projects, decks, conversations, audit (technical design section 4)
+      - ./data:/slides/data
+      # the administrators' configuration and templates (technical design section 1.2)
+      - ./config:/slides/config:ro
+      - ./templates:/slides/templates:ro
+      # the templates' fonts (Arial Nova, Aptos, Calibri...: licensed, from this machine's Windows and Office, never in
+      # the image), for LibreOffice's previews, PDFs and the fit checks (docs/licenses.md)
+      - ./fonts:/usr/share/fonts/slides:ro
+
+networks:
+  logus2k_network:
+    external: true
+  cortex-kb:
+    external: true

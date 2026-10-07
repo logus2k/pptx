@@ -1,0 +1,15 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "tools/list_layouts",
+ "title": "list_layouts",
+ "description": "The layouts of the deck's template, each with its placeholders (type and idx).",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [],
+ "properties": {
+  "deck_id": {
+   "type": "string",
+   "description": "Left out: the active deck."
+  }
+ }
+}

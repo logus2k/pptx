@@ -1,0 +1,21 @@
+{
+ "classes": [
+  "text",
+  "table",
+  "notes",
+  "images",
+  "structure",
+  "decks",
+  "knowledge",
+  "memory",
+  "history"
+ ],
+ "mode": "multi",
+ "none_name": "none",
+ "kind": "trained",
+ "meta": {
+  "C": 4.0,
+  "description_weight": 1.0,
+  "n_examples": 451
+ }
+}

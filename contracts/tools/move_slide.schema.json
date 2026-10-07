@@ -1,0 +1,34 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "tools/move_slide",
+ "title": "move_slide",
+ "description": "Move a slide to a position (0 = first).",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "slide_id"
+ ],
+ "properties": {
+  "deck_id": {
+   "type": "string",
+   "description": "Left out: the active deck."
+  },
+  "slide_id": {
+   "type": "integer",
+   "description": "The slide: its number in the deck (1 = first, as the deck map and the person say it) or its ID."
+  },
+  "position": {
+   "type": "integer",
+   "minimum": 0,
+   "description": "Or its place counted from 0 (0 = first). Use after_slide_id or before_slide_id instead when you can."
+  },
+  "after_slide_id": {
+   "type": "integer",
+   "description": "Put it right after this slide (its number or ID). The simplest way to place it."
+  },
+  "before_slide_id": {
+   "type": "integer",
+   "description": "Put it right before this slide (its number or ID)."
+  }
+ }
+}

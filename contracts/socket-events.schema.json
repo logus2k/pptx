@@ -1,0 +1,88 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "socket-events",
+ "title": "socket.io events",
+ "description": "The assistant's channel (technical design sections 7 and 10), at /slides/socket.io. The person is the proxy's (X-Auth-Request-Email on the handshake). Client events answer through the acknowledgement; server events go to the connection, or to the room conv:<conversation id> of everyone following that conversation. backend/tests/test_contracts.py checks that the server handles exactly the client events below and emits only the server events below.",
+ "$defs": {
+  "ids": {
+   "type": "object",
+   "properties": {
+    "project_id": { "type": "string" },
+    "conversation_id": { "type": "string" }
+   },
+   "required": ["project_id", "conversation_id"]
+  },
+  "ack": {
+   "description": "Every client event but voice_audio answers {ok: true, ...} or {ok: false, error}.",
+   "type": "object",
+   "properties": { "ok": { "type": "boolean" }, "error": { "type": "string" } },
+   "required": ["ok"]
+  },
+  "message": { "$ref": "storage/message.schema.json" },
+  "proposal": {
+   "description": "A proposal as the page shows it (Agent.describe): per deck, its base version, its slides' order and the slides it touches (added, changed, removed).",
+   "type": "object",
+   "properties": {
+    "id": { "type": "string" },
+    "conversation_id": { "type": "string" },
+    "status": { "$ref": "storage/proposal.schema.json#/properties/status" },
+    "decks": { "type": "object" }
+   },
+   "required": ["id", "status", "decks"]
+  }
+ },
+ "client_to_server": {
+  "whoami": { "payload": { "type": "null" }, "ack": { "description": "{authenticated, email, name, picture, signOutUrl, is_admin}" } },
+  "join_conversation": {
+   "payload": { "allOf": [{ "$ref": "#/$defs/ids" }], "properties": { "after": { "type": "integer", "description": "The last message seq seen: the catch-up after a reconnection." } } },
+   "ack": { "description": "{ok, conversation, messages, proposal (pending, or null), busy}" }
+  },
+  "user_message": {
+   "payload": {
+    "allOf": [{ "$ref": "#/$defs/ids" }],
+    "properties": {
+     "text": { "type": "string", "minLength": 1, "maxLength": 8000, "description": "Refused, never cut, when longer." },
+     "deck_id": { "type": ["string", "null"] },
+     "selection": { "type": ["object", "null"], "properties": { "slide_id": { "type": "integer" }, "shape_ids": { "type": "array", "items": { "type": "integer" } } } },
+     "attachments": { "type": "array", "items": { "type": "string", "description": "An asset id." } }
+    },
+    "required": ["text"]
+   },
+   "ack": { "$ref": "#/$defs/ack" }
+  },
+  "answer": {
+   "description": "The person's answer to what the turn waits for: a question (answer), a plan (approve, comment), proposed instructions (accept).",
+   "payload": { "allOf": [{ "$ref": "#/$defs/ids" }], "properties": { "answer": { "type": "string" }, "approve": { "type": "boolean" }, "comment": { "type": "string" }, "accept": { "type": "boolean" } } },
+   "ack": { "$ref": "#/$defs/ack" }
+  },
+  "proposal_decision": {
+   "payload": { "allOf": [{ "$ref": "#/$defs/ids" }], "properties": { "proposal_id": { "type": "string" }, "accept": { "type": "boolean" }, "slides": { "type": ["object", "null"], "description": "{deck_id: [slide ids to accept]}; null: all." } }, "required": ["proposal_id", "accept"] },
+   "ack": { "description": "{ok, status}" }
+  },
+  "cancel_turn": { "payload": { "$ref": "#/$defs/ids" }, "ack": { "$ref": "#/$defs/ack" } },
+  "voice_begin": {
+   "description": "The microphone is on (push-to-talk, or hands-free when a request starts: spec VO-1, VO-2).",
+   "payload": { "properties": { "project_id": { "type": "string" }, "deck_id": { "type": ["string", "null"] }, "language": { "enum": ["pt", "en"] } } },
+   "ack": { "$ref": "#/$defs/ack" }
+  },
+  "voice_audio": { "description": "PCM16, 16 kHz, mono, in packets of ~100 ms (binary). No acknowledgement.", "payload": { "type": "string", "contentEncoding": "binary" } },
+  "voice_end": { "description": "The recording is complete: it is transcribed and comes back as voice_text.", "payload": { "type": "null" }, "ack": { "$ref": "#/$defs/ack" } },
+  "voice_cancel": { "description": "The recording is dropped unheard (hands-free turned off in the middle of a request).", "payload": { "type": "null" }, "ack": { "$ref": "#/$defs/ack" } }
+ },
+ "server_to_client": {
+  "voice_text": { "to": "the connection", "payload": { "type": "object", "properties": { "text": { "type": "string" }, "error": { "type": "string" } }, "required": ["text"] } },
+  "turn_started": { "to": "the conversation", "payload": { "type": "object", "properties": { "model": { "type": "string" } } } },
+  "assistant_delta": { "to": "the conversation", "payload": { "type": "object", "properties": { "text": { "type": "string" } }, "required": ["text"] } },
+  "assistant_message": { "to": "the conversation", "payload": { "$ref": "#/$defs/message" } },
+  "message": { "to": "the conversation", "payload": { "$ref": "#/$defs/message" } },
+  "tool_progress": { "to": "the conversation", "payload": { "type": "object", "properties": { "tool": { "type": "string" } }, "required": ["tool"] } },
+  "question": { "to": "the conversation", "payload": { "type": "object", "properties": { "tool_call_id": { "type": "string" }, "question": { "type": "string" }, "options": { "type": "array", "items": { "type": "string" } } }, "required": ["tool_call_id", "question"] } },
+  "plan": { "to": "the conversation", "payload": { "type": "object", "properties": { "tool_call_id": { "type": "string" }, "steps": { "type": "array", "items": { "type": "string" } } }, "required": ["tool_call_id", "steps"] } },
+  "instructions_proposed": { "to": "the conversation", "payload": { "type": "object", "properties": { "tool_call_id": { "type": "string" }, "text": { "type": "string" }, "before": { "type": "string" } }, "required": ["tool_call_id", "text"] } },
+  "instructions_changed": { "to": "the conversation", "payload": { "type": "object", "properties": { "accepted": { "type": "boolean" } } } },
+  "proposal_updated": { "to": "the conversation", "payload": { "$ref": "#/$defs/proposal" } },
+  "deck_changed": { "to": "the conversation", "payload": { "type": "object", "properties": { "deck_id": { "type": "string" } }, "required": ["deck_id"] } },
+  "assistant_error": { "to": "the conversation", "payload": { "type": "object", "properties": { "message": { "type": "string" } }, "required": ["message"] } },
+  "turn_ended": { "to": "the conversation", "payload": { "type": "object", "properties": { "status": { "enum": ["done", "waiting", "limit", "cancelled", "failed"] } }, "required": ["status"] } }
+ }
+}

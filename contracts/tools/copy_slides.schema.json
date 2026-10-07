@@ -1,0 +1,39 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "tools/copy_slides",
+ "title": "copy_slides",
+ "description": "Copy slides from another deck of the project into this one (move: and remove them from the other), on this deck's layouts and template; text with no place in them is kept and reported. The person approves first.",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "from_deck_id",
+  "slide_ids"
+ ],
+ "properties": {
+  "from_deck_id": {
+   "type": "string",
+   "description": "The deck the slides come from (Decks in your context)."
+  },
+  "slide_ids": {
+   "type": "array",
+   "minItems": 1,
+   "maxItems": 50,
+   "items": {
+    "type": "integer"
+   },
+   "description": "The slides, by their number in that deck (1 = first) or ID; get_deck_outline with its deck_id lists them."
+  },
+  "deck_id": {
+   "type": "string",
+   "description": "The deck they go to; left out: the active deck."
+  },
+  "after_slide_id": {
+   "type": "integer",
+   "description": "Put them after this slide of the target (number or ID); left out: at the end."
+  },
+  "move": {
+   "type": "boolean",
+   "description": "true: remove them from the deck they come from."
+  }
+ }
+}
