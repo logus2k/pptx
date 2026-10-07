@@ -940,7 +940,8 @@ def test_fit_text_grows_the_box_into_free_space_when_shrinking_is_not_allowed():
     sid = blank["slides"][0]
     lines = [{"runs": [{"text": f"Ponto número {i} de uma lista longa", "size_pt": 12}]} for i in range(10)]
     place = {"x": 0.1, "y": 0.1, "w": 0.4, "h": 0.15}
-    data, box = ops.apply(data, "add_shape", {"slide_id": sid, "kind": "text_box", "box": place, "paragraphs": lines})
+    # a rectangle, text centred, no autofit (a text box made by add_shape grows with its text: never overflows)
+    data, box = ops.apply(data, "add_shape", {"slide_id": sid, "kind": "rectangle", "box": place, "paragraphs": lines})
     shape = lambda d: next(s for s in get(d, sid)["shapes"] if s["shape_id"] == box["shape_id"])  # noqa: E731
     assert shape(data)["overflow"]  # ten 12 pt lines in a short box
     grown, res = ops.apply(data, "fit_text", {"slide_id": sid, "shape_id": box["shape_id"]})

@@ -187,7 +187,8 @@ def _spacing(value_node, size: float) -> float:
 
 
 def measure(sh) -> dict | None:
-    """The text's glyphs, as laid out: {lines, top, bottom} in points from the box's top, and the box's height;
+    """The text's glyphs, as laid out: {lines, top, bottom} in points from the box's top, the height its lines take
+    from the first to the last with text (extent), and the box's height;
     None for a shape without text or size, or with a typeface not installed."""
     try:
         if not sh.has_text_frame or not sh.width or not sh.height:
@@ -198,6 +199,7 @@ def measure(sh) -> dict | None:
     major, minor = _theme_fonts(sh)
     width = sh.width / EMU_PT - (body["lIns"] + body["rIns"]) / EMU_PT
     y, top_ink, bottom_ink, lines_total = 0.0, None, None, 0
+    start = end = None  # the text's line boxes, first to last non-empty line: what "resize shape to fit text" holds
     paras = sh.text_frame._txBody.findall(f"{A}p")
     for i, p in enumerate(paras):
         ppr = p.find(f"{A}pPr")
@@ -232,10 +234,15 @@ def measure(sh) -> dict | None:
         n = max(n, 1)
         y += before
         if text.strip():
-            first_top = y + TOP * big
-            last_bottom = y + (n - 1) * pitch + (TOP + INK) * big
+            # a line's glyphs sit at the bottom of its box: spacing above or below a single line's moves them (measured
+            # in LibreOffice: at 150% the first line 0.6 em lower, at 80% 0.24 em higher, in every typeface)
+            lift = pitch - PITCH * big
+            first_top = y + lift + TOP * big
+            last_bottom = y + (n - 1) * pitch + lift + (TOP + INK) * big
             top_ink = first_top if top_ink is None else min(top_ink, first_top)
             bottom_ink = last_bottom if bottom_ink is None else max(bottom_ink, last_bottom)
+            start = y if start is None else start
+            end = y + n * pitch
         y += n * pitch + after
         lines_total += n
     if top_ink is None:
@@ -247,7 +254,10 @@ def measure(sh) -> dict | None:
         shift += (room_h - y) / 2
     elif body["anchor"] == "b":
         shift += room_h - y
-    return {"lines": lines_total, "top": shift + top_ink, "bottom": shift + bottom_ink, "box_h": box_h, **body}
+    return {
+        "lines": lines_total, "top": shift + top_ink, "bottom": shift + bottom_ink, "extent": end - start, "box_h": box_h,
+        **body,
+    }  # fmt: skip
 
 
 def _first_node(chain, name: str):

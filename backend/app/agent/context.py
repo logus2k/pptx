@@ -322,7 +322,10 @@ def system_context(
         note = f"\n({brief} slides in one line only: get_slide gives their shape IDs and text)" if brief else ""
         heading = "Active deck, slide by slide (slide numbers or IDs, and shape IDs, are what the editing tools take)"
         parts.append(_data(f"{heading}{note}", text))
-        parts.append(layouts_text(prs))
+        offered = {d["function"]["name"] for d in getattr(t, "tool_defs", None) or []}
+        if not offered or offered & {"add_slide", "change_layout"}:  # only when a slide can be made or relaid
+            # (measured: a text-only turn took a layout example's "idx 17" for the paragraph index to edit)
+            parts.append(layouts_text(prs))
         if selected:
             try:
                 s = read.slide(prs, int(selected))

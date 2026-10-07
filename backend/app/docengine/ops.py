@@ -846,7 +846,9 @@ def fit_text(prs, slide_id: int, shape_id: int, deck_id=None) -> dict:
     # text" (measured: an 11th item in a 12 pt list, refused shrinking, and the turn ended with it 49 pt too long)
     m = textfit.measure(sh)
     if m is not None:
-        need = int((m["bottom"] + m["bIns"] / textfit.EMU_PT + textfit.TOL_PT) * textfit.EMU_PT) - sh.height
+        # the text's lines, whole, and the insets (anchored in the middle or at the bottom, it runs out above too);
+        # measured: to its glyphs' baseline only, the last line's descenders crossed the box's border
+        need = int(m["extent"] * textfit.EMU_PT) + m["tIns"] + m["bIns"] - sh.height
         if need > 0 and sh.top + sh.height + need <= prs.slide_height:
             below = (sh.left, sh.top + sh.height, sh.width, need)
             if not _overlapping(below, _boxes(prs, s, {sh.shape_id})):

@@ -627,6 +627,21 @@ def test_a_slide_number_keeps_its_meaning_for_the_whole_request(server, fake_mod
     chat.close()
 
 
+def test_the_layouts_are_sent_only_when_a_slide_can_be_made_or_relaid(server, fake_model):
+    # measured: a text-only turn took a layout example's "idx 17" for the paragraph index to edit
+    pid, _, cid = setup(server)
+    chat = Chat(server, pid, cid)
+    fake_model.routes = [{"intent": "Fix a typo", "kind": "change", "groups": ["text"]}]
+    fake_model.script = [{"text": "Nothing to fix."}]
+    chat.send("fix the typo")
+    assert "## Layouts of this deck" not in fake_model.sent[-1][0]["content"]
+    fake_model.routes = [{"intent": "Add a slide", "kind": "change", "groups": ["structure"]}]
+    fake_model.script = [{"text": "Which layout?"}]
+    chat.send("add a slide")
+    assert "## Layouts of this deck" in fake_model.sent[-1][0]["content"]
+    chat.close()
+
+
 def test_the_words_a_request_names_are_found_in_the_deck():
     from app.agent import router
 
