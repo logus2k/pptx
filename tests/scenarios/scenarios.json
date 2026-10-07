@@ -240,6 +240,89 @@
      }
     }
    ]
+  },
+  {
+   "id": "a-chart-from-figures-then-a-value-changed",
+   "about": "A native chart from figures the person dictates (spec M8: native charts), then one value changed in it (edit_chart).",
+   "deck": {
+    "upload": "fixtures/decks/simple.pptx"
+   },
+   "turns": [
+    {
+     "say": "Acrescenta no fim um diapositivo com um gráfico de colunas das vendas: 2023 120, 2024 150, 2025 180",
+     "expect": {
+      "status": "done",
+      "slides": 4,
+      "changed": true,
+      "chart": {
+       "kind": "column",
+       "categories": [
+        "2023",
+        "2024",
+        "2025"
+       ],
+       "values_all": [
+        120,
+        150,
+        180
+       ]
+      },
+      "no_covered_text": true,
+      "no_empty_placeholders": true
+     }
+    },
+    {
+     "say": "No gráfico, muda o valor de 2025 para 200",
+     "expect": {
+      "status": "done",
+      "slides": 4,
+      "changed": true,
+      "chart": {
+       "categories": [
+        "2023",
+        "2024",
+        "2025"
+       ],
+       "values_all": [
+        120,
+        150,
+        200
+       ]
+      },
+      "no_covered_text": true,
+      "no_empty_placeholders": true
+     }
+    }
+   ]
+  },
+  {
+   "id": "a-diagram-from-a-description",
+   "about": "A process diagram from a description (spec M8: diagrams from a description): boxes in the deck's style, joined by arrows.",
+   "deck": {
+    "upload": "fixtures/decks/simple.pptx"
+   },
+   "turns": [
+    {
+     "say": "Acrescenta no fim um diapositivo com um diagrama do processo de crédito: Pedido, Análise, Aprovação, Entrega",
+     "expect": {
+      "status": "done",
+      "slides": 4,
+      "changed": true,
+      "diagram": {
+       "min_boxes": 4,
+       "min_connectors": 3,
+       "all": [
+        "Pedido",
+        "Análise",
+        "Aprovação",
+        "Entrega"
+       ]
+      },
+      "no_covered_text": true,
+      "no_empty_placeholders": true
+     }
+    }
+   ]
   }
  ]
 }

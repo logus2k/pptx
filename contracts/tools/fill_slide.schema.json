@@ -21,7 +21,7 @@
   "content": {
    "type": "object",
    "additionalProperties": false,
-   "description": "What the slide says; the application puts each part where the layout has its place (the heading, the subtitle, each point in a box of its own with the box's number or column heading, or every point in one list) and removes the places left empty. Only text from the request or from what you found: never filler.",
+   "description": "What the slide says; the application places each part in the layout. Only text from the request or a source, never filler.",
    "properties": {
     "title": {
      "type": "string",
@@ -34,7 +34,7 @@
     "points": {
      "type": "array",
      "maxItems": 30,
-     "description": "The slide's points, in order, each a short line in your words (not a passage copied): a text, or {heading, text} for a point with a heading of its own (a column, a phase).",
+     "description": "Its points, in order: short lines in your words, or {heading, text} (a column, a phase).",
      "items": {
       "anyOf": [
        {
@@ -65,7 +65,7 @@
       "type": "string",
       "maxLength": 300
      },
-     "description": "The titles of the knowledge-base documents its text comes from: the application writes their citations in the slide's notes."
+     "description": "Titles of the KB documents it comes from (cited in the notes)."
     }
    }
   },

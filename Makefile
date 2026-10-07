@@ -38,7 +38,11 @@ e2e:
 	  && node m5.mjs 1440 light pt && node m5.mjs 1440 dark en && node m5.mjs 834 light pt \
 	  && node m6.mjs 1440 light en && node m6.mjs 1440 dark pt && node m6.mjs 834 light pt \
 	  && node m7.mjs 1440 light en && node m7.mjs 1440 dark pt && node m7.mjs 834 light pt \
-	  && node m7v.mjs 1440 light pt && node m7v.mjs 1440 dark en && node m7v.mjs 834 light pt; \
+	  && node m7v.mjs 1440 light pt && node m7v.mjs 1440 dark en && node m7v.mjs 834 light pt \
+	  && node m8share.mjs 1440 light && node m8share.mjs 1440 dark && node m8share.mjs 834 light \
+	  && node m8archive.mjs 1440 light && node m8archive.mjs 1440 dark && node m8archive.mjs 834 light \
+	  && node m8admin.mjs 1440 light en && node m8admin.mjs 1440 dark pt && node m8admin.mjs 834 light pt \
+	  && node m8admin.mjs 834 dark en && node m8admin.mjs 375 light en && node m8admin.mjs 375 dark pt; \
 	  status=$$?; docker rm -f slides-e2e >/dev/null; exit $$status
 
 a11y:

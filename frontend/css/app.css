@@ -222,3 +222,42 @@ button.primary:hover:not(:disabled), button.danger:hover:not(:disabled) { backgr
 /* a secondary button on the review bar's alert container: on --surface, as secondary buttons are (red on the yellow
    container is 4.43:1; on --surface, 5.01:1) */
 .review-bar button:not(.primary) { background: var(--surface); }
+
+/* the edit lease's note above the editor (spec PJ-13): a feedback block, info (DESIGN.md, Components > Feedback block) */
+.editor > .lease-note { flex: none; margin: var(--space-2) var(--space-4) 0; }
+/* who wrote a message in a shared project's conversation (spec PJ-13): Caption, --text-weak (DESIGN.md, Typography) */
+.chat-msg .chat-author { margin-bottom: var(--space-1); color: var(--text-weak); font-size: var(--fs-caption); line-height: var(--lh-caption);
+  letter-spacing: var(--ls-caption); }
+/* a member's address wraps where it must (an address has no spaces: kept on one line, it set the page's minimum width
+   and cut the section's text at the pane's edge, seen at 1440 px with the projects panel open) */
+.members-list .list-title { white-space: normal; overflow-wrap: anywhere; }
+.members-list .row { flex: none; }
+
+/* ── administration (views/admin.js; spec AD-4..AD-6) ── */
+/* laid out by the width the page has (a tab beside the side panel can be narrow at any screen width): a container */
+.admin-page { container-type: inline-size; width: 100%; }   /* a container has no width of its own: it takes the view's */
+/* the filters: filled fields side by side, wrapping (DESIGN.md, Text input and select); the CSV button beside them */
+.admin-filters { align-items: flex-end; margin-bottom: var(--space-4); }
+.admin-filters .field-box { flex: 0 1 180px; min-width: 140px; }
+.admin-filters .admin-q { flex: 1 1 220px; }
+.admin-status { margin: var(--space-3) 0; }
+/* a template: its text, then its tags and commands, which go under the text when the page is narrow */
+.admin-templates > li { flex-wrap: wrap; }
+.admin-templates .list-text { flex: 1 1 260px; }
+.admin-templates .row { flex: 0 1 auto; justify-content: flex-end; margin-left: auto; }
+.audit-table .audit-target { color: var(--text-weak); font-size: var(--fs-caption); line-height: var(--lh-caption); overflow-wrap: anywhere; }
+.audit-table td { height: auto; padding-top: var(--space-3); padding-bottom: var(--space-3); }
+/* a cell's column name: shown only where the table becomes a list of cards */
+.admin-table .cell-label { display: none; }
+/* narrow (DESIGN.md, Data table: on a phone, more than three columns become a list, one card per row, each cell a
+   label-and-value row; here also wherever the page is as narrow, e.g. a tablet with the side panel open) */
+@container (max-width: 640px) {
+  .admin-table thead { display: none; }
+  .admin-table, .admin-table tbody, .admin-table tr, .admin-table td { display: block; width: 100%; }
+  .admin-table tr { padding: var(--space-2) 0; border-bottom: 1px solid var(--divider); }
+  .admin-table tr:last-child { border-bottom: 0; }
+  .admin-table td, .admin-table td.num { display: flex; justify-content: space-between; gap: var(--space-4); height: auto; min-height: 32px;
+    padding: var(--space-1) var(--space-4); border: 0; text-align: right; }
+  .admin-table .cell-label { display: block; flex: none; color: var(--text-weak); text-align: left; }
+  .admin-filters .field-box, .admin-filters .admin-q { flex: 1 1 100%; }
+}

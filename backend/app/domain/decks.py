@@ -31,7 +31,8 @@ def _summary(deck: dict) -> dict:
 
 
 class Decks:
-    def __init__(self, layout: Layout, projects: Projects, templates: Templates) -> None:
+    def __init__(self, layout: Layout, projects: Projects, templates: Templates, leases=None) -> None:
+        self.leases = leases  # spec PJ-13: a deck another member has open is not changed (leases.py)
         self.layout = layout
         self.projects = projects
         self.templates = templates
@@ -82,6 +83,8 @@ class Decks:
     ) -> dict:
         """Write the next version of `deck` (the project's lock is held by the caller). history: "change" (the
         replaced version goes on the undo stack, the redo stack empties), "undo" or "redo" (section 5.2)."""
+        if self.leases is not None:
+            self.leases.check(deck["id"], author)
         number = max(v["number"] for v in deck["versions"]) + 1 if deck["versions"] else 1
         storage.write_bytes(self.layout.version_file(pid, deck["id"], number), data)
         files.slides(data)  # it reopens: a file that does not is never published
@@ -156,6 +159,8 @@ class Decks:
     async def set_template(self, pid: str, did: str, email: str, ref: dict) -> dict:
         async with storage.lock(pid):
             self.projects.get(pid, email, roles=WRITE_ROLES)
+            if self.leases is not None:
+                self.leases.check(did, email)
             deck = self._read(pid, did)
             deck["template"] = {"kind": ref["kind"], "id": ref["id"]}
             deck["updated_at"] = storage.now()
@@ -165,6 +170,8 @@ class Decks:
     async def rename(self, pid: str, did: str, email: str, title: str) -> dict:
         async with storage.lock(pid):
             self.projects.get(pid, email, roles=WRITE_ROLES)
+            if self.leases is not None:
+                self.leases.check(did, email)
             deck = self._read(pid, did)
             deck["title"] = title.strip() or deck["title"]
             deck["updated_at"] = storage.now()
@@ -174,6 +181,8 @@ class Decks:
     async def delete(self, pid: str, did: str, email: str) -> None:
         async with storage.lock(pid):
             self.projects.get(pid, email, roles=WRITE_ROLES)
+            if self.leases is not None:
+                self.leases.check(did, email)
             folder = self.layout.deck(pid, did)
             if not folder.exists():
                 raise NotFound("deck")

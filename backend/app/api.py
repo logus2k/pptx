@@ -5,21 +5,26 @@ exist."""
 from __future__ import annotations
 
 import asyncio
+import csv
 import hashlib
+import io
+import json
 import logging
 from typing import Literal
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field
 
-from . import identity
+from . import audit, identity
 from .docengine import files, ops, read, render
 from .domain.decks import Decks
 from .domain.projects import Projects
 from .domain.templates import ProjectAssets, Templates
 from .kb import KBError
 from . import storage
+from .domain import archive
+from .domain.leases import Leased
 from .storage import Layout, NotFound
 
 log = logging.getLogger("slides.api")
@@ -91,6 +96,11 @@ class ProjectChanges(BaseModel):
     settings: SettingsChanges | None = None
 
 
+class Member(BaseModel):
+    email: str = Field(min_length=3, max_length=254)
+    role: str = Field(min_length=5, max_length=6)
+
+
 class MemoryText(BaseModel):
     text: str = Field(min_length=1, max_length=500)
 
@@ -131,6 +141,15 @@ class ManualEdit(BaseModel):
     position: int | None = Field(default=None, ge=0)
 
 
+class TemplateChanges(BaseModel):
+    """An administrator template renamed, retired or brought back, or made the default (spec AD-4)."""
+
+    name: str | None = Field(default=None, min_length=1, max_length=120)
+    description: str | None = Field(default=None, max_length=500)
+    retired: bool | None = None
+    default: Literal[True] | None = None
+
+
 def build(
     settings,
     layout: Layout,
@@ -148,17 +167,24 @@ def build(
     r = APIRouter(prefix="/api")
     max_bytes = settings.file["limits"]["upload_mb"] * 1024 * 1024
 
+    def leased(e: Leased) -> HTTPException:  # spec PJ-13: another member has the deck open
+        return HTTPException(409, {"code": "leased", "holder": e.holder, "message": f"The deck is being edited by {e.holder}."})
+
     def found(fn, *args, **kwargs):
         try:
             return fn(*args, **kwargs)
         except NotFound:
             raise HTTPException(404, "not found") from None
+        except Leased as e:
+            raise leased(e) from None
 
     async def afound(coro):
         try:
             return await coro
         except NotFound:
             raise HTTPException(404, "not found") from None
+        except Leased as e:
+            raise leased(e) from None
 
     async def read_upload(upload: UploadFile) -> bytes:
         data = await upload.read(max_bytes + 1)
@@ -182,6 +208,51 @@ def build(
     async def get_project(pid: str, user: identity.User = Depends(identity.current_user)):
         project = found(projects.get, pid, user.email)
         return {**project, "role": next(m["role"] for m in project["members"] if m["email"] == user.email)}
+
+    # ── members (spec PJ-13, as Cortex's project members: owners add, change and remove; anyone may leave) ──
+    @r.put("/projects/{pid}/members")
+    async def set_member(pid: str, body: Member, request: Request, user: identity.User = Depends(identity.current_user)):
+        try:
+            project = await afound(projects.set_member(pid, user.email, body.email, body.role))
+        except ValueError as e:
+            raise HTTPException(400, {"code": "member", "message": str(e)}) from None
+        request.state.audit = {"member": body.email.strip().lower(), "role": body.role}
+        return {"members": project["members"]}
+
+    @r.delete("/projects/{pid}/members/{member}")
+    async def remove_member(pid: str, member: str, user: identity.User = Depends(identity.current_user)):
+        try:
+            project = await afound(projects.remove_member(pid, user.email, member))
+        except ValueError as e:
+            raise HTTPException(400, {"code": "member", "message": str(e)}) from None
+        return {"members": project["members"] if member.strip().lower() != user.email else []}
+
+    # ── a project's archive (spec PJ-14): exported whole, imported as a new project ──
+    @r.get("/projects/{pid}/export")
+    async def export_project(pid: str, user: identity.User = Depends(identity.current_user)):
+        project = found(projects.get, pid, user.email)
+        convs = found(conversations.list, pid, user.email) if conversations is not None else []
+        data = await asyncio.to_thread(
+            archive.export, layout, project, convs, lambda cid: conversations.messages(pid, cid) if conversations else []
+        )
+        name = "".join(c if c.isalnum() or c in " -_" else "_" for c in project["name"]).strip() or "project"
+        disposition = f'attachment; filename="{name[:80]}.zip"'
+        return Response(data, media_type="application/zip", headers={"Content-Disposition": disposition})
+
+    @r.post("/projects/import", status_code=201)
+    async def import_project(request: Request, file: UploadFile, user: identity.User = Depends(identity.current_user)):
+        raw = await file.read(max_bytes * 10 + 1)
+        if len(raw) > max_bytes * 10:
+            raise HTTPException(413, {"code": "too_large", "message": f"The archive is larger than {max_bytes * 10 >> 20} MB."})
+        try:
+            entries = await asyncio.to_thread(archive.unpack, raw, max_bytes)
+            await asyncio.to_thread(archive.check, entries, max_bytes)
+        except archive.BadArchive as e:
+            raise HTTPException(422, {"code": "archive", "message": str(e)}) from None
+        pid = storage.new_id()
+        project = await asyncio.to_thread(archive.write, layout, entries, pid, user.email)
+        request.state.audit = {"pid": pid}
+        return {"id": pid, "name": project["name"]}
 
     @r.patch("/projects/{pid}")
     async def change_project(pid: str, body: ProjectChanges, user: identity.User = Depends(identity.current_user)):
@@ -233,6 +304,69 @@ def build(
         if project:
             found(projects.get, project, user.email)
         return {"templates": templates.listing(project), "default": templates.admin.default_id}
+
+    # ── administration (spec AD-4, AD-5, AD-6): administrators only, as Cortex's _admin ──
+    def admin(user: identity.User = Depends(identity.current_user)) -> identity.User:
+        """A dependency: it runs before the request's body is read, so anyone else is refused before anything else."""
+        if not user.is_admin:
+            raise HTTPException(403, "administrators only")
+        return user
+
+    template_changes = asyncio.Lock()  # one change to templates.json at a time
+
+    @r.get("/admin/templates")
+    async def admin_templates(user: identity.User = Depends(admin)):
+        return {"templates": list(templates.admin.items.values()), "default": templates.admin.default_id}
+
+    @r.post("/admin/templates", status_code=201)
+    async def admin_add_template(
+        request: Request,
+        name: str = Form(..., min_length=1, max_length=120),
+        description: str = Form("", max_length=500),
+        file: UploadFile = File(...),
+        user: identity.User = Depends(admin),
+    ):
+        data = await read_upload(file)
+        try:
+            async with template_changes:
+                t = await asyncio.to_thread(templates.admin.add, name.strip(), data, description.strip())
+        except files.Rejected as e:
+            raise HTTPException(422, {"code": e.code, "message": str(e)}) from None
+        request.state.audit = {"tid": t["id"]}
+        return t
+
+    @r.patch("/admin/templates/{tid}")
+    async def admin_change_template(tid: str, body: TemplateChanges, user: identity.User = Depends(admin)):
+        try:
+            async with template_changes:
+                return await asyncio.to_thread(found, templates.admin.change, tid, **body.model_dump(exclude_none=True))
+        except ValueError as e:
+            raise HTTPException(400, {"code": "template", "message": str(e)}) from None
+
+    @r.get("/audit")
+    async def audit_list(user_filter: str = Query("", alias="user"), q: str = "", since: str = "", until: str = "",
+                         limit: int = 100, before: int | None = None,
+                         user: identity.User = Depends(admin)):  # fmt: skip
+        limit = max(1, min(500, limit))
+        return await asyncio.to_thread(audit.search, layout.audit, user_filter, q, since, until, before, limit)
+
+    @r.get("/audit.csv")
+    async def audit_csv(user_filter: str = Query("", alias="user"), q: str = "", since: str = "", until: str = "",
+                        user: identity.User = Depends(admin)):  # fmt: skip
+        rows = (await asyncio.to_thread(audit.search, layout.audit, user_filter, q, since, until, None, 50_000))["entries"]
+        out = io.StringIO()
+        w = csv.writer(out)
+        w.writerow(["when (UTC)", "user", "what", "action", "which data"])
+        for e in rows:
+            target = json.dumps(e.get("target", {}), ensure_ascii=False, sort_keys=True)
+            w.writerow([e.get("at", ""), e.get("user", ""), e.get("label", ""), e.get("action", ""), target])
+        disposition = 'attachment; filename="slides-audit.csv"'
+        return Response(out.getvalue(), media_type="text/csv; charset=utf-8", headers={"Content-Disposition": disposition})
+
+    @r.get("/usage")
+    async def usage(since: str = "", until: str = "", by: Literal["day", "week", "month"] = "week",
+                    user: identity.User = Depends(admin)):  # fmt: skip
+        return {"by": by, "periods": await asyncio.to_thread(audit.usage, layout.audit, since, until, by)}
 
     @r.get("/projects/{pid}/assets")
     async def list_assets(pid: str, user: identity.User = Depends(identity.current_user)):
@@ -306,6 +440,8 @@ def build(
                 body = NewDeck.model_validate(await request.json())
                 if body.template.kind not in ("admin", "asset"):
                     raise HTTPException(400, {"code": "template", "message": "Unknown template kind."})
+                if body.template.kind == "admin" and templates.admin.items.get(body.template.id, {}).get("retired"):
+                    raise HTTPException(400, {"code": "template", "message": "This template has been retired."})
                 deck = await afound(decks.from_template(pid, user.email, body.title, body.template.model_dump()))
         except files.Rejected as e:
             raise HTTPException(422, {"code": e.code, "message": str(e)}) from None
@@ -318,6 +454,7 @@ def build(
         """The deck's record and the slides of a version (the current one by default), each with its render key."""
         info = await asyncio.to_thread(found, decks.slides, pid, did, user.email, version)
         info["record"] = found(decks.get, pid, did, user.email)
+        info["lease"] = decks.leases.holder(did) if decks.leases is not None else None
         return info
 
     @r.patch("/projects/{pid}/decks/{did}")
@@ -327,6 +464,22 @@ def build(
     @r.delete("/projects/{pid}/decks/{did}", status_code=204)
     async def delete_deck(pid: str, did: str, user: identity.User = Depends(identity.current_user)):
         await afound(decks.delete(pid, did, user.email))
+        return Response(status_code=204)
+
+    # ── the edit lease (spec PJ-13): the open editor takes and renews it, and releases it on closing ──
+    @r.post("/projects/{pid}/decks/{did}/lease")
+    async def take_lease(pid: str, did: str, user: identity.User = Depends(identity.current_user)):
+        found(decks.get, pid, did, user.email)
+        found(projects.get, pid, user.email, roles=("owner", "editor"))
+        try:
+            return decks.leases.take(did, user.email)
+        except Leased as e:
+            raise leased(e) from None
+
+    @r.delete("/projects/{pid}/decks/{did}/lease", status_code=204)
+    async def release_lease(pid: str, did: str, user: identity.User = Depends(identity.current_user)):
+        found(decks.get, pid, did, user.email)
+        decks.leases.release(did, user.email)
         return Response(status_code=204)
 
     @r.get("/projects/{pid}/decks/{did}/versions")
@@ -413,6 +566,8 @@ def build(
             deck = await decks.undo(pid, did, email, 1, redo=redo)
         except NotFound:
             raise HTTPException(404, "not found") from None
+        except Leased as e:
+            raise leased(e) from None
         except ValueError as e:
             raise HTTPException(409, {"code": "nothing", "message": "Nothing to redo." if redo else "Nothing to undo."}) from e
         renderer.warm(pid, layout.version_file(pid, did, deck["current_version"]).read_bytes())
@@ -504,7 +659,9 @@ def build(
         return agent.describe(pid, found(proposals.get, pid, cid, prid))
 
     @r.post("/projects/{pid}/conversations/{cid}/proposals/{prid}/decision")
-    async def decide(pid: str, cid: str, prid: str, body: Decision, user: identity.User = Depends(identity.current_user)):
+    async def decide(
+        pid: str, cid: str, prid: str, body: Decision, request: Request, user: identity.User = Depends(identity.current_user)
+    ):
         found(conversations.get, pid, cid, user.email)
         try:
             p = await agent.decide(pid, cid, prid, user.email, body.accept, body.slides)
@@ -512,6 +669,7 @@ def build(
             raise HTTPException(404, "not found") from None
         except ValueError as e:
             raise HTTPException(409, {"code": "decided", "message": str(e)}) from None
+        request.state.audit = {"status": p["status"]}  # spec AD-5: accepted and rejected are counted from the audit
         return {"id": p["id"], "status": p["status"]}
 
     @r.get("/projects/{pid}/conversations/{cid}/proposals/{prid}/decks/{did}/slides/{slide_id}/image")

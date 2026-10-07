@@ -54,6 +54,16 @@ async function tabTo(p, test, what, limit = 80) {
 }
 
 const b = await launch();
+// the administration (spec AD-4..AD-6), as an administrator (the e2e app's: tests/e2e/fake_app.py)
+const pa = await open(b, 'admin@example.com', { width: W, height: 900, storage: { 'slides.theme': theme, 'slides.uiLanguage': 'pt' } });
+// a change first, so the usage and the audit log have a row on a fresh server
+await pa.request.fetch(`${BASE}api/projects`, { method: 'POST', headers: { ...authHeaders(user), 'Content-Type': 'application/json' }, data: JSON.stringify({ name: 'Auditoria' }) });
+for (const [area, rows] of [['templates', '.admin-templates li'], ['usage', '.usage-table tbody tr'], ['audit', '.audit-table tbody tr']]) {
+  await pa.goto(`${BASE}admin/${area}`, { waitUntil: 'networkidle' });
+  await pa.waitForSelector(rows, { timeout: 10000 }).then(() => audit(pa, `administration: ${area}`)).catch(() => check(false, `the administration's ${area} opened`));
+}
+
+await pa.close();
 const p = await open(b, user, { width: W, height: 900, storage: { 'slides.theme': theme, 'slides.uiLanguage': 'pt' } });
 await p.waitForSelector('.identity-btn');
 await audit(p, 'projects');

@@ -14,6 +14,9 @@ export const ICONS = {
   projects: icon('<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>'),
   decks: icon('<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/>'),
   assistant: icon('<rect x="4" y="7" width="16" height="12" rx="3"/><path d="M12 3v4M9 12h.01M15 12h.01M9 16h6"/>'),
+  'admin-templates': icon('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/>'),
+  'admin-usage': icon('<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>'),
+  'admin-audit': icon('<path d="M9 4h10v16H5V8z"/><path d="M9 4v4H5M9 12h6M9 16h6"/>'),
 };
 
 // ── the side panel (noted's SidebarPanel, verbatim) ──────────────────

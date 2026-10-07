@@ -783,7 +783,8 @@ def test_with_no_route_and_every_tool_too_big_the_usual_groups_are_offered(serve
     chat.send("faz qualquer coisa")
     offered = set(fake_model.offered[-1])
     assert chat.last("turn_ended")["status"] == "done"  # not refused
-    assert offered == router.tools_of(router.FALLBACK) & offered and "update_text" in offered and "kb_search" not in offered
+    usual = router.tools_of(router.FALLBACK | {"knowledge"})  # the knowledge tools with them: there is a knowledge base
+    assert offered == usual & offered and "update_text" in offered and "kb_search" in offered and "remember" not in offered
     chat.close()
 
 
@@ -807,3 +808,225 @@ def test_a_new_slide_has_a_place_in_an_empty_deck_and_after_slide_0_is_the_first
     assert [o["slide_id"] for o in outline(data)] == [second["slides"][0], first]  # "after slide 0": at the start
     with pytest.raises(Exception, match="slides 1 to 2"):
         Executor._positions({"slide_id": 3}, data)  # a slide that is not there is still refused
+
+
+def test_tools_that_do_not_fit_are_left_out_the_least_needed_first(server, fake_model):
+    """Measured: a request needing slides, a table, a picture and the knowledge base was offered tools taking 34.1% of
+    the window with the prompt, and the turn was refused; now the least needed are left out until they fit."""
+    from app.agent.loop import EXPENDABLE
+
+    pid, _, cid = setup(server)
+    fake_model._window, fake_model._estimating = 42000, False
+    fake_model.routes = [{"intent": "x", "kind": "change", "groups": ["structure", "table", "images", "decks", "knowledge"]}]
+    fake_model.script = [{"text": "Feito."}, {"text": "Feito."}]
+    chat = Chat(server, pid, cid)
+    chat.send("faz uma coisa grande")
+    chat.close()
+    offered = set(fake_model.offered[-1])
+    assert chat.last("turn_ended")["status"] == "done"  # not refused
+    assert "update_text" in offered and "add_slide" in offered and "kb_search" in offered  # the core of it kept
+    assert "kb_read_document" not in offered and EXPENDABLE[0] == "kb_read_document"  # the first left out
+
+
+def test_the_assistant_does_not_change_a_deck_another_member_has_open(server, fake_model):
+    """Spec PJ-13: a deck held by another member's open editor is not changed by anyone else's assistant."""
+    from .test_kb import tool_results
+
+    pid, did, cid = setup(server)
+    rui = "rui@example.com"
+    requests.put(f"{server}/api/projects/{pid}/members", json={"email": rui, "role": "editor"}, headers=h(), timeout=10)
+    assert requests.post(f"{server}/api/projects/{pid}/decks/{did}/lease", headers=h(rui), timeout=10).status_code == 200
+    data = deck_bytes(server, pid, did)
+    sid = outline(data)[1]["slide_id"]
+    fake_model.script = [
+        {"tools": [("update_text", {"slide_id": sid, "shape_id": body_id(data, sid), "paragraphs": [{"text": "x"}]})]},
+        {"text": "Não consegui."},
+        {"text": "Não consegui."},
+    ]
+    chat = Chat(server, pid, cid)
+    chat.send("muda a agenda")
+    chat.close()
+    assert tool_results(fake_model, "update_text")[0]["error"]["code"] == "DECK_LEASED"
+    assert deck_bytes(server, pid, did) == data
+
+
+def _figure_turn(server, fake_model, steps, say="acrescenta no fim um diapositivo com isto"):
+    """One turn on the three-slide deck with the scripted calls; its proposal accepted. The deck's slides after, and
+    every tool result the model was sent."""
+    from .test_kb import tool_results
+
+    pid, did, cid = setup(server)
+    fake_model.routes = [{"intent": "A new slide with a figure", "kind": "change", "groups": ["structure", "table"]}]
+    fake_model.script = [{"tools": [step]} for step in steps] + [{"text": "Feito."}]
+    chat = Chat(server, pid, cid)
+    try:
+        chat.send(say)
+        proposal = next((d for n, d in reversed(chat.events) if n == "proposal_updated"), None)
+        if proposal:
+            chat.decide(proposal["id"], True)
+    finally:
+        chat.close()
+    prs = read.open_deck(deck_bytes(server, pid, did))
+    results = {name: tool_results(fake_model, name) for name in ("add_slide", "add_slides", "draw_diagram", "add_chart")}
+    return prs, results
+
+
+def test_a_figure_on_the_slide_after_the_last_makes_that_slide_first(server, fake_model):
+    """Measured: the model drew a diagram on "slide 4" of a three-slide deck, was told it is not there, and ended the
+    turn saying it was done. The slide is added at the end, then the diagram drawn on it (on the blank layout: a
+    diagram has no title); a chart's title becomes its slide's heading."""
+    nodes = [{"text": t} for t in ("Pedido", "Análise", "Aprovação", "Entrega")]
+    prs, results = _figure_turn(server, fake_model, [("draw_diagram", {"slide_id": 4, "nodes": nodes})])
+    assert len(prs.slides) == 4
+    last = list(prs.slides)[-1]
+    assert last.slide_layout.name == "Blank" and not list(last.placeholders)
+    boxes = [sh.text_frame.text for sh in last.shapes if sh.has_text_frame and sh.text_frame.text]
+    assert boxes == ["Pedido", "Análise", "Aprovação", "Entrega"]
+    assert sum(sh._element.tag.endswith("cxnSp") for sh in last.shapes) == 3
+    assert "There was no slide 4" in results["draw_diagram"][-1]["note"]
+
+    series = [{"name": "Vendas", "values": [120, 150, 180]}]
+    chart = {"slide_id": 4, "kind": "column", "title": "Vendas por ano", "categories": ["2023", "2024", "2025"], "series": series}
+    prs, _ = _figure_turn(server, fake_model, [("add_chart", chart)])
+    last = list(prs.slides)[-1]
+    assert len(prs.slides) == 4 and last.shapes.title.text == "Vendas por ano"
+    graphic = next(sh for sh in last.shapes if getattr(sh, "has_chart", False))
+    assert not graphic.chart.has_title  # the slide's heading says it once
+    empty = [ph for ph in last.placeholders if ph.has_text_frame and not ph.text_frame.text.strip()]
+    assert not empty
+
+
+def test_a_figure_on_the_slide_this_turn_added_goes_on_it_and_a_refused_one_adds_nothing(server, fake_model):
+    nodes = [{"text": t} for t in ("A", "B")]
+    prs, _ = _figure_turn(server, fake_model, [("add_slide", {"layout": "Title Only", "content": {"title": "Fluxo"}}),
+                                               ("draw_diagram", {"slide_id": 4, "nodes": nodes})])  # fmt: skip
+    assert len(prs.slides) == 4  # one new slide, not two
+    last = list(prs.slides)[-1]
+    assert last.shapes.title.text == "Fluxo" and sum(sh._element.tag.endswith("cxnSp") for sh in last.shapes) == 1
+    bad = {"slide_id": 4, "kind": "column", "categories": ["2023", "2024"], "series": [{"name": "x", "values": [1]}]}
+    prs, results = _figure_turn(server, fake_model, [("add_chart", bad)])
+    assert len(prs.slides) == 3 and results["add_chart"][-1]["error"]["code"] == "BAD_CHART"
+
+
+def test_a_new_slide_with_a_diagram_in_one_call_names_its_boxes(server, fake_model):
+    nodes = [{"text": t} for t in ("Pedido", "Análise", "Aprovação")]
+    add = {"after_slide_id": 3, "layout": "Title and Content", "content": {"title": "Processo", "diagram": {"nodes": nodes}}}
+    prs, results = _figure_turn(server, fake_model, [("add_slide", add)])
+    note = results["add_slide"][-1]["note"]
+    assert "Its diagram: boxes" in note and "arrows" in note and "arrows none" not in note
+    last = list(prs.slides)[-1]
+    assert last.shapes.title.text == "Processo" and sum(sh._element.tag.endswith("cxnSp") for sh in last.shapes) == 2
+
+
+def test_the_layout_and_the_charts_title_put_inside_content_are_taken_where_they_belong(server, fake_model):
+    """The calls as the model made them (6 runs in 6; each refused, then sent again unchanged up to five times)."""
+    chart = {"categories": ["2023", "2024", "2025"], "kind": "column", "number_format": "###0",
+             "series": [{"name": "Vendas", "values": [120, 150, 180]}], "title": "Vendas por Ano"}  # fmt: skip
+    add = {"after_slide_id": 3, "content": {"chart": chart, "layout": "Title and Content"}, "layout": "Title and Content"}
+    prs, results = _figure_turn(server, fake_model, [("add_slide", add)])
+    last = list(prs.slides)[-1]
+    assert len(prs.slides) == 4 and last.shapes.title.text == "Vendas por Ano"
+    graphic = next(sh for sh in last.shapes if getattr(sh, "has_chart", False))
+    assert [list(s.values) for s in graphic.chart.plots[0].series] == [[120.0, 150.0, 180.0]]
+    assert "Its chart is shape" in results["add_slide"][-1]["note"]
+    nodes = [{"text": t} for t in ("Pedido", "Análise")]
+    content = {"diagram": {"nodes": nodes}, "layout": "Blank", "title": "Processo"}
+    add = {"after_slide_id": 3, "content": content, "layout": "Blank"}
+    prs, results = _figure_turn(server, fake_model, [("add_slide", add)])
+    assert list(prs.slides)[-1].shapes.title.text == "Processo"
+    assert "'Blank' has no place for its title" in results["add_slide"][-1]["note"]
+
+
+def test_the_slides_title_beside_content_is_taken_into_it(server, fake_model):
+    """As the model sent it (2 runs in 4 of "a slide with the conditions of the product", from the knowledge base)."""
+    add = {"after_slide_id": 1, "content": {"points": ["Destinado a jovens até 35 anos.", "Financiamento até 100%."]},
+           "layout": "Title and Content", "title": "Condições do Crédito Habitação Jovem", "subtitle": "Resumo"}  # fmt: skip
+    said = "Acrescenta um diapositivo: Destinado a jovens até 35 anos. Financiamento até 100%."  # dictated
+    prs, results = _figure_turn(server, fake_model, [("add_slide", add)], say=said)
+    assert results["add_slide"][-1].get("ok"), results["add_slide"][-1]
+    new = list(prs.slides)[1]
+    assert new.shapes.title.text == "Condições do Crédito Habitação Jovem"
+    assert "Destinado a jovens até 35 anos." in [p.text for sh in new.placeholders for p in sh.text_frame.paragraphs]
+
+
+def test_a_point_that_only_repeats_the_title_is_left_out_and_said(server, fake_model):
+    """As the model sent it: on a cover (the title again as its point), and on a slide written without reading the
+    knowledge base (7 runs in 14). Refused, covers failed 4 runs in 4: left out, and said."""
+    cover = {"content": {"points": [{"text": "Crédito Habitação Jovem"}], "subtitle": "Apresentação",
+                         "title": "Crédito Habitação Jovem"}, "layout": "Title Slide"}  # fmt: skip
+    prs, results = _figure_turn(server, fake_model, [("add_slide", cover)])
+    assert len(prs.slides) == 4 and "only repeated the title was left out" in results["add_slide"][-1]["note"]
+    texts = [sh.text_frame.text for sh in list(prs.slides)[-1].placeholders if sh.has_text_frame]
+    assert texts.count("Crédito Habitação Jovem") == 1
+    echo = {"content": {"points": ["Condições do Crédito Habitação Jovem"], "title": "Condições do crédito habitação jovem"},
+            "layout": "Title and Content"}  # fmt: skip
+    _, results = _figure_turn(server, fake_model, [("add_slide", echo)])
+    assert results["add_slide"][-1]["error"]["code"] == "TITLE_ALONE"  # the title again, then nothing: write it
+    assert "kb_search" in results["add_slide"][-1]["error"]["hint"]
+    fine = {"content": {"title": "Condições", "points": ["Até 35 anos", "Financiamento até 100%"]}, "layout": "Title and Content"}
+    prs, results = _figure_turn(server, fake_model, [("add_slide", fine)], say="Condições: até 35 anos, financiamento até 100%")
+    assert "left out" not in results["add_slide"][-1]["note"]
+
+
+def test_charts_and_diagrams_are_offered_only_when_asked_for(server, fake_model):
+    """Measured: with add_slide's chart and diagram, and draw_diagram, offered for "a slide with the conditions of the
+    product", the model wrote it without reading the knowledge base 7 runs in 14; without both, it read it 6 in 6."""
+    pid, _, cid = setup(server)
+    chat = Chat(server, pid, cid)
+    try:
+        for groups, figures in ((["structure", "text"], False), (["structure", "table"], True)):
+            fake_model.routes = [{"intent": "A slide", "kind": "change", "groups": groups}]
+            fake_model.script = [{"text": "Ok."}]
+            chat.send("acrescenta um diapositivo")
+            add = next(d for d in fake_model.definitions if d["function"]["name"] == "add_slide")["function"]
+            content = add["parameters"]["properties"]["content"]["properties"]
+            names = [d["function"]["name"] for d in fake_model.definitions]
+            assert ("chart" in content and "diagram" in content) == figures
+            assert ("draw_diagram" in names) == figures and ("chart or diagram" in add["description"]) == figures
+    finally:
+        chat.close()
+
+
+def test_points_too_long_are_named_with_their_lengths_not_quoted(server, fake_model):
+    """Measured: the message quoted the whole passage and named only the first point; the model sent the same points
+    again, or fixed one and met the next (3 runs in 3)."""
+    long_a, long_b = "Critérios de elegibilidade: " + "x" * 210, "O regime " + "y" * 320
+    points = ["Até 35 anos", long_a, {"heading": "Garantia", "text": long_b}]
+    add = {"after_slide_id": 1, "layout": "Title and Content", "content": {"title": "Condições", "points": points}}
+    prs, results = _figure_turn(server, fake_model, [("add_slide", add)])
+    error = results["add_slide"][-1]["error"]
+    assert error["code"] == "POINTS_TOO_LONG" and len(prs.slides) == 3
+    assert error["message"].startswith(f"Points 2, 3 ({len(long_a)}, {len(long_b)} characters)")
+    assert "xxxx" not in error["message"]
+    assert "set_notes" in error["hint"]
+
+
+def test_an_unclear_request_once_answered_is_acted_on_with_its_tools(server, fake_model):
+    """Measured: "Cria um slide", routed unclear, answered "Decide tu.": the turn offered ask_user alone after the answer,
+    and the model asked the same question again 13 times, nothing made."""
+    pid, did, cid = setup(server)
+    fake_model.routes = [{"intent": "Create a slide", "kind": "unclear", "groups": ["structure", "text"]}]
+    fake_model.script = [{"tools": [("ask_user", {"question": "Que conteúdo deve ter o slide?"})]}]
+    chat = Chat(server, pid, cid)
+    try:
+        assert chat.send("Cria um slide")["status"] == "waiting"
+        assert fake_model.offered[-1] == ["ask_user"]
+        add = {"layout": "Title and Content", "content": {"title": "Próximos passos", "points": ["Rever a proposta"]}}
+        fake_model.script = [{"tools": [("add_slide", add)]}, {"text": "Fiz um slide."}]
+        assert chat.answer(answer="Decide tu.")["status"] == "done"
+        offered = fake_model.offered[-2]
+        assert "add_slide" in offered and len(offered) > 1  # its tools, after the answer
+        assert len(read.open_deck(deck_bytes(server, pid, did)).slides) == 3  # in review, not yet saved
+        assert chat.last("proposal_updated")["decks"][did]["slides"]
+    finally:
+        chat.close()
+
+
+def test_a_new_slide_with_its_title_alone_on_a_text_layout_is_sent_back_once(server, fake_model):
+    """Measured: "a slide with the conditions of the product" made with its title alone, its text box showing its
+    prompt. Once per turn: the second call goes through; a layout with no text place is never sent back."""
+    alone = {"layout": "Title and Content", "content": {"title": "Condições"}}
+    _, results = _figure_turn(server, fake_model, [("add_slide", alone), ("add_slide", alone)])
+    assert results["add_slide"][0]["error"]["code"] == "TITLE_ALONE" and results["add_slide"][-1].get("ok")
+    _, results = _figure_turn(server, fake_model, [("add_slide", {"layout": "Title Only", "content": {"title": "Obrigado"}})])
+    assert results["add_slide"][-1].get("ok")

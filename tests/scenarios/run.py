@@ -124,8 +124,11 @@ def slides_of(data: bytes) -> list[dict]:
     out = []
     for o in read.outline(prs):
         s = read.slide(prs, o["slide_id"])
-        shapes, empty, over = [], [], []
+        shapes, empty, over, charts, connectors = [], [], [], [], 0
         for sh in _flat(s["shapes"]):
+            if sh.get("chart"):
+                charts.append(sh["chart"])
+            connectors += sh.get("type") == "connector"
             lines = [" ".join(r.get("text", "") for r in p.get("runs") or []).strip() for p in sh.get("paragraphs") or []]
             lines = [x for x in lines if x]
             ph = sh.get("placeholder") or {}
@@ -135,8 +138,17 @@ def slides_of(data: bytes) -> list[dict]:
                 empty.append(ph.get("type"))  # shows its prompt text in the editor ("Click to add text")
             if sh.get("overflow"):
                 over.append(sh["shape_id"])
+        # a chart or a diagram box over a shape with text (boxes as the read model gives them, in slide fractions)
+        def meets(a, b):
+            return a["x"] < b["x"] + b["w"] and b["x"] < a["x"] + a["w"] and a["y"] < b["y"] + b["h"] and b["y"] < a["y"] + a["h"]
+
+        figures = [sh for sh in _flat(s["shapes"]) if sh.get("chart") or (sh.get("type") == "shape" and not sh.get("placeholder"))]
+        texts = [sh for sh in _flat(s["shapes"]) if sh.get("placeholder") and any(p.get("runs") for p in sh.get("paragraphs") or [])
+                 and (sh.get("placeholder") or {}).get("type") not in ("title", "center_title")]  # fmt: skip
+        covered = sorted({t["shape_id"] for f in figures for t in texts if f.get("box") and t.get("box") and meets(f["box"], t["box"])})
         out.append({"slide_id": o["slide_id"], "layout": s.get("layout"), "shapes": shapes, "empty_placeholders": empty,
-                    "overflowing": over, "notes": s.get("notes")})  # fmt: skip
+                    "overflowing": over, "notes": s.get("notes"), "charts": charts, "connectors": connectors,
+                    "covered": covered})  # fmt: skip
     return out
 
 
@@ -236,6 +248,9 @@ def judge(expect: dict, record: dict, slides: list[dict]) -> list[dict]:
     if expect.get("no_empty_placeholders"):
         bad = [(n + 1, s["empty_placeholders"]) for n, s in enumerate(slides) if s["empty_placeholders"]]
         check(slides and not bad, f"no slide left with empty placeholders (prompt text on show) {bad}")
+    if expect.get("no_covered_text"):  # no chart or diagram box over a shape that holds text
+        bad = [(n + 1, c) for n, s in enumerate(slides) for c in s.get("covered") or []]
+        check(slides and not bad, f"no figure over the slide's text {bad}")
     if expect.get("no_overflow"):
         bad = [(n + 1, s["overflowing"]) for n, s in enumerate(slides) if s["overflowing"]]
         check(slides and not bad, f"no text past its box {bad}")
@@ -270,6 +285,30 @@ def judge(expect: dict, record: dict, slides: list[dict]) -> list[dict]:
             check(any(w.lower() in notes.lower() for w in want["notes"]), f"slide {n}'s notes mention one of {want['notes']}")
         if want.get("exactly"):
             check(text_of(s) == "\n".join(want["exactly"]), f"slide {n} says exactly {want['exactly']} ({text_of(s)!r})")
+    if expect.get("chart"):  # {kind, categories: [...], values_all: [...]}: a native chart on some slide
+        want = expect["chart"]
+        found = [(n + 1, c) for n, s in enumerate(slides) for c in s.get("charts") or []]
+        check(bool(found), f"a slide has a chart ({len(found)} found)")
+        if found:
+            n, c = found[-1]
+            if want.get("kind"):
+                check(c["kind"] == want["kind"], f"slide {n}'s chart is a {want['kind']} chart ({c['kind']})")
+            if want.get("categories"):
+                check(c["categories"] == want["categories"], f"slide {n}'s chart has categories {want['categories']} ({c['categories']})")
+            values = [v for se in c["series"] for v in se["values"]]
+            for v in want.get("values_all") or []:
+                check(v in values, f"slide {n}'s chart has the value {v} ({values})")
+    if expect.get("diagram"):  # {min_boxes, min_connectors, all: [...]}: boxes joined by connectors on some slide
+        want = expect["diagram"]
+        best = max(slides, key=lambda s: s.get("connectors") or 0) if slides else None
+        n = slides.index(best) + 1 if best else 0
+        joined = (best or {}).get("connectors") or 0
+        check(joined >= want.get("min_connectors", 1), f"slide {n} has at least {want.get('min_connectors', 1)} connectors ({joined})")
+        boxes = [sh for sh in (best or {}).get("shapes", []) if sh["kind"] == "shape"]
+        check(len(boxes) >= want.get("min_boxes", 2), f"slide {n} has at least {want.get('min_boxes', 2)} boxes ({len(boxes)})")
+        text = " ".join(x for sh in boxes for x in sh["lines"]).lower()
+        for w in want.get("all") or []:
+            check(w.lower() in text, f"slide {n}'s boxes say {w!r}")
     if expect.get("reply_any"):
         reply = " ".join(x or "" for x in record.get("replies") or []).lower()
         check(any(w.lower() in reply for w in expect["reply_any"]), f"the reply mentions one of {expect['reply_any']}")

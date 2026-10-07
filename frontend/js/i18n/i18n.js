@@ -28,6 +28,7 @@
   function miss(text, el) {
     var core = text.trim();
     if (!audit || !core || core.toLowerCase() === core.toUpperCase() || misses.indexOf(core) >= 0) return;
+    if (portuguese[core] || ptTemplates.some(function (parts) { return shaped(core, parts); })) return;   // Slides: already translated (a dialog's text by cortexT, a tab title copied to the status bar)
     misses.push(core);
     where[core] = el ? el.tagName.toLowerCase() + (el.className && typeof el.className === 'string' ? '.' + el.className.split(' ').join('.') : '') : '';
   }
@@ -45,6 +46,15 @@
   var CONTENT_ATTR = CONTENT.split(', ').filter(function (s) { return s !== 'textarea' && s !== 'input' && s !== '[contenteditable="true"]'; }).join(', ');
 
   var exact = Object.create(null);
+  var portuguese = Object.create(null);     // Slides: the dictionary's own Portuguese texts, for the audit's misses
+  var ptTemplates = [];                     // Slides: and its Portuguese templates' literal parts
+  function shaped(text, parts) {            // Slides: does `text` have the template's literal parts, in order?
+    var last = parts.length - 1;
+    if (!text.startsWith(parts[0]) || !text.endsWith(parts[last]) || text.length <= parts[0].length + parts[last].length) return false;
+    var pos = parts[0].length;
+    for (var p = 1; p < last; p++) { var at = text.indexOf(parts[p], pos + 1); if (at < 0) return false; pos = at + parts[p].length; }
+    return pos < text.length - parts[last].length;
+  }
   var templates = [];                       // { parts: [literal...], order: [hole index...], to: 'pt {0} …' }
   function holes(s) {                       // "a {0} b {1}" -> { parts: ['a ', ' b ', ''], order: [0, 1] }
     var parts = [], order = [], cur = '', i = 0;
@@ -61,9 +71,10 @@
   }
   function load(dict) {
     Object.keys(dict).forEach(function (en) {
-      if (en.indexOf('{0}') < 0) { exact[en] = dict[en]; return; }
+      if (en.indexOf('{0}') < 0) { exact[en] = dict[en]; portuguese[dict[en]] = true; return; }
       var h = holes(en);
       templates.push({ parts: h.parts, order: h.order, to: dict[en] });
+      ptTemplates.push(holes(dict[en]).parts);   // Slides: for the audit
     });
     // longer literal text first: the most specific template wins
     templates.sort(function (a, b) { return b.parts.join('').length - a.parts.join('').length; });

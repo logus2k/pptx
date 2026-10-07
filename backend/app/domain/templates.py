@@ -22,30 +22,96 @@ class TemplateError(Exception):
 
 
 class AdminTemplates:
-    """templates.json: {schema_version, templates: [{id, file, name: {pt, en}, description: {pt, en}, default}]}."""
+    """templates.json: {schema_version, templates: [{id, file, name: {pt, en}, description: {pt, en}, default, retired?}]}.
 
-    def __init__(self, folder: Path) -> None:
+    Read from `store` (DATA_DIR/templates: administrators manage it from the template screen, spec AD-4), seeded on the
+    first start from the configured folder (`folder`, mounted read-only); with no store, from the folder itself. A
+    retired template is not offered for new decks and stays for the decks made from it."""
+
+    def __init__(self, folder: Path, store: Path | None = None) -> None:
+        if store is not None:
+            if not (store / "templates.json").exists():
+                store.mkdir(parents=True, exist_ok=True)
+                listing = json.loads((folder / "templates.json").read_text(encoding="utf-8"))
+                for t in listing["templates"]:
+                    storage.copy_file(folder / t["file"], store / t["file"])
+                storage.write_bytes(store / "templates.json", json.dumps(listing, ensure_ascii=False, indent=1).encode())
+            folder = store
         self.folder = folder
         self.items: dict[str, dict] = {}
         self.data: dict[str, bytes] = {}
-        listing = json.loads((folder / "templates.json").read_text(encoding="utf-8"))
+        self._load()
+        log.info("administrator templates loaded", extra={"templateCount": len(self.items)})
+
+    def _load(self) -> None:
+        listing = json.loads((self.folder / "templates.json").read_text(encoding="utf-8"))
+        items, data = {}, {}
         for t in listing["templates"]:
-            raw = (folder / t["file"]).read_bytes()
+            raw = (self.folder / t["file"]).read_bytes()
             checked = files.check(raw, max_bytes=200 * 1024 * 1024)  # opens, no macros: or start-up fails
-            self.data[t["id"]] = checked.data
-            self.items[t["id"]] = {
+            data[t["id"]] = checked.data
+            items[t["id"]] = {
                 "kind": "admin",
                 "id": t["id"],
                 "name": t["name"],
                 "description": t.get("description", {}),
                 "default": bool(t.get("default")),
+                "retired": bool(t.get("retired")),
+                "file": t["file"],
                 "layouts": files.layouts(checked.data),
+                "missing_fonts": fonts.missing(files.fonts(checked.data)),
             }
-        defaults = [t for t in self.items.values() if t["default"]]
+        defaults = [t for t in items.values() if t["default"] and not t["retired"]]
         if len(defaults) != 1:
-            raise TemplateError(f"templates.json must mark exactly one template as the default ({len(defaults)} found)")
-        self.default_id = defaults[0]["id"]
-        log.info("administrator templates loaded", extra={"templateCount": len(self.items)})
+            raise TemplateError(f"templates.json must mark exactly one template in use as the default ({len(defaults)} found)")
+        self.items, self.data, self.default_id = items, data, defaults[0]["id"]
+
+    def _save(self, items: dict[str, dict]) -> None:
+        listing = {"schema_version": 1, "templates": [
+            {k: t[k] for k in ("id", "file", "name", "description", "default", "retired")} for t in items.values()
+        ]}  # fmt: skip
+        storage.write_bytes(self.folder / "templates.json", json.dumps(listing, ensure_ascii=False, indent=1).encode())
+        self._load()
+
+    def in_use(self) -> list[dict]:
+        return [t for t in self.items.values() if not t["retired"]]
+
+    def add(self, name: str, raw: bytes, description: str = "") -> dict:
+        """A new template from an uploaded .pptx/.potx (the upload checks: files.Rejected), in use, not the default."""
+        checked = files.check(raw, max_bytes=200 * 1024 * 1024)
+        if not files.layouts(checked.data):
+            raise files.Rejected("no_layouts", "This file has no slide layouts to use as a template.")
+        tid = storage.new_id()
+        file = f"{tid}.pptx"
+        storage.write_bytes(self.folder / file, checked.data)
+        items = dict(self.items)
+        items[tid] = {"id": tid, "file": file, "name": {"pt": name, "en": name},
+                      "description": {"pt": description, "en": description}, "default": False, "retired": False}  # fmt: skip
+        self._save(items)
+        return self.items[tid]
+
+    def change(self, tid: str, name: str | None = None, description: str | None = None, retired: bool | None = None,
+               default: bool | None = None) -> dict:  # fmt: skip
+        """Rename, retire (or bring back), make the default; the default is never retired (ValueError)."""
+        if tid not in self.items:
+            raise NotFound("template")
+        items = {k: dict(v) for k, v in self.items.items()}
+        t = items[tid]
+        if name is not None:
+            t["name"] = {"pt": name, "en": name}
+        if description is not None:
+            t["description"] = {"pt": description, "en": description}
+        if retired is not None:
+            if retired and t["default"]:
+                raise ValueError("the default template cannot be retired: make another the default first")
+            t["retired"] = retired
+        if default:
+            if t["retired"]:
+                raise ValueError("a retired template cannot be the default")
+            for other in items.values():
+                other["default"] = other["id"] == tid
+        self._save(items)
+        return self.items[tid]
 
 
 class ProjectAssets:
@@ -200,7 +266,7 @@ class Templates:
         self.assets = assets
 
     def listing(self, pid: str | None) -> list[dict]:
-        out = list(self.admin.items.values())
+        out = self.admin.in_use()  # a retired template is not offered (spec AD-4)
         if pid:
             out += [
                 {

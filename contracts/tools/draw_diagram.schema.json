@@ -2,7 +2,7 @@
  "$schema": "https://json-schema.org/draft/2020-12/schema",
  "$id": "tools/draw_diagram",
  "title": "draw_diagram",
- "description": "Draw a diagram from a description (a process, a flow, an organisation): its boxes and the arrows between them. The application lays it out in steps (by the arrows) and styles it like the deck's own diagrams; to change one afterwards, use duplicate_shape, connect_shapes and the text tools.",
+ "description": "Draw a diagram (a process, a flow, an organisation): boxes and arrows, laid out in steps and styled like the deck's diagrams.",
  "type": "object",
  "additionalProperties": false,
  "required": [
@@ -16,13 +16,13 @@
   },
   "slide_id": {
    "type": "integer",
-   "description": "The slide's number or ID (make one first with add_slide when needed)."
+   "description": "The slide's number or ID."
   },
   "nodes": {
    "type": "array",
    "minItems": 2,
    "maxItems": 20,
-   "description": "The boxes, numbered from 0 in this order.",
+   "description": "The boxes, numbered from 0.",
    "items": {
     "type": "object",
     "additionalProperties": false,
@@ -33,7 +33,7 @@
      "text": {
       "type": "string",
       "maxLength": 80,
-      "description": "Its words: a short label."
+      "description": "A short label."
      }
     }
    }
@@ -41,7 +41,7 @@
   "edges": {
    "type": "array",
    "maxItems": 40,
-   "description": "The arrows: from box n to box m.",
+   "description": "Arrows from box n to box m. Left out: each box to the next (a process).",
    "items": {
     "type": "object",
     "additionalProperties": false,
@@ -66,11 +66,11 @@
     "right",
     "down"
    ],
-   "description": "right: steps left to right (a flow); down: top to bottom (a hierarchy). Left out: right."
+   "description": "right: a flow; down: a hierarchy. Left out: right."
   },
   "like_shape_id": {
    "type": "integer",
-   "description": "A box on this slide to copy the look of. Left out: the deck's nearest diagram, else the theme."
+   "description": "A box on this slide to look like. Left out: the deck's nearest diagram."
   },
   "box": {
    "type": "object",
@@ -81,7 +81,7 @@
     "w",
     "h"
    ],
-   "description": "The area, in fractions of the slide. Left out: under the title.",
+   "description": "The area, fractions of the slide. Left out: under the title.",
    "properties": {
     "x": {
      "type": "number",

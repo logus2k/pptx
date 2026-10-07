@@ -1166,3 +1166,108 @@ def test_a_diagram_from_a_description_is_laid_out_in_steps_and_styled_like_the_d
     with pytest.raises(ops.OpError) as e:
         ops.apply(data, "draw_diagram", {"slide_id": sid, "nodes": nodes, "edges": [{"from": 0, "to": 9}]})
     assert e.value.code == "BAD_DIAGRAM"
+
+
+def test_a_chart_named_with_its_kind_is_unchanged_and_another_kind_is_drawn_anew_in_its_frame():
+    """The model sends edit_chart the chart whole, as add_chart takes it (measured: 2 runs in 2 named its kind, the
+    same): that kind changes nothing; another redraws it in the same frame, keeping its data, its title and the link to
+    its workbook (PowerPoint's Edit Data; measured: the new chart's XML had lost it)."""
+    simple = (DECKS / "simple.pptx").read_bytes()
+    data, made = ops.apply(simple, "add_slide", {"layout": "Title Only", "content": {"title": "Resultados"}})
+    sid = made["slides"][0]
+    cats, rows = ["2023", "2024", "2025"], [{"name": "Vendas", "values": [120, 150, 180]}]
+    whole = {"slide_id": sid, "kind": "column", "title": "Vendas", "categories": cats, "series": rows}
+    data, res = ops.apply(data, "add_chart", whole)
+    shid = res["shape_id"]
+    chart = lambda d: next(sh for sh in get(d, sid)["shapes"] if sh["shape_id"] == shid)["chart"]  # noqa: E731
+    rows[0]["values"][2] = 200
+    data, _ = ops.apply(data, "edit_chart", {**whole, "shape_id": shid})
+    now = [{"name": "Vendas", "values": [120.0, 150.0, 200.0]}]
+    assert chart(data) == {"kind": "column", "title": "Vendas", "categories": cats, "series": now}
+    data, _ = ops.apply(data, "edit_chart", {"slide_id": sid, "shape_id": shid, "kind": "bar"})
+    assert chart(data) == {"kind": "bar", "title": "Vendas", "categories": cats, "series": now}
+    data, _ = ops.apply(data, "edit_chart", {"slide_id": sid, "shape_id": shid, "kind": "line", "title": ""})
+    assert chart(data)["kind"] == "line" and chart(data)["title"] is None
+    z = zipfile.ZipFile(io.BytesIO(data))
+    part = next(n for n in z.namelist() if n.startswith("ppt/charts/chart") and n.endswith(".xml"))
+    assert b"<c:externalData" in z.read(part)  # still linked to its workbook
+    book = zipfile.ZipFile(io.BytesIO(z.read(next(n for n in z.namelist() if n.startswith("ppt/embeddings/")))))
+    sheet = book.read("xl/worksheets/sheet1.xml")
+    assert b"<v>200</v>" in sheet and b"<v>180</v>" not in sheet
+    with pytest.raises(ops.OpError) as e:  # a pie has one series
+        two = [*rows, {"name": "Custos", "values": [1, 2, 3]}]
+        ops.apply(data, "edit_chart", {"slide_id": sid, "shape_id": shid, "kind": "pie", "categories": cats, "series": two})
+    assert e.value.code == "BAD_CHART"
+
+
+def test_a_diagram_without_arrows_is_a_process_and_leaves_no_empty_text_box_under_it():
+    """Measured: "a diagram of the process: Pedido, Análise, Aprovação, Entrega" came with no edges, and four boxes
+    stood joined by nothing; and drawn on a title-and-content slide, its empty text box stayed under the diagram."""
+    simple = (DECKS / "simple.pptx").read_bytes()
+    data, made = ops.apply(simple, "add_slide", {"layout": "Title and Content", "content": {"title": "Processo"}})
+    sid = made["slides"][0]
+    nodes = [{"text": t} for t in ("Pedido", "Análise", "Aprovação", "Entrega")]
+    data, res = ops.apply(data, "draw_diagram", {"slide_id": sid, "nodes": nodes})
+    assert len(res["connector_ids"]) == 3
+    shapes = {sh["shape_id"]: sh for sh in get(data, sid)["shapes"]}
+    x = [shapes[i]["box"]["x"] for i in res["shape_ids"]]
+    assert x == sorted(x) and len(set(x)) == 4  # a step each, left to right
+    left = [s for s in shapes.values() if s.get("placeholder") and not any(p.get("runs") for p in s.get("paragraphs") or [])]
+    assert not left  # the layout's empty text box under the diagram went
+    data, res = ops.apply(data, "draw_diagram", {"slide_id": sid, "nodes": nodes[:2], "edges": []})
+    assert res["connector_ids"] == []  # no arrows, when that is what is asked
+    assert ops.blank_layout(read.open_deck((DECKS / "simple.pptx").read_bytes())).name == "Blank"
+    assert ops.blank_layout(read.open_deck((REPO / "templates" / "bancoctt.pptx").read_bytes())).name == "Descanso"
+
+
+def test_a_chart_over_a_slides_list_says_it_covers_it():
+    """Measured: on "Title and Content" with a point written, the chart was drawn over the list and covers said
+    nothing (a box over half the slide was taken for a background)."""
+    simple = (DECKS / "simple.pptx").read_bytes()
+    listed = {"layout": "Title and Content", "content": {"title": "Vendas", "points": ["Vendas por ano"]}}
+    data, made = ops.apply(simple, "add_slide", listed)
+    sid = made["slides"][0]
+    body = next(sh["shape_id"] for sh in get(data, sid)["shapes"] if (sh.get("placeholder") or {}).get("type") == "object")
+    chart = {"slide_id": sid, "kind": "column", "categories": ["2023", "2024"], "series": [{"name": "Vendas", "values": [1, 2]}]}
+    _, res = ops.apply(data, "add_chart", chart)
+    assert res["covers"] == [body]
+
+
+def test_a_new_slide_with_a_chart_or_a_diagram_has_it_under_its_title_in_place_of_its_list():
+    """Measured: for "a new slide with a diagram of the process", the model put the boxes in add_slide first (8 turns in
+    8); for a chart, it wrote a filler point and drew the chart over it (4 runs in 4). The figure is content: drawn where
+    the list would go, nothing left under it, a filler point left out and said."""
+    simple = (DECKS / "simple.pptx").read_bytes()
+    nodes = [{"text": t} for t in ("Pedido", "Análise", "Aprovação", "Entrega")]
+    content = {"title": "Processo de crédito", "diagram": {"nodes": nodes}}
+    data, res = ops.apply(simple, "add_slide", {"layout": "Blank", "content": content})
+    sid = res["slides"][0]
+    assert res["figure"] == "diagram" and len(res["connector_ids"]) == 3 and res["instead_of"] == "Blank"
+    shapes = get(data, sid)["shapes"]
+    title = next(sh for sh in shapes if (sh.get("placeholder") or {}).get("type") == "title")
+    assert title["paragraphs"][0]["runs"][0]["text"] == "Processo de crédito"
+    assert not [sh for sh in shapes if sh.get("placeholder") and not any(p.get("runs") for p in sh.get("paragraphs") or [])]
+    boxes = [sh for sh in shapes if sh["shape_id"] in res["shape_ids"]]
+    assert all(b["box"]["y"] >= title["box"]["y"] + title["box"]["h"] - 0.01 for b in boxes)  # under the title
+
+    chart = {"kind": "column", "categories": ["2023", "2024", "2025"], "series": [{"name": "Vendas", "values": [120, 150, 180]}]}
+    content = {"title": "Vendas anuais", "points": ["Vendas por ano"], "chart": chart}
+    data, res = ops.apply(simple, "add_slide", {"layout": "Title and Content", "content": content})
+    sid = res["slides"][0]
+    assert res["figure"] == "chart" and res["left_out"] == ["points (the chart takes their place)"] and "covers" not in res
+    shapes = get(data, sid)["shapes"]
+    made = next(sh for sh in shapes if sh["shape_id"] == res["shape_id"])
+    assert made["chart"]["categories"] == ["2023", "2024", "2025"] and made["chart"]["title"] is None
+    assert [sh["type"] for sh in shapes] == ["placeholder", "chart"]  # the title and the chart: nothing under it
+
+    ctt = (REPO / "templates" / "bancoctt.pptx").read_bytes()  # a layout with a chart place: the chart is put in it
+    data, res = ops.apply(ctt, "add_slide", {"layout": "4_Gráficos", "content": {"title": "Crédito", "chart": chart}})
+    graphic = next(x for x in read.open_deck(data).slides.get(res["slides"][0]).shapes if x.shape_id == res["shape_id"])
+    assert graphic.is_placeholder
+    shapes = get(data, res["slides"][0])["shapes"]
+    texts = [sh for sh in shapes if sh.get("placeholder") and "paragraphs" in sh]
+    empty = [sh for sh in texts if not any(p.get("runs") for p in sh["paragraphs"])]
+    assert not empty
+    # the chart sent whole to edit_chart, the slide's title as its own (measured): said once, by the slide
+    data, _ = ops.apply(data, "edit_chart", {"slide_id": res["slides"][0], "shape_id": res["shape_id"], "title": "crédito "})
+    assert next(sh for sh in get(data, res["slides"][0])["shapes"] if sh["shape_id"] == res["shape_id"])["chart"]["title"] is None

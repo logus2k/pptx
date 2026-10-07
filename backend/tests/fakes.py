@@ -45,6 +45,7 @@ class FakeModels:
     async def stream(self, model, preset, messages, tools, max_tokens=None):
         self.sent.append(messages)
         self.offered.append([d["function"]["name"] for d in tools or []])
+        self.definitions = list(tools or [])  # the last call's tools, as sent
         if preset == "slides_summariser":
             text = self.summaries.pop(0) if self.summaries else "Summary."
             yield {"choices": [{"index": 0, "delta": {"content": text}, "finish_reason": None}]}
@@ -65,6 +66,8 @@ class FakeModels:
             yield {"choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}]}
             return
         step = self.script.pop(0) if self.script else {"text": "(the script ran out)"}
+        if step.get("fail"):  # the model service failing mid-turn
+            raise ConnectionError(step["fail"])
         if step.get("text"):
             yield {"choices": [{"index": 0, "delta": {"content": step["text"]}, "finish_reason": None}]}
         for i, (name, args) in enumerate(step.get("tools", [])):

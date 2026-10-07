@@ -11,12 +11,14 @@ import logging
 import time
 import uuid
 
-from .. import search, storage
+from .. import audit, search, storage
 from ..domain.proposals import FINAL, Stale
+from ..domain.leases import Leased
 from ..storage import NotFound
 from . import context, llm, router
 from ..docengine import read
-from .tools import EDITING, WAITING, Executor, sources_of, ToolError, Turn, definitions, image_message, slide_name
+from .tools import (EDITING, WAITING, Executor, ToolError, Turn, definitions, image_message, slide_name, sources_of,
+                    without_figures)  # fmt: skip
 
 log = logging.getLogger("slides.agent")
 MAX_MODEL_CALLS, MAX_TOOL_CALLS, MAX_SECONDS = 16, 40, 180
@@ -42,6 +44,14 @@ FAILED_NUDGE = (
     "(A note from the application, not from the person.) Nothing has changed yet: your edits failed. If the error tells "
     "you what to do, call the tool again now, as your answer says; if it cannot be done, tell the person why."
 )
+# the tools left out first when the offered ones do not fit the window's fixed share: the rarely needed, then the
+# ones a request can do without (another tool or the person can do it), the core never
+EXPENDABLE = (
+    "kb_read_document", "search_project", "list_templates", "duplicate_deck", "change_template", "copy_slides",
+    "search_conversations", "render_slide", "kb_list_images", "generate_image", "set_alt_text", "connect_shapes",
+    "duplicate_shape", "move_resize_shape", "format_text", "fit_text", "edit_chart", "change_layout", "add_shape",
+    "draw_diagram", "add_slides", "duplicate_slide", "move_slide",
+)  # fmt: skip
 # tools that only read: a turn that called only these has changed nothing
 READS = {"get_slide", "get_deck_outline", "render_slide", "list_decks", "list_layouts", "list_templates", "kb_search",
          "kb_get", "kb_read_document", "kb_list_images", "search_project", "search_conversations", "draft_outline"}  # fmt: skip
@@ -241,6 +251,10 @@ class Agent:
             carried = conv.get("route")
             if carried:  # the turn goes on after an answer: the same request, with the edits it already made
                 t.intent, t.kind, t.done = carried["intent"], carried["kind"], list(carried["done"])
+                if t.kind == "unclear":  # the person answered the question: the request is clear now, its tools offered
+                    # (measured: kept "unclear", the turn offered ask_user alone after the answer, and the model asked
+                    # the same question again until the turn's limit: "Cria um slide", answered "Decide tu.", 13 times)
+                    t.kind = "change"
                 t.changes = t.kind == "change"
                 t.groups = set(carried["groups"]) if carried["groups"] is not None else None
                 t.focus = carried.get("focus")
@@ -266,20 +280,22 @@ class Agent:
             t.tool_defs = [
                 d for d in await asyncio.to_thread(self._offered, t) if routed is None or d["function"]["name"] in routed
             ]
+            if routed is not None and "add_chart" not in routed:  # no chart or diagram asked for: add_slide without them
+                t.tool_defs = [without_figures(d) if d["function"]["name"] == "add_slide" else d for d in t.tool_defs]
             if t.kind == "unclear":  # too vague to act on: asking is the only right step (measured: offered the core,
                 # the model asked in its reply text, which is no question the person can answer in the panel)
                 t.tool_defs = [d for d in t.tool_defs if d["function"]["name"] == "ask_user"] or t.tool_defs
             try:
                 room, answer_tokens = await asyncio.to_thread(context.budget, self.app.models, model, t.tool_defs)
             except context.ModelTooSmall:
-                if routed is not None:
-                    raise
-                # no route, and every tool together does not fit the window's fixed share (measured: 39 tools, 29.4%
-                # of 32 768): the groups most requests need, rather than a refused turn
-                fallback = router.tools_of(router.FALLBACK)
-                t.tool_defs = [d for d in t.tool_defs if d["function"]["name"] in fallback]
-                log.warning("every tool does not fit: the usual groups offered", extra={"toolCount": len(t.tool_defs)})
-                room, answer_tokens = await asyncio.to_thread(context.budget, self.app.models, model, t.tool_defs)
+                if routed is None:
+                    # no route, and every tool together does not fit the window's fixed share (measured: 39 tools,
+                    # 29.4% of 32 768): the groups most requests need, rather than a refused turn
+                    usual = router.FALLBACK | ({"knowledge"} if self._has_sources(t) else set())
+                    fallback = router.tools_of(usual)
+                    t.tool_defs = [d for d in t.tool_defs if d["function"]["name"] in fallback]
+                    log.warning("every tool does not fit: the usual groups offered", extra={"toolCount": len(t.tool_defs)})
+                room, answer_tokens = await self._fitted_budget(t, model)
             t.result_chars = int(room * 0.15 * 3)  # a tool result: a sixth of the room, at ~3 characters a token
             started, model_calls, tool_calls, failed_nudged, overflow_nudged = time.monotonic(), 0, 0, False, False
             undone_nudged, called = False, set()  # the tools called this turn
@@ -406,6 +422,9 @@ class Agent:
         except Exception as e:
             status = "failed"
             log.error("a turn failed", exc_info=e)
+            # spec AD-5: the usage screen counts model-service errors from the audit log (the error's type only)
+            failure = {"pid": pid, "cid": cid, "error": type(e).__name__}
+            await asyncio.to_thread(audit.record, self.app.layout.audit, email, "turn failed", failure)
             if t.proposal is not None:
                 t.proposal["status"] = "failed"
                 self.app.proposals.write(pid, t.proposal)
@@ -727,6 +746,21 @@ class Agent:
         log.info("routed", extra={"groups": ",".join(sorted(groups)) if groups is not None else "all"})
         return router.tools_of(groups)
 
+    async def _fitted_budget(self, t: Turn, model: dict) -> tuple[int, int]:
+        """The context budget with the offered tools trimmed, the least needed first, until they fit the window's fixed
+        share (measured: a request needing slides, a table, a picture and the knowledge base was offered tools
+        taking 34.1% of 32 768 with the prompt, and the turn was refused)."""
+        while True:
+            try:
+                return await asyncio.to_thread(context.budget, self.app.models, model, t.tool_defs)
+            except context.ModelTooSmall:
+                names = [d["function"]["name"] for d in t.tool_defs]
+                drop = next((n for n in EXPENDABLE if n in names), None)
+                if drop is None:
+                    raise
+                t.tool_defs = [d for d in t.tool_defs if d["function"]["name"] != drop]
+                log.warning("the tools do not fit: one left out", extra={"toolCount": len(t.tool_defs)})
+
     def _declined(self, t: Turn) -> bool:
         """Did the person just say no to a plan or the instructions (their last answer)?"""
         for m in reversed(self.app.conversations.messages(t.pid, t.cid)):
@@ -921,6 +955,8 @@ class Agent:
         decision = args["decision"]
         if decision in ("accept_all", "reject_all"):
             done = await self.decide(t.pid, t.cid, p["id"], t.email, decision == "accept_all")
+            await asyncio.to_thread(audit.record, self.app.layout.audit, t.email, "assistant decide_changes",
+                                    {"pid": t.pid, "cid": t.cid, "prid": p["id"], "status": done["status"]})  # fmt: skip
             return {"ok": True, "status": done["status"]}
         shown = self.describe(t.pid, p)["decks"]
         named = {int(n) for n in args.get("slides") or []}
@@ -954,6 +990,12 @@ class Agent:
             self.app.proposals.drop_drafts(pid, p)
             await self.emit("proposal_updated", self.describe(pid, p) | {"status": "rejected"}, cid)
             return p
+        leases = getattr(self.app.decks, "leases", None)
+        for did in p["decks"] if leases is not None else []:  # every deck free before any is published (spec PJ-13)
+            try:
+                leases.check(did, email)
+            except Leased as e:
+                raise ValueError(f"the deck is being edited by {e.holder}: accept when they have closed it") from None
         t = Turn(pid=pid, cid=cid, email=email, conversation=self.app.conversations.get(pid, cid, email))
         partial = False
         try:

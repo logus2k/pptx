@@ -115,6 +115,7 @@ data = Path(tempfile.mkdtemp(prefix="slides-e2e-"))
 cfg = json.loads((ROOT / "config" / "config.json").read_text())
 cfg["templates_dir"] = str(ROOT / "templates")
 cfg["identity"]["profile"] = False
+cfg["administrators"] = ["admin@example.com"]  # the administration's checks (m8admin.mjs); never the real addresses
 (data / "config.json").write_text(json.dumps(cfg))
 settings = config.load(
     {

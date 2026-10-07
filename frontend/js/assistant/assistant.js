@@ -88,6 +88,11 @@ function showMessage(m) {
     const el = bubble('me');
     el.classList.add('user-text');
     el.textContent = m.content;
+    // a shared project's conversation shows who wrote each message (spec PJ-13): another member's, by address
+    const author = (m.author || '').toLowerCase();
+    if (author && author !== (window.__user?.email || '').toLowerCase()) {
+      el.prepend(Object.assign(document.createElement('div'), { className: 'chat-author notranslate', textContent: author }));
+    }
     if (m.attachments?.length) el.append(Object.assign(document.createElement('div'), { className: 'chat-attach', textContent: `🖼 ${m.attachments.length}` }));
   } else if (m.role === 'assistant' && (m.content || '').trim()) {
     const el = bubble('bot', renderMarkdown(m.content));

@@ -65,6 +65,11 @@ def _atomic_write(path: Path, data: bytes) -> None:
         raise
 
 
+def validate(data, schema: str) -> None:
+    """Raise jsonschema's ValidationError when `data` is not a valid `schema` record (an archive's files: archive.py)."""
+    jsonschema.validate(data, _schema(schema))
+
+
 def write_json(path: Path, data: dict, schema: str) -> None:
     jsonschema.validate(data, _schema(schema))
     _atomic_write(path, json.dumps(data, ensure_ascii=False, indent=1).encode("utf-8"))

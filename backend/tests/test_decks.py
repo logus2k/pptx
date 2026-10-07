@@ -296,3 +296,64 @@ def test_manual_edits_make_versions_undo_takes_back_and_stale_ones_are_refused(s
     assert second in order()
     audit = (tmp_path / "data" / "audit.jsonl").read_text()
     assert audit.count('"edited a deck by hand"') == 3 and "Título novo" not in audit
+
+
+def test_a_project_is_shared_and_a_deck_open_in_the_editor_is_held_for_whoever_opened_it(server, tmp_path):
+    """Spec PJ-13: owners share a project as editor or viewer; while a member has a deck open (its lease), the others
+    can view it and not change it - by hand, by undo, nor by accepting the assistant's changes; released, they can."""
+    EVA = "eva@example.com"
+    p = new_project(server)
+    pid = p["id"]
+    deck = upload(server, pid, "simple.pptx").json()
+    base = f"{server}/api/projects/{pid}/decks/{deck['id']}"
+    members = f"{server}/api/projects/{pid}/members"
+    assert requests.get(f"{server}/api/projects/{pid}", headers=h(RUI), timeout=10).status_code == 404  # not yet
+    r = requests.put(members, json={"email": " Rui@Example.com ", "role": "editor"}, headers=h(ANA), timeout=10)
+    assert r.status_code == 200 and {"email": RUI, "role": "editor"} in r.json()["members"]
+    assert requests.put(members, json={"email": EVA, "role": "viewer"}, headers=h(ANA), timeout=10).status_code == 200
+    assert requests.put(members, json={"email": EVA, "role": "owner"}, headers=h(RUI), timeout=10).status_code == 404  # an editor
+    assert requests.put(members, json={"email": "rui.example", "role": "editor"}, headers=h(ANA), timeout=10).status_code == 400
+    last_owner = requests.put(members, json={"email": ANA, "role": "editor"}, headers=h(ANA), timeout=10)
+    assert last_owner.status_code == 400
+    listed = requests.get(f"{server}/api/projects", headers=h(RUI), timeout=10).json()["projects"]
+    assert [(x["id"], x["role"]) for x in listed] == [(pid, "editor")]
+    assert requests.post(f"{base}/lease", headers=h(EVA), timeout=10).status_code == 404  # a viewer does not edit
+
+    slides = requests.get(base, headers=h(ANA), timeout=30).json()["slides"]
+    first = slides[0]["id"]
+    shapes = requests.get(f"{base}/slides/{first}", headers=h(ANA), timeout=30).json()["shapes"]
+    title = next(s for s in shapes if s.get("paragraphs"))
+    text = {"op": "text", "slide_id": first, "shape_id": title["shape_id"], "paragraphs": ["Da Ana"]}
+    assert requests.post(f"{base}/lease", headers=h(ANA), timeout=10).json()["holder"] == ANA
+    held = requests.post(f"{base}/lease", headers=h(RUI), timeout=10)
+    assert held.status_code == 409
+    assert held.json()["detail"] == {"code": "leased", "holder": ANA, "message": f"The deck is being edited by {ANA}."}
+    assert requests.get(base, headers=h(RUI), timeout=30).json()["lease"]["holder"] == ANA  # shown to the others
+    refused = requests.post(f"{base}/edits", json={"base_version": 1, **text}, headers=h(RUI), timeout=60)
+    assert refused.status_code == 409 and refused.json()["detail"]["code"] == "leased"
+    assert requests.post(f"{base}/edits", json={"base_version": 1, **text}, headers=h(ANA), timeout=60).status_code == 200
+    assert requests.post(f"{base}/undo", headers=h(RUI), timeout=30).status_code == 409
+    assert requests.patch(base, json={"title": "Outro"}, headers=h(RUI), timeout=10).status_code == 409
+    assert requests.delete(f"{base}/lease", headers=h(RUI), timeout=10).status_code == 204  # not theirs: nothing happens
+    assert requests.get(base, headers=h(RUI), timeout=30).json()["lease"]["holder"] == ANA
+    assert requests.delete(f"{base}/lease", headers=h(ANA), timeout=10).status_code == 204
+    assert requests.get(base, headers=h(RUI), timeout=30).json()["lease"] is None
+    assert requests.post(f"{base}/undo", headers=h(RUI), timeout=30).status_code == 200  # free: the editor can
+    assert requests.delete(f"{members}/{RUI}", headers=h(RUI), timeout=10).status_code == 200  # leaving
+    assert requests.get(f"{server}/api/projects/{pid}", headers=h(RUI), timeout=10).status_code == 404
+    audit = (tmp_path / "data" / "audit.jsonl").read_text()
+    assert audit.count('"shared a project"') == 2 and audit.count('"removed a project member"') == 1 and "/lease" not in audit
+
+
+def test_the_lease_expires_when_its_holder_goes_idle():
+    import time
+
+    from app.domain.leases import Leased, Leases
+
+    leases = Leases(minutes=0.01)  # 0.6 s
+    leases.take("d1", "ana@example.com")
+    with pytest.raises(Leased):
+        leases.check("d1", "rui@example.com")
+    time.sleep(0.7)
+    leases.check("d1", "rui@example.com")  # idle past its time: free
+    assert leases.take("d1", "rui@example.com")["holder"] == "rui@example.com"

@@ -23,6 +23,9 @@ function pickFile(accept) {
   });
 }
 
+const ROLE_TEXT = { owner: 'Owner', editor: 'Editor', viewer: 'Viewer' };
+const me = () => (window.__user?.email || '').toLowerCase();
+
 function nameOf(t) { return t.name?.[window.uiLanguage()] || t.name?.en || t.id; }
 
 export function buildProject(view, { pid, openDeck, onChanged, onDeleted }) {
@@ -56,6 +59,7 @@ export function buildProject(view, { pid, openDeck, onChanged, onDeleted }) {
       <p class="lead user-text">${project.description || ''}</p>
       <div class="row" style="margin-bottom: var(--space-8)">
         <button type="button" data-action="rename">Rename</button>
+        <a class="button-link" href="api/projects/${pid}/export" download>Export project</a>
         ${project.role === 'owner' ? html`<button type="button" data-action="delete">Delete project</button>` : ''}
       </div>
       <section>
@@ -71,6 +75,19 @@ export function buildProject(view, { pid, openDeck, onChanged, onDeleted }) {
             <span class="deck-caption">${d.slide_count === 1 ? '1 slide' : `${d.slide_count} slides`} · ${when(d.updated_at)}</span>
           </button>`)}</div>`
         : html`<p class="muted">No decks yet: start from a template, or upload a presentation.</p>`}
+      </section>
+      <section>
+        <h2 class="section-title">Members</h2>
+        <p class="muted">Editors work on the decks, conversations, instructions and memory; viewers see them. A deck open in someone's editor is theirs to change until they close it.</p>
+        <ul class="list members-list">${project.members.map((m) => html`
+          <li><div class="list-text"><div class="list-title notranslate">${m.email}</div>
+            <div class="list-caption"><span>${ROLE_TEXT[m.role]}</span>${m.email === me() ? html`<span> · you</span>` : ''}</div></div>
+            <div class="row">
+              ${project.role === 'owner' && m.email !== me() ? html`<button type="button" data-action="member-role" data-email="${m.email}">Change role</button>
+                <button type="button" data-action="member-remove" data-email="${m.email}">Remove</button>` : ''}
+              ${m.email === me() ? html`<button type="button" data-action="member-leave" data-email="${m.email}">Leave</button>` : ''}
+            </div></li>`)}</ul>
+        ${project.role === 'owner' ? html`<div class="row" style="margin-top: var(--space-2)"><button type="button" class="secondary" data-action="member-add">Add a member</button></div>` : ''}
       </section>
       <section>
         <h2 class="section-title">Project instructions</h2>
@@ -128,6 +145,11 @@ export function buildProject(view, { pid, openDeck, onChanged, onDeleted }) {
       }).catch(() => {});
     }
     for (const card of page.querySelectorAll('.deck-card')) card.addEventListener('click', () => openDeck(card.dataset.id));
+    page.querySelector('[data-action="member-add"]')?.addEventListener('click', () => member());
+    for (const b of page.querySelectorAll('[data-action="member-role"]')) b.addEventListener('click', () => member(b.dataset.email));
+    for (const b of page.querySelectorAll('[data-action="member-remove"], [data-action="member-leave"]')) {
+      b.addEventListener('click', () => removeMember(b.dataset.email));
+    }
     page.querySelector('[data-action="rename"]').addEventListener('click', rename);
     page.querySelector('[data-action="delete"]')?.addEventListener('click', remove);
     page.querySelector('[data-action="new-deck"]').addEventListener('click', newDeck);
@@ -155,6 +177,34 @@ export function buildProject(view, { pid, openDeck, onChanged, onDeleted }) {
   }
 
   const failed = (title) => (e) => modalAlert(e.message, { title });
+
+  // spec PJ-13, as Cortex's project members (static/js/shell/project.js): owners add, change and remove; anyone leaves
+  async function member(email = null) {
+    const current = project.members.find((m) => m.email === email);
+    const values = await modalForm({
+      title: email ? 'Change role' : 'Add a member', confirmText: email ? 'Save' : 'Add',
+      fields: [
+        ...(email ? [] : [{ name: 'email', label: 'Address', placeholder: 'name@bancoctt.pt' }]),
+        { name: 'role', label: 'Role', value: current?.role || 'editor', options: [['editor', ROLE_TEXT.editor], ['viewer', ROLE_TEXT.viewer], ['owner', ROLE_TEXT.owner]] },
+      ],
+      validate: (v) => (email || (v.email || '').includes('@') ? null : 'Give the person\'s address, name@domain.'),
+    });
+    if (!values) return;
+    try {
+      await api(`projects/${pid}/members`, { method: 'PUT', json: { email: email || values.email, role: values.role } });
+      await load();
+    } catch (e) { failed(email ? 'Change role' : 'Add a member')(e); }
+  }
+
+  async function removeMember(email) {
+    const leaving = email === me();
+    if (!(await modalConfirm(leaving ? 'You will no longer see this project.' : 'They will no longer see this project.',
+      { title: leaving ? 'Leave the project' : 'Remove the member', confirmText: leaving ? 'Leave' : 'Remove', danger: true }))) return;
+    try {
+      await api(`projects/${pid}/members/${encodeURIComponent(email)}`, { method: 'DELETE' });
+      if (leaving) onDeleted?.(); else await load();
+    } catch (e) { failed(leaving ? 'Leave the project' : 'Remove the member')(e); }
+  }
 
   async function rename() {
     const v = await modalForm({ title: 'Rename project', confirmText: 'Save',

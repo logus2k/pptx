@@ -29,7 +29,7 @@ export async function refreshProjects() {
   setHtml(listEl, html`<ul class="list" role="listbox" aria-label="Projects">${projects.map((p) => html`
     <li class="clickable${p.id === current ? ' selected' : ''}" data-id="${p.id}" tabindex="0" role="option" aria-selected="${p.id === current ? 'true' : 'false'}">
       <div class="list-text"><div class="list-title user-text">${p.name}</div>
-      <div class="list-caption">${when(p.updated_at)}</div></div>
+      <div class="list-caption notranslate">${when(p.updated_at)}</div></div>
     </li>`)}</ul>`);
   for (const li of listEl.querySelectorAll('li[data-id]')) {
     const open = () => onOpen(li.dataset.id);
@@ -60,14 +60,32 @@ export async function newProject() {
   return project;
 }
 
+// a project's archive (spec PJ-14), exported from its page, imported here as a new project of the person's
+export async function importProject() {
+  const file = await new Promise((resolve) => {
+    const input = Object.assign(document.createElement('input'), { type: 'file', accept: '.zip,application/zip' });
+    input.addEventListener('change', () => resolve(input.files[0] || null));
+    input.click();
+  });
+  if (!file) return null;
+  const form = new FormData();
+  form.append('file', file);
+  const project = await api('projects/import', { method: 'POST', form });
+  await refreshProjects();
+  onOpen(project.id);
+  return project;
+}
+
 export function buildProjectsView(element, { open }) {
   onOpen = open;
   setHtml(element, html`
     <div class="stack" style="max-width: none; margin-bottom: var(--space-4)">
       <button type="button" class="primary" data-action="new">New project</button>
+      <button type="button" class="secondary" data-action="import">Import a project</button>
     </div>
     <div class="projects-list"></div>`);
   listEl = element.querySelector('.projects-list');
   element.querySelector('[data-action="new"]').addEventListener('click', () => newProject().catch((e) => modalAlert(e.message, { title: 'New project' })));
+  element.querySelector('[data-action="import"]').addEventListener('click', () => importProject().catch((e) => modalAlert(e.message, { title: 'Import a project' })));
   return refreshProjects();
 }

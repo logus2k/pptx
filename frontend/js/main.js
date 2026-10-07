@@ -8,6 +8,7 @@ import { buildDesignSystem } from './views/design-system.js';
 import { buildProjectsView, markCurrent, newProject, refreshProjects } from './views/projects.js';
 import { buildProject } from './views/project.js';
 import { buildDeck } from './views/deck.js';
+import { buildAdminTemplates, buildUsage, buildAuditLog } from './views/admin.js';
 import * as store from './core/store.js';
 import { showAssistant, newConversation } from './assistant/assistant.js';
 
@@ -89,13 +90,27 @@ function openDeck(pid, did) {
     title: window.cortexT('Deck'),
     named: true,
     build: (view) => deckViews.set(did, buildDeck(view, { pid, did, onTitle: (t) => setTitle(key, t), onChanged: () => projectViews.get(pid)?.reload() })),
-    onClose: () => { deckProject.delete(did); deckViews.delete(did); if (store.get('deck') === did) { store.set('deck', null); store.set('selection', null); } },
+    onClose: () => { deckViews.get(did)?.release?.(); deckProject.delete(did); deckViews.delete(did); if (store.get('deck') === did) { store.set('deck', null); store.set('selection', null); } },
   });
   activate(key);
 }
 
+// administration (spec AD-4..AD-6): a tab each, in the side menu for administrators only (as Cortex's admin areas)
+const ADMIN = {
+  templates: { title: 'Templates', build: buildAdminTemplates },
+  usage: { title: 'Usage', build: buildUsage },
+  audit: { title: 'Audit log', build: buildAuditLog },
+};
+function openAdmin(area) {
+  const a = ADMIN[area];
+  if (!a) { openHome(); return; }
+  openTab(`admin:${area}`, { title: a.title, build: (view) => a.build(view) });
+  activate(`admin:${area}`);
+}
+
 function render() {
   const parts = route().split('/');
+  if (parts[0] === 'admin') { openAdmin(parts[1]); return; }
   if (parts[0] === 'projects' && parts[1]) {
     if (!isOpen(`project:${parts[1]}`)) openProject(parts[1]);
     if (parts[2] === 'decks' && parts[3]) openDeck(parts[1], parts[3]);
@@ -110,6 +125,7 @@ document.addEventListener('main-tab-activated', (e) => {
   const key = e.detail.key;
   let to = null;
   if (key === 'home') to = '';
+  else if (key.startsWith('admin:')) to = `admin/${key.slice(6)}`;
   else if (key.startsWith('project:')) to = `projects/${key.slice(8)}`;
   else if (key.startsWith('deck:') && deckProject.has(key.slice(5))) {
     to = `projects/${deckProject.get(key.slice(5))}/decks/${key.slice(5)}`;
@@ -149,5 +165,13 @@ document.addEventListener('sa:review', (e) => {
 document.addEventListener('sa:project-changed', () => { const pid = store.get('project'); if (pid) projectViews.get(pid)?.reload(); });
 // a deck the assistant created: the project's home lists it
 document.addEventListener('sa:assistant-reply', () => { const pid = store.get('project'); if (pid) projectViews.get(pid)?.reload(); });
+try {
+  const me = await (await fetch('api/me')).json();
+  if (me.is_admin) {
+    for (const [area, label] of [['templates', 'Templates'], ['usage', 'Usage'], ['audit', 'Audit log']]) {
+      window.sideMenu.addAction(`admin-${area}`, { section: 'Administration', label, icon: ICONS[`admin-${area}`], action: () => navigate(`admin/${area}`) });
+    }
+  }
+} catch { /* not known: no administration items */ }
 render();
 if (!route()) window.sideMenu.show('projects');            // the home opens with the person's projects beside it

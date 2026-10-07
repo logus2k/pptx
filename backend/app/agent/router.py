@@ -16,12 +16,11 @@ import json
 GROUPS: dict[str, list[str]] = {
     "core": ["ask_user", "propose_plan", "get_slide", "get_deck_outline"],
     "text": ["update_text", "edit_paragraphs", "format_text", "fit_text", "fill_slide"],
-    "table": ["edit_table", "add_chart", "edit_chart"],
+    "table": ["edit_table", "add_chart", "edit_chart", "draw_diagram"],
     "notes": ["set_notes"],
     "images": ["insert_image", "replace_image", "set_alt_text", "render_slide", "kb_list_images", "generate_image"],
     "structure": ["add_slide", "duplicate_slide", "delete_slide", "move_slide", "change_layout", "add_shape",
-                  "move_resize_shape", "delete_shape", "duplicate_shape", "connect_shapes", "add_slides",
-                  "draw_diagram"],
+                  "move_resize_shape", "delete_shape", "duplicate_shape", "connect_shapes", "add_slides"],
     "decks": ["create_deck", "duplicate_deck", "copy_slides", "change_template", "list_templates"],
     "knowledge": ["kb_search", "kb_read_document", "search_project"],
     "memory": ["remember", "search_conversations", "update_instructions"],
@@ -36,8 +35,9 @@ DESCRIPTIONS = {
     "text": "Write, rewrite, shorten, translate, correct or format the text already on a slide: a title, a subtitle, a "
     "bullet or a list of bullets, a column, a text box; change a word, a number, a date, a name; make text bigger, "
     "bold or another colour.",
-    "table": "Tables and charts: change a table's cell, add or remove a row or a column, correct a figure in a table; "
-    "make a chart (bar, column, line, pie) from figures, or change a chart's data or title.",
+    "table": "Change a table on a slide: a cell's value, add or remove a row or a column, correct a figure in a table. "
+    "Make or change a chart (bar, column, line, pie) from figures; draw a diagram of a process, a flow or an "
+    "organisation.",
     "notes": "Write, change or add to the speaker notes of a slide; cite a source in the notes.",
     "images": "Pictures: insert, replace or remove an image or photo, put a picture from a document on a slide, write "
     "or fix the alt text of an image, look at what an image shows.",
@@ -119,6 +119,7 @@ def prompt(request: str, deck: str, count: int = 0) -> str:
         '- A slide named by its title or subject ("the agenda", "the thank-you slide") to delete, move or duplicate '
         "is the whole slide: say slide N in the intent; where is the slide number alone.\n"
         "- A value that is in a table (see the deck) is table.\n"
+        "- A new chart or diagram is table.\n"
         "- Facts the request says come from documents, the knowledge base or policies need knowledge; content "
         "written from it onto slides also needs text or structure, and notes for the source.\n"
         '- "Here" and "this" mean what the person has selected.\n'

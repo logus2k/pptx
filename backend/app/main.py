@@ -26,6 +26,7 @@ from .domain.memory import Memory
 from .domain.projects import Projects
 from .domain.proposals import Proposals
 from .domain.templates import AdminTemplates, ProjectAssets, Templates
+from .domain.leases import Leases
 from .imagegen import ImageGenerator
 from .kb import KnowledgeBase
 from .search import Reranker
@@ -73,9 +74,11 @@ class Services:
         self.layout = Layout(settings.data_dir)
         self.projects = Projects(self.layout)
         self.assets = ProjectAssets(self.layout)
-        self.templates = Templates(AdminTemplates(settings.templates_dir), self.assets)
+        # spec AD-4: managed from the template screen in DATA_DIR/templates, seeded from the configured folder
+        self.templates = Templates(AdminTemplates(settings.templates_dir, settings.data_dir / "templates"), self.assets)
         self.renderer = api_routes.Renderer(self.layout)
-        self.decks = Decks(self.layout, self.projects, self.templates)
+        minutes = float((settings.file.get("limits") or {}).get("lease_idle_minutes", 10))  # spec PJ-13: 10 by default
+        self.decks = Decks(self.layout, self.projects, self.templates, Leases(minutes))
         self.conversations = Conversations(self.layout, self.projects)
         self.proposals = Proposals(self.layout)
         services = settings.file.get("services", {})
@@ -345,7 +348,7 @@ def create_app(
 
         async def run():
             p = await agent.decide(pid, cid, str(d.get("proposal_id") or ""), who(sid), bool(d.get("accept")), d.get("slides"))
-            recorded(sid, "proposal_decision", {"pid": pid, "cid": cid, "prid": p["id"]})
+            recorded(sid, "proposal_decision", {"pid": pid, "cid": cid, "prid": p["id"], "status": p["status"]})
             return {"status": p["status"]}
 
         return await guarded(run)

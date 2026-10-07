@@ -45,6 +45,43 @@ class Projects:
             raise NotFound("project")
         return project
 
+    async def set_member(self, pid: str, actor: str, email: str, role: str) -> dict:
+        """Add a member or change their role (spec PJ-13): owners only; the last owner stays an owner."""
+        email = " ".join(email.split()).lower()
+        if role not in ("owner", "editor", "viewer"):
+            raise ValueError("a role is owner, editor or viewer")
+        if "@" not in email or " " in email or len(email) > 254:
+            raise ValueError("an address is name@domain")
+        async with storage.lock(pid):
+            project = self.get(pid, actor, roles=("owner",))
+            owners = [m for m in project["members"] if m["role"] == "owner"]
+            if role != "owner" and len(owners) == 1 and owners[0]["email"] == email:
+                raise ValueError("the project's last owner stays an owner: make another member owner first")
+            for m in project["members"]:
+                if m["email"] == email:
+                    m["role"] = role
+                    break
+            else:
+                project["members"].append({"email": email, "role": role})
+            project["updated_at"] = storage.now()
+            storage.write_json(self._path(pid), project, "project")
+            return project
+
+    async def remove_member(self, pid: str, actor: str, email: str) -> dict:
+        """Remove a member (owners), or leave the project (anyone); the last owner cannot leave."""
+        email = " ".join(email.split()).lower()
+        async with storage.lock(pid):
+            project = self.get(pid, actor)
+            if email != actor and _role(project, actor) != "owner":
+                raise NotFound("project")  # not the person's to do: as for what they may not see
+            owners = [m for m in project["members"] if m["role"] == "owner"]
+            if len(owners) == 1 and owners[0]["email"] == email:
+                raise ValueError("the project's last owner cannot leave: make another member owner first")
+            project["members"] = [m for m in project["members"] if m["email"] != email]
+            project["updated_at"] = storage.now()
+            storage.write_json(self._path(pid), project, "project")
+            return project
+
     def list(self, email: str) -> list[dict]:
         out = []
         if not self.layout.projects.exists():

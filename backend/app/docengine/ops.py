@@ -530,8 +530,25 @@ def add_slide(
     content: dict | None = None,
     deck_id=None,
 ) -> list[int]:
+    from . import layouts
+
     lay = _layout(prs, layout)
     instead = None
+    # a chart or a diagram as the slide's content: drawn where its list would go, under its title (measured: asked for
+    # "a new slide with a diagram of the process", the model put the boxes in add_slide first, 8 turns in 8; for a
+    # chart it wrote a filler point and drew the chart over it, 4 runs in 4)
+    kind = next((k for k in ("chart", "diagram") if content and content.get(k)), None)
+    figure, dropped = (content or {}).get(kind), []
+    if kind:
+        content = {k: v for k, v in content.items() if k not in ("chart", "diagram")}
+        if content.get("points"):
+            content.pop("points")
+            dropped.append(f"points (the {kind} takes their place)")
+        heading = layouts.slots(lay, prs.slide_width, prs.slide_height)["heading"]
+        if content.get("title") and not placeholders and heading is None:
+            better = _layout_for_content(prs, {"title": content["title"]})  # a heading for its title (it chose "Blank")
+            if better.name != lay.name:
+                lay, instead = better, lay.name
     more_than_a_title = content and (content.get("subtitle") or content.get("points"))  # a title alone: a chart slide's
     if more_than_a_title and not placeholders and _needs_other_content(prs, lay):
         # text alone on a layout made for a table, a chart or a diagram, left empty: the layout the text fits (measured:
@@ -543,11 +560,40 @@ def add_slide(
     _move_to(prs, s, _place(prs, s, position, after_slide_id, before_slide_id, default=len(prs.slides) - 1))
     for spec in placeholders or []:
         _fill_placeholder(s, spec)
-    left_out = _place_content(prs, s, content) if content else []
-    if left_out or instead:
+    left_out = (_place_content(prs, s, content) if content else []) + dropped
+    drawn = _draw_figure(prs, s, kind, figure) if kind else {}
+    if left_out or instead or drawn:
         return {"slides": [s.slide_id], **({"left_out": left_out} if left_out else {}),
-                **({"layout": lay.name, "instead_of": instead} if instead else {})}  # fmt: skip
+                **({"layout": lay.name, "instead_of": instead} if instead else {}), **drawn}  # fmt: skip
     return [s.slide_id]
+
+
+def _draw_figure(prs, s, kind: str, figure: dict) -> dict:
+    """A new slide's chart or diagram, in the place its layout keeps for its text (the largest text placeholder left
+    empty, which goes), or a chart in the layout's chart place; else under the title."""
+    holders = [ph for ph in s.placeholders if ph.has_text_frame and not ph.text_frame.text.strip()
+               and ph.placeholder_format.type is not None
+               and ph.placeholder_format.type.name in ("BODY", "OBJECT")]  # fmt: skip
+    kinds = {ph.placeholder_format.type.name for ph in s.placeholders if ph.placeholder_format.type is not None}
+    chart_place = "CHART" in kinds
+    box = None
+    if holders and not (kind == "chart" and chart_place):
+        big = max(holders, key=lambda ph: ph.width * ph.height)
+        W, H = prs.slide_width, prs.slide_height
+        box = {"x": big.left / W, "y": big.top / H, "w": big.width / W, "h": big.height / H}
+    if kind == "chart":
+        got = add_chart(prs, s.slide_id, figure["kind"], figure["categories"], figure["series"],
+                        number_format=figure.get("number_format"), box=box)  # fmt: skip
+        out = {"figure": "chart", "shape_id": got["shape_id"], **({"covers": got["covers"]} if got.get("covers") else {})}
+    else:
+        got = draw_diagram(prs, s.slide_id, figure["nodes"], figure.get("edges"), figure.get("direction", "right"), box=box)
+        out = {"figure": "diagram", "shape_ids": got["shape_ids"], "connector_ids": got["connector_ids"],
+               "styled_from": got["styled_from"]}  # fmt: skip
+    for ph in list(s.placeholders):  # a new slide: a text place still empty would show its prompt (measured: the
+        # text box kept for the list, beside a chart put in the layout's chart place)
+        if ph.has_text_frame and not ph.text_frame.text.strip():
+            ph._element.getparent().remove(ph._element)
+    return out
 
 
 def _needs_other_content(prs, lay) -> bool:
@@ -1107,11 +1153,16 @@ def _top_level(slide, sh, what: str) -> None:
 
 def _boxes(prs, slide, but: set[int]) -> list[tuple[int, int, int, int, int]]:
     """The slide's own shapes as (id, x, y, w, h), backgrounds and connectors aside (a shape over half the slide is
-    behind the diagram; a connector's box is far larger than its line)."""
+    behind the diagram, unless it is a text placeholder with text: a slide's list is content, however large its box -
+    measured: a chart drawn over a bullet in "Title and Content" was not reported; a connector's box is far larger than
+    its line)."""
     area = prs.slide_width * prs.slide_height
     out = []
     for sh in slide.shapes:
-        if sh.shape_id in but or sh.left is None or sh.width is None or sh.width * sh.height > area / 2:
+        if sh.shape_id in but or sh.left is None or sh.width is None:
+            continue
+        text = sh.is_placeholder and sh.has_text_frame and sh.text_frame.text.strip()
+        if sh.width * sh.height > area / 2 and not text:
             continue
         if sh._element.tag == qn("p:cxnSp"):
             continue
@@ -1425,7 +1476,9 @@ def draw_diagram(
     s = get_slide(prs, slide_id)
     if not 1 < len(nodes) <= 20:
         raise OpError("BAD_DIAGRAM", "A diagram has 2 to 20 boxes.", "")
-    edges = edges or []
+    if edges is None:  # left out: a process, each box to the next (measured: "a diagram of the process: A, B, C, D" came
+        # with no arrows, and four boxes stood stacked in one column, joined by nothing)
+        edges = [{"from": i, "to": i + 1} for i in range(len(nodes) - 1)]
     pairs = []
     for e in edges:
         a, b = int(e["from"]), int(e["to"])
@@ -1499,8 +1552,24 @@ def draw_diagram(
             if old is not None:
                 sp_pr.remove(old)
             sp_pr.append(copy.deepcopy(ln))
+    for ph in list(s.placeholders):  # an empty text box under the diagram goes, as under a chart (its prompt would show)
+        if ph.has_text_frame and not ph.text_frame.text.strip() and ph.left is not None:
+            if _overlapping((int(ax), int(ay), int(aw), int(ah)), [(ph.shape_id, ph.left, ph.top, ph.width, ph.height)]):
+                ph._element.getparent().remove(ph._element)
     styled = f"shape {style.shape_id}" if style is not None else "the theme"
     return {"slides": [s.slide_id], "shape_ids": ids, "connector_ids": connectors, "styled_from": styled}
+
+
+def blank_layout(prs):
+    """The layout with no place to fill (a slide for a figure that has no title): the first with no heading, text,
+    picture, table or chart placeholder; else the one content fits with a title alone."""
+    from . import layouts
+
+    for lay in prs.slide_layouts:
+        roles = {x["role"] for x in layouts.placeholders(lay, prs.slide_width, prs.slide_height)}
+        if not roles - {"number"}:
+            return lay
+    return _layout_for_content(prs, {"title": "-"})
 
 
 # ── charts (spec NL-5) ───────────────────────────────────────────────
@@ -1524,6 +1593,18 @@ def _chart_data(categories: list[str], series: list[dict], number_format: str | 
     for one in series:
         data.add_series(str(one["name"]), [float(v) for v in one["values"]])
     return data
+
+
+def _not_the_heading(s, title: str | None) -> str | None:
+    """A chart's title, unless it is its slide's title: said once, by the slide (measured: the model sends the chart
+    whole to edit_chart, with the slide's title as the chart's, and the slide showed it twice)."""
+    from . import layouts
+
+    idx = layouts.slots(s.slide_layout, s.part.package.presentation_part.presentation.slide_width,
+                        s.part.package.presentation_part.presentation.slide_height)["heading"]  # fmt: skip
+    head = next((ph for ph in s.placeholders if ph.placeholder_format.idx == idx), None) or s.shapes.title
+    said = " ".join(head.text_frame.text.split()).lower() if head is not None and head.has_text_frame else ""
+    return None if title and said and " ".join(title.split()).lower() == said else title
 
 
 def _style_chart(chart, kind: str, title: str | None, series: list[dict]) -> None:
@@ -1571,7 +1652,7 @@ def add_chart(
         sw, sh_ = prs.slide_width, prs.slide_height
         b = box or {"x": 0.08, "y": 0.22, "w": 0.84, "h": 0.66}
         frame = s.shapes.add_chart(chart_type, int(b["x"] * sw), int(b["y"] * sh_), int(b["w"] * sw), int(b["h"] * sh_), data)
-    _style_chart(frame.chart, kind, title, series)
+    _style_chart(frame.chart, kind, _not_the_heading(s, title), series)
     covers = []
     if not in_place:
         mine = (frame.left, frame.top, frame.width, frame.height)
@@ -1585,10 +1666,15 @@ def add_chart(
 
 def edit_chart(
     prs, slide_id: int, shape_id: int, title: str | None = None, categories: list[str] | None = None,
-    series: list[dict] | None = None, deck_id=None,
+    series: list[dict] | None = None, kind: str | None = None, deck_id=None,
 ) -> dict:  # fmt: skip
-    """A chart's data replaced (categories and series together), its title changed or removed; its kind, style and
-    place kept."""
+    """A chart's data replaced (categories and series together), its title changed or removed, its kind changed; its
+    place kept. The model sends the chart whole, as add_chart takes it (measured: 2 runs in 2 named its kind, unchanged):
+    the same kind changes nothing; another is drawn anew in the same frame, with the data and title it has."""
+    from pptx.chart.xmlwriter import ChartXmlWriter
+    from pptx.enum.chart import XL_CHART_TYPE
+    from pptx.oxml import parse_xml
+
     s = get_slide(prs, slide_id)
     sh = get_shape(s, shape_id, editable=False)  # a chart is locked to the other tools; this one changes its data
     if not getattr(sh, "has_chart", False):
@@ -1596,12 +1682,31 @@ def edit_chart(
     chart = sh.chart
     if (categories is None) != (series is None):
         raise OpError("BAD_CHART", "Give the categories and the series together.", "")
+    now = read.chart_data(sh)
+    if kind is not None and now is not None and kind != now["kind"]:
+        cats = categories if categories is not None else now["categories"]
+        rows = series if series is not None else now["series"]
+        if kind == "pie" and len(rows) != 1:
+            raise OpError("BAD_CHART", "A pie chart has one series.", "Give one series, or choose column, bar or line.")
+        data = _chart_data(cats, rows)
+        part = sh.chart_part
+        fresh = parse_xml(ChartXmlWriter(getattr(XL_CHART_TYPE, CHART_KINDS[kind]), data).xml.encode())
+        link = part._element.find(qn("c:externalData"))  # the link to its workbook (PowerPoint's Edit Data): kept
+        if link is not None:
+            fresh._insert_externalData(copy.deepcopy(link))
+        part._element = fresh
+        part.chart_workbook.update_from_xlsx_blob(data.xlsx_blob)
+        part.__dict__.pop("chart", None)  # (python-pptx keeps the Chart it made of the old XML)
+        keep = now["title"] if title is None else title.strip()
+        _style_chart(sh.chart, kind, _not_the_heading(s, keep or None), rows)
+        return {"slides": [s.slide_id], "shape_id": shape_id}
     if categories is not None:
         chart.replace_data(_chart_data(categories, series))
         pie = chart.chart_type.name == "PIE"
         chart.has_legend = pie or len(series) > 1  # as add_chart sets it (measured: one series left, its legend stayed)
     if title is not None:
-        if title.strip():
+        title = _not_the_heading(s, title.strip()) or ""
+        if title:
             chart.has_title = True
             chart.chart_title.text_frame.text = title.strip()
         else:

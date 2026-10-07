@@ -35,6 +35,34 @@ export function buildDeck(view, { pid, did, onTitle, onChanged }) {
   let review = null;              // {proposal, deck: its entry, include: Set of slide ids}
   let shapes = [];                // the selected slide's shapes (read model), for editing text in place
   let dragFrom = null;            // the strip index being dragged
+  // the edit lease (spec PJ-13): taken on opening, renewed while the editor is open, released on closing; while
+  // another member holds it, this editor views the deck and changes nothing ("being edited by ...")
+  let lease = { mine: false, holder: null, viewer: false };
+  const RENEW_MS = 60_000;
+
+  async function takeLease() {
+    try {
+      await api(`projects/${pid}/decks/${did}/lease`, { method: 'POST' });
+      lease = { mine: true, holder: null, viewer: false };
+    } catch (e) {
+      if (e.status === 404) lease = { mine: false, holder: null, viewer: true };       // a viewer: no lease to take
+      else if (e.status === 409) lease = { mine: false, holder: info?.lease?.holder || null, viewer: false };
+    }
+  }
+
+  const renew = setInterval(async () => {
+    if (!root.isConnected) { clearInterval(renew); return; }
+    const was = lease.mine;
+    await takeLease();
+    if (lease.mine !== was) load(true);            // freed (or taken by someone else): the editor follows
+  }, RENEW_MS);
+
+  function release() {
+    clearInterval(renew);
+    if (lease.mine) fetch(`api/projects/${pid}/decks/${did}/lease`, { method: 'DELETE', keepalive: true }).catch(() => {});
+    lease = { mine: false, holder: null, viewer: false };
+  }
+  window.addEventListener('pagehide', release);
 
   async function load(keepSelection = false) {
     try {
@@ -43,6 +71,8 @@ export function buildDeck(view, { pid, did, onTitle, onChanged }) {
       setHtml(root, html`<div class="page"><div class="banner error">${raw(INFO_ICON)}<div><b>This deck could not be opened</b><small class="user-text">${e.message}</small></div></div></div>`);
       return;
     }
+    await takeLease();
+    if (!lease.mine && !lease.viewer) lease.holder = info.lease?.holder || lease.holder;
     if (!keepSelection) selected = 0;
     onTitle?.(info.deck.title);
     syncReview(store.get('proposal'));
@@ -82,16 +112,21 @@ export function buildDeck(view, { pid, did, onTitle, onChanged }) {
     }
     const { all, slide } = current();
     publishSelection(slide);
+    const locked = !lease.mine;                    // another member's, or a viewer's: nothing changes from here
+    const off = locked ? 'disabled' : '';
     setHtml(root, html`
+      ${locked ? html`<div class="banner info lease-note" role="status">${raw(INFO_ICON)}<div>${lease.viewer
+        ? html`<b>You can view this deck</b><small>Your role in this project is viewer.</small>`
+        : html`<b>Being edited by <span class="notranslate">${lease.holder || 'another member'}</span></b><small>You can view it; you can change it when they close it.</small>`}</div></div>` : ''}
       <div class="editor-bar">
         <span class="editor-title user-text">${d.title}</span>
         <span class="pill">Version ${info.version}</span>
         <span class="editor-spacer"></span>
-        <button type="button" data-action="undo" title="Undo the last accepted change" ${review ? 'disabled' : ''}>Undo</button>
-        <button type="button" data-action="redo" title="Redo" ${review ? 'disabled' : ''}>Redo</button>
+        <button type="button" data-action="undo" title="Undo the last accepted change" ${review || locked ? 'disabled' : ''}>Undo</button>
+        <button type="button" data-action="redo" title="Redo" ${review || locked ? 'disabled' : ''}>Redo</button>
         <button type="button" data-action="edit-text" title="Edit the selected text box (F2, or double-click it)" disabled>Edit text</button>
-        <button type="button" data-action="delete-slide" ${review || !slide ? 'disabled' : ''}>Delete slide</button>
-        <button type="button" data-action="rename">Rename</button>
+        <button type="button" data-action="delete-slide" ${review || !slide || locked ? 'disabled' : ''}>Delete slide</button>
+        <button type="button" data-action="rename" ${off}>Rename</button>
         <button type="button" data-action="versions" aria-pressed="${showVersions}">Versions</button>
         <a class="button-link" href="${downloadUrl(pid, did)}" download>Download</a>
         <a class="button-link" href="${downloadUrl(pid, did).replace('/download', '/pdf')}" download>PDF</a>
@@ -99,11 +134,11 @@ export function buildDeck(view, { pid, did, onTitle, onChanged }) {
       ${review ? html`<div class="review-bar">
         <span>The assistant's changes: ${review.include.size} of ${review.deck.slides.length} slides selected. Nothing is saved until you accept.</span>
         <span class="editor-spacer"></span>
-        <button type="button" class="primary" data-action="accept" ${review.include.size ? '' : 'disabled'}>Accept selected</button>
+        <button type="button" class="primary" data-action="accept" ${review.include.size && !locked ? '' : 'disabled'}>Accept selected</button>
         <button type="button" data-action="reject">Reject all</button></div>` : ''}
       <div class="editor-body">
         <ol class="slide-strip" aria-label="Slides">${all.map((s, i) => html`
-          <li draggable="${review ? 'false' : 'true'}" data-index="${i}"><button type="button" class="strip-item${i === selected ? ' selected' : ''}${s.hidden ? ' hidden-slide' : ''} state-${s.state}" data-index="${i}"
+          <li draggable="${review || locked ? 'false' : 'true'}" data-index="${i}"><button type="button" class="strip-item${i === selected ? ' selected' : ''}${s.hidden ? ' hidden-slide' : ''} state-${s.state}" data-index="${i}"
                aria-current="${i === selected}">
             <span class="strip-number">${s.state === 'removed' ? '–' : i + 1}</span>
             <span class="strip-thumb"><img class="notranslate" alt="${s.title || ''}" title="${s.title || ''}" loading="lazy" src="${image(s, 'thumb')}">${s.state !== 'same' ? html`<span class="strip-badge pill ${s.state === 'removed' ? 'error' : 'alert'}">${{ added: 'New', changed: 'Changed', removed: 'Removed' }[s.state]}</span>` : ''}</span>
@@ -178,7 +213,7 @@ export function buildDeck(view, { pid, did, onTitle, onChanged }) {
     const b = root.querySelector('[data-action="edit-text"]');
     if (!b) return;
     const one = selectedShapes.size === 1 ? shapes.find((s) => s.shape_id === [...selectedShapes][0]) : null;
-    b.disabled = Boolean(review) || !editable(one);
+    b.disabled = Boolean(review) || !lease.mine || !editable(one);
   }
 
   async function manual(body, done) {
@@ -194,6 +229,7 @@ export function buildDeck(view, { pid, did, onTitle, onChanged }) {
   }
 
   function editText(shapeId) {
+    if (!lease.mine) return;                       // another member's deck, or a viewer's: nothing to edit here
     const s = shapes.find((x) => x.shape_id === shapeId);
     const layer = root.querySelector('.shape-boxes');
     if (review || !editable(s) || !layer) return;
@@ -226,6 +262,7 @@ export function buildDeck(view, { pid, did, onTitle, onChanged }) {
   }
 
   async function deleteSlide() {
+    if (!lease.mine) return;
     const { all, slide } = current();
     if (review || !slide) return;
     if (!await modalConfirm(`Delete slide ${selected + 1}? Undo brings it back.`, { title: 'Delete slide', confirmText: 'Delete' })) return;
@@ -235,6 +272,7 @@ export function buildDeck(view, { pid, did, onTitle, onChanged }) {
   }
 
   async function moveSlide(from, to) {
+    if (!lease.mine) return;
     const { all } = current();
     if (review || from === to || to < 0 || to >= all.length) return;
     selected = to;
@@ -345,5 +383,5 @@ export function buildDeck(view, { pid, did, onTitle, onChanged }) {
   document.addEventListener('sa:review', (e) => { if (e.detail.deck === did && store.get('proposal')) { syncReview(store.get('proposal')); render(); } });
   phone.addEventListener('change', () => info && render());
   load();
-  return { reload: () => load(true), title: () => info?.deck.title, focus: () => info && publishSelection(current().slide) };
+  return { reload: () => load(true), title: () => info?.deck.title, focus: () => info && publishSelection(current().slide), release };
 }

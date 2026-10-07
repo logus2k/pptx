@@ -385,3 +385,82 @@ def test_generate_image_is_offered_only_when_configured_and_makes_an_image_asset
     made = tool_results(fake_model, "generate_image")[-1]
     assets = requests.get(f"{server}/api/projects/{pid}/assets", headers=h(), timeout=10).json()["assets"]
     assert any(a["id"] == made["asset_id"] and a["kind"] == "image" for a in assets)
+
+
+def test_a_project_exported_and_imported_loses_nothing_and_its_archive_is_not_trusted(server, fake_model, tmp_path):
+    """Spec PJ-14 and M8's "done when": a project's archive imported as a new project is the same project (every deck
+    version, conversation, memory item, instruction, asset and passage); an archive is the person's file: its members
+    are not given access, and a path or a deck a project cannot have is refused."""
+    import zipfile
+
+    pid = project(server, "Arquivo")
+    did = upload(server, pid, DECKS / "simple.pptx", "proposta.pptx")
+    cid = conversation(server, pid, did)
+    requests.patch(f"{server}/api/projects/{pid}", json={"instructions": "Preços em EUR."}, headers=h(), timeout=10)
+    memory_item = {"text": "O cliente prefere gráficos simples."}
+    requests.post(f"{server}/api/projects/{pid}/memory", json=memory_item, headers=h(), timeout=10)
+    doc = _docx([("Heading1", "Preços"), ("", "A conta custa 4 euros.")])
+    assets = f"{server}/api/projects/{pid}/assets"
+    requests.post(assets, data={"kind": "document"}, files={"file": ("precos.docx", doc)}, headers=h(), timeout=30)
+    png = io.BytesIO()
+    __import__("PIL.Image", fromlist=["Image"]).new("RGB", (40, 30), (1, 2, 3)).save(png, "PNG")
+    requests.post(assets, data={"kind": "image"}, files={"file": ("foto.png", png.getvalue())}, headers=h(), timeout=30)
+    data = deck_bytes(server, pid, did)
+    first = outline(data)[0]["slide_id"]
+    requests.post(f"{server}/api/projects/{pid}/decks/{did}/edits",
+                  json={"base_version": 1, "op": "move", "slide_id": first, "position": 1}, headers=h(), timeout=60)  # fmt: skip
+    fake_model.script = [{"text": "Olá."}, {"text": "Olá."}]
+    chat = Chat(server, pid, cid)
+    chat.send("olá")
+    chat.close()
+    eva = {"email": "eva@example.com", "role": "editor"}
+    requests.put(f"{server}/api/projects/{pid}/members", json=eva, headers=h(), timeout=10)
+
+    exported = requests.get(f"{server}/api/projects/{pid}/export", headers=h(), timeout=60)
+    assert exported.status_code == 200 and exported.headers["content-type"] == "application/zip"
+    with zipfile.ZipFile(io.BytesIO(exported.content)) as z:
+        names = z.namelist()
+        assert "readable/decks/proposta.pptx" in names and "readable/instructions.json" in names
+        assert any(n.startswith("readable/conversations/") and n.endswith(".md") for n in names)
+        assert not any("/renders/" in n for n in names)
+    bob = "bob@example.com"
+    made = requests.post(f"{server}/api/projects/import", files={"file": ("a.zip", exported.content)}, headers=h(bob), timeout=60)
+    assert made.status_code == 201, made.text
+    new = made.json()["id"]
+    assert new != pid
+    imported = requests.get(f"{server}/api/projects/{new}", headers=h(bob), timeout=10).json()
+    assert imported["members"] == [{"email": bob, "role": "owner"}] and imported["instructions"] == "Preços em EUR."
+    assert requests.get(f"{server}/api/projects/{new}", headers=h("eva@example.com"), timeout=10).status_code == 404
+    mine = requests.get(f"{server}/api/projects/{new}/decks/{did}/download", headers=h(bob), timeout=30).content
+    assert mine == deck_bytes(server, pid, did)  # the current version, byte for byte
+    again = requests.get(f"{server}/api/projects/{new}/export", headers=h(bob), timeout=60).content
+
+    def contents(raw):
+        with zipfile.ZipFile(io.BytesIO(raw)) as z:
+            out = {n: z.read(n) for n in z.namelist() if n.startswith("data/") and n != "data/project.json"}
+            project_ = json.loads(z.read("data/project.json"))
+        for k in ("id", "owner", "members", "created_at", "updated_at"):
+            project_.pop(k)
+        return out, project_
+
+    first_data, first_project = contents(exported.content)
+    second_data, second_project = contents(again)
+    assert first_data == second_data and first_project == second_project  # nothing lost, nothing changed
+    assert any(n.startswith("data/decks/") and n.endswith("/versions/2.pptx") for n in first_data)  # every version
+
+    def tampered(rel, payload):
+        out = io.BytesIO()
+        with zipfile.ZipFile(io.BytesIO(exported.content)) as z, zipfile.ZipFile(out, "w") as w:
+            for n in z.namelist():
+                w.writestr(n, payload if n == rel else z.read(n))
+            if rel not in z.namelist():
+                w.writestr(rel, payload)
+        sent = {"file": ("a.zip", out.getvalue())}
+        return requests.post(f"{server}/api/projects/import", files=sent, headers=h(bob), timeout=60)
+
+    bad = tampered("data/../../evil.txt", b"x")
+    assert bad.status_code == 422 and "does not have" in bad.json()["detail"]["message"]
+    version = next(n for n in first_data if n.endswith("/versions/1.pptx"))
+    assert tampered(version, b"not a deck").status_code == 422
+    garbage = requests.post(f"{server}/api/projects/import", files={"file": ("a.zip", b"PK nope")}, headers=h(bob), timeout=10)
+    assert garbage.status_code == 422

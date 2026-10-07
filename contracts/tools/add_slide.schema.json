@@ -2,7 +2,7 @@
  "$schema": "https://json-schema.org/draft/2020-12/schema",
  "$id": "tools/add_slide",
  "title": "add_slide",
- "description": "Insert ONE new slide from a layout and write what it says: content (title, subtitle, points) is put in the layout's places by the application; placeholders by idx only for a particular place. A slide for each point of an outline: one add_slide per point.",
+ "description": "Insert ONE new slide from a layout and write what it says: content (title, subtitle, points, or a chart or diagram) is put in the layout's places by the application; placeholders by idx only for a particular place. A slide for each point of an outline: one add_slide per point.",
  "type": "object",
  "additionalProperties": false,
  "required": [
@@ -134,7 +134,7 @@
   "content": {
    "type": "object",
    "additionalProperties": false,
-   "description": "What the slide says; the application puts each part where the layout has its place (the heading, the subtitle, each point in a box of its own with the box's number or column heading, or every point in one list) and removes the places left empty. Only text from the request or from what you found: never filler.",
+   "description": "What the slide says; the application places each part in the layout. Only text from the request or a source, never filler.",
    "properties": {
     "title": {
      "type": "string",
@@ -147,7 +147,7 @@
     "points": {
      "type": "array",
      "maxItems": 30,
-     "description": "The slide's points, in order, each a short line in your words (not a passage copied): a text, or {heading, text} for a point with a heading of its own (a column, a phase).",
+     "description": "Its points, in order: short lines in your words, or {heading, text} (a column, a phase).",
      "items": {
       "anyOf": [
        {
@@ -178,7 +178,131 @@
       "type": "string",
       "maxLength": 300
      },
-     "description": "The titles of the knowledge-base documents its text comes from: the application writes their citations in the slide's notes."
+     "description": "Titles of the KB documents it comes from (cited in the notes)."
+    },
+    "chart": {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "kind",
+      "categories",
+      "series"
+     ],
+     "description": "A chart in the slide's body, under its title (instead of points).",
+     "properties": {
+      "kind": {
+       "enum": [
+        "column",
+        "bar",
+        "line",
+        "pie"
+       ],
+       "description": "column, bar (horizontal), line, pie (one series)."
+      },
+      "categories": {
+       "type": "array",
+       "minItems": 1,
+       "maxItems": 50,
+       "items": {
+        "type": "string",
+        "maxLength": 100
+       },
+       "description": "The bars, points or slices, in order."
+      },
+      "series": {
+       "type": "array",
+       "minItems": 1,
+       "maxItems": 8,
+       "description": "Each: a name and one number per category.",
+       "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+         "name",
+         "values"
+        ],
+        "properties": {
+         "name": {
+          "type": "string",
+          "maxLength": 100
+         },
+         "values": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 50,
+          "items": {
+           "type": "number"
+          }
+         }
+        }
+       }
+      },
+      "number_format": {
+       "type": "string",
+       "maxLength": 40,
+       "description": "As PowerPoint writes it: 0, 0.0, 0%, #,##0 €."
+      }
+     }
+    },
+    "diagram": {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "nodes"
+     ],
+     "description": "A diagram in the slide's body, under its title (instead of points).",
+     "properties": {
+      "nodes": {
+       "type": "array",
+       "minItems": 2,
+       "maxItems": 20,
+       "description": "The boxes, numbered from 0.",
+       "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+         "text"
+        ],
+        "properties": {
+         "text": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "A short label."
+         }
+        }
+       }
+      },
+      "edges": {
+       "type": "array",
+       "maxItems": 40,
+       "description": "Arrows from box n to box m. Left out: each box to the next (a process).",
+       "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+         "from",
+         "to"
+        ],
+        "properties": {
+         "from": {
+          "type": "integer",
+          "minimum": 0
+         },
+         "to": {
+          "type": "integer",
+          "minimum": 0
+         }
+        }
+       }
+      },
+      "direction": {
+       "enum": [
+        "right",
+        "down"
+       ],
+       "description": "right: a flow; down: a hierarchy. Left out: right."
+      }
+     }
     }
    }
   }

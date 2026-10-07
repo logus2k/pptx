@@ -2,7 +2,7 @@
  "$schema": "https://json-schema.org/draft/2020-12/schema",
  "$id": "tools/add_chart",
  "title": "add_chart",
- "description": "Put a native PowerPoint chart (editable in PowerPoint, its data in the file) on a slide, from data the person gives or a source says: column, bar, line or pie.",
+ "description": "Put a native, editable chart on a slide from the person's or a source's figures.",
  "type": "object",
  "additionalProperties": false,
  "required": [
@@ -27,7 +27,7 @@
     "line",
     "pie"
    ],
-   "description": "column: vertical bars; bar: horizontal bars; line; pie (one series)."
+   "description": "column, bar (horizontal), line, pie (one series)."
   },
   "title": {
    "type": "string",
@@ -41,13 +41,13 @@
     "type": "string",
     "maxLength": 100
    },
-   "description": "The categories (the bars, points or slices), in order."
+   "description": "The bars, points or slices, in order."
   },
   "series": {
    "type": "array",
    "minItems": 1,
    "maxItems": 8,
-   "description": "One per data series (a pie has one): its name and one number per category.",
+   "description": "Each: a name and one number per category.",
    "items": {
     "type": "object",
     "additionalProperties": false,
@@ -74,7 +74,7 @@
   "number_format": {
    "type": "string",
    "maxLength": 40,
-   "description": "How values are shown, as PowerPoint writes it: 0, 0.0, 0%, #,##0 €. Left out: as given."
+   "description": "As PowerPoint writes it: 0, 0.0, 0%, #,##0 €."
   },
   "box": {
    "type": "object",
@@ -85,7 +85,7 @@
     "w",
     "h"
    ],
-   "description": "Where, in fractions of the slide (0-1). Left out: the slide's chart place, else the space under its title.",
+   "description": "Fractions of the slide. Left out: its chart place, else under the title.",
    "properties": {
     "x": {
      "type": "number",
