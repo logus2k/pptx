@@ -144,6 +144,10 @@
         "reranker": {
           "type": "string",
           "description": "embeddings-server: its /v1/rerank (bge-reranker) scores conversation and document passages against a query."
+        },
+        "image_generation": {
+          "type": "string",
+          "description": "An image-generation service with tti_server's API (POST /api/generate, GET /api/stream/{id}, GET /api/image/{id}), e.g. http://tti-web:80. Left out: generate_image is not offered (spec IM-6)."
         }
       }
     }

@@ -1,0 +1,67 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "tools/edit_chart",
+ "title": "edit_chart",
+ "description": "Change a chart's data or title (the slide's chart, as the deck map shows it): give the whole new data, categories and series together.",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "slide_id",
+  "shape_id"
+ ],
+ "properties": {
+  "deck_id": {
+   "type": "string",
+   "description": "Left out: the active deck."
+  },
+  "slide_id": {
+   "type": "integer"
+  },
+  "shape_id": {
+   "type": "integer"
+  },
+  "title": {
+   "type": "string",
+   "maxLength": 200,
+   "description": "The new title; an empty text removes it."
+  },
+  "categories": {
+   "type": "array",
+   "minItems": 1,
+   "maxItems": 50,
+   "items": {
+    "type": "string",
+    "maxLength": 100
+   },
+   "description": "The categories (the bars, points or slices), in order."
+  },
+  "series": {
+   "type": "array",
+   "minItems": 1,
+   "maxItems": 8,
+   "description": "One per data series (a pie has one): its name and one number per category.",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "name",
+     "values"
+    ],
+    "properties": {
+     "name": {
+      "type": "string",
+      "maxLength": 100
+     },
+     "values": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 50,
+      "items": {
+       "type": "number"
+      }
+     }
+    }
+   }
+  }
+ }
+}

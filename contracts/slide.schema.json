@@ -303,6 +303,48 @@
           "minItems": 2,
           "maxItems": 2,
           "description": "A connector attached at both ends: the IDs of the shapes it links, from and to."
+        },
+        "chart": {
+          "type": "object",
+          "description": "A chart's data, as edit_chart takes it.",
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "type": "string"
+            },
+            "title": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "categories": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "series": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "values": {
+                    "type": "array",
+                    "items": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     }

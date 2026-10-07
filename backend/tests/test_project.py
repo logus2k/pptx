@@ -310,3 +310,78 @@ def test_what_a_picture_shows_is_found_by_the_model(server, fake_model):
     context = next(m for m in reversed(fake_model.sent) if isinstance(m[0]["content"], str))[0]["content"]
     assert "(picture): alt text: image.png; it shows: Uma fotografia de teste." in context
     assert found.status_code == 200
+
+
+def test_a_picture_is_generated_into_the_project_only_when_a_service_is_configured(tmp_path):
+    """Spec IM-6, against a stand-in for tti_server's API (generate, events, image): the client reads the events to
+    "done" and fetches the PNG; a "failed" event is an error with the service's words; none configured: unavailable."""
+    import io as io_
+    import threading
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+    from PIL import Image
+
+    from app.imagegen import ImageGenerator, ImageGenError
+
+    png = io_.BytesIO()
+    Image.new("RGB", (64, 36), (10, 120, 200)).save(png, "PNG")
+    seen = {}
+
+    class Tti(BaseHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+        def do_POST(self):
+            seen["body"] = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+            out = json.dumps({"id": "fail" if "fail" in seen["body"]["prompt"] else "j1"}).encode()
+            self.send_response(200), self.send_header("Content-Type", "application/json"), self.end_headers()
+            self.wfile.write(out)
+
+        def do_GET(self):
+            if self.path.startswith("/api/stream/"):
+                self.send_response(200), self.send_header("Content-Type", "text/event-stream"), self.end_headers()
+                if self.path.endswith("fail"):
+                    self.wfile.write(b'event: failed\ndata: {"message": "out of memory"}\n\n')
+                else:
+                    done = b'event: done\ndata: {"image_url": "api/image/j1"}\n\n'
+                    self.wfile.write(b'event: progress\ndata: {"pct": 50}\n\n' + done)
+            else:
+                self.send_response(200), self.send_header("Content-Type", "image/png"), self.end_headers()
+                self.wfile.write(png.getvalue())
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Tti)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    try:
+        gen = ImageGenerator(f"http://127.0.0.1:{server.server_port}/")
+        assert gen.available and gen.generate("a lighthouse at dawn", "wide") == png.getvalue()
+        assert (seen["body"]["width"], seen["body"]["height"]) == (1344, 768)
+        try:
+            gen.generate("please fail")
+            raise AssertionError("a failed generation must raise")
+        except ImageGenError as e:
+            assert "out of memory" in str(e)
+    finally:
+        server.shutdown()
+    assert not ImageGenerator(None).available
+
+
+def test_generate_image_is_offered_only_when_configured_and_makes_an_image_asset(server, fake_model, fake_imagegen):
+    from .test_agent import setup
+
+    pid, _, cid = setup(server)
+    fake_model.script = [{"tools": [["generate_image", {"prompt": "a lighthouse at dawn"}]]}, {"text": "Feito."}]
+    chat = Chat(server, pid, cid)
+    try:
+        chat.send("faz uma imagem de um farol")
+        assert "generate_image" not in fake_model.offered[-1]  # no service configured: not offered
+        assert tool_results(fake_model, "generate_image")[-1]["error"]["code"] == "IMAGE_GENERATION_FAILED"  # called anyway
+        fake_imagegen.available = True
+        fake_model.script = [{"tools": [["generate_image", {"prompt": "a lighthouse at dawn", "shape": "square"}]]},
+                             {"text": "Feito."}]  # fmt: skip
+        chat.send("faz uma imagem de um farol")
+    finally:
+        chat.close()
+    assert "generate_image" in fake_model.offered[-1] and fake_imagegen.prompts == [("a lighthouse at dawn", "square")]
+    made = tool_results(fake_model, "generate_image")[-1]
+    assets = requests.get(f"{server}/api/projects/{pid}/assets", headers=h(), timeout=10).json()["assets"]
+    assert any(a["id"] == made["asset_id"] and a["kind"] == "image" for a in assets)

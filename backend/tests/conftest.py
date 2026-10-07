@@ -88,7 +88,15 @@ def fake_reranker():
 
 
 @pytest.fixture
-def server(make_settings, fake_model, fake_kb, fake_stt, fake_reranker):
+def fake_imagegen():
+    """An image-generation service, off unless a test turns it on (spec IM-6)."""
+    from .fakes import FakeImageGen
+
+    return FakeImageGen()
+
+
+@pytest.fixture
+def server(make_settings, fake_model, fake_kb, fake_stt, fake_reranker, fake_imagegen):
     """The real ASGI app served by uvicorn on a free port, in a thread, with the scripted model; yields its base URL."""
     telemetry.setup("test")
     settings = make_settings()
@@ -98,7 +106,9 @@ def server(make_settings, fake_model, fake_kb, fake_stt, fake_reranker):
     srv = uvicorn.Server(
         uvicorn.Config(
             telemetry.instrument_asgi(
-                main.create_app(settings, models=fake_model, kb=fake_kb, stt=fake_stt, reranker=fake_reranker)
+                main.create_app(
+                    settings, models=fake_model, kb=fake_kb, stt=fake_stt, reranker=fake_reranker, imagegen=fake_imagegen
+                )
             ),
             host="127.0.0.1",
             port=port,

@@ -775,6 +775,7 @@ class Agent:
             "kb_search": self.app.kb.available,
             "kb_read_document": self.app.kb.available,
             "kb_list_images": self.app.kb.available,
+            "generate_image": bool(getattr(getattr(self.app, "imagegen", None), "available", False)),
         }
         return [d for d in self.tool_defs if when.get(d["function"]["name"], True)]
 

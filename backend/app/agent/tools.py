@@ -30,6 +30,9 @@ EDITING = (
     "update_text",
     "fill_slide",
     "add_slides",
+    "add_chart",
+    "edit_chart",
+    "draw_diagram",
     "duplicate_shape",
     "connect_shapes",
     "fit_text",
@@ -530,6 +533,13 @@ class Executor:
                 if result.get("grown_pt")
                 else f" The text is at {round(result.get('scale', 1) * 100)}% of its size."
             )
+        if name == "draw_diagram":
+            boxes, arrows = ", ".join(map(str, result["shape_ids"])), ", ".join(map(str, result["connector_ids"])) or "none"
+            out["note"] += f" Boxes {boxes} (in the nodes' order), styled like {result['styled_from']}; arrows {arrows}."
+        if name == "add_chart":
+            out["note"] += f" The chart is shape {result['shape_id']}."
+            if result.get("covers"):
+                out["note"] += f" It covers shape {', '.join(map(str, result['covers']))}: move one (move_resize_shape)."
         if name in ("duplicate_shape", "connect_shapes"):
             what = "copy" if name == "duplicate_shape" else "connector"
             out["note"] += f" The {what} is shape {result['shape_id']}."
@@ -714,6 +724,24 @@ class Executor:
         if r.get("total") == 0:
             out["note"] = "The document has no passages yet (it may have just been added to the knowledge base)."
         return out
+
+    async def t_generate_image(self, t: Turn, args: dict) -> dict:
+        """A new picture from the configured service (spec IM-6), kept as a project image for insert_image."""
+        from ..imagegen import ImageGenError
+
+        self.app.projects.get(t.pid, t.email, roles=("owner", "editor"))
+        try:
+            png = await asyncio.to_thread(self.app.imagegen.generate, args["prompt"], args.get("shape") or "wide")
+        except ImageGenError as e:
+            raise ToolError("IMAGE_GENERATION_FAILED", f"No picture: {e}.", "Tell the person; do not try another way.") from None
+        name = f"generated - {' '.join(args['prompt'].split())[:60]}.png"
+        try:
+            limit = self.app.settings.file["limits"]["upload_mb"] << 20
+            asset = await self.app.assets.add_image(t.pid, t.email, name, png, limit)
+        except files.Rejected as e:
+            raise ToolError("IMAGE_REFUSED", str(e), "") from None
+        note = "A new image of the project: put it on a slide with insert_image; its alt text says it was generated."
+        return {"ok": True, "asset_id": asset["id"], "note": note}
 
     async def t_kb_list_images(self, t: Turn, args: dict) -> dict:
         images = await self._kb(self.app.kb.images, t.email, args["domain"], args["path"])

@@ -156,10 +156,32 @@ def shape(sh, width: int, height: int, measure: bool = True) -> dict:
         except (AttributeError, KeyError, ValueError):  # a linked or missing image
             pass
     elif out["type"] in ("other", "chart", "group", "shape"):
+        if out["type"] == "chart":
+            data = chart_data(sh)
+            if data:
+                out["chart"] = data
         alt = _alt(sh)
         if alt:
             out["alt_text"] = alt
     return out
+
+
+def chart_data(sh) -> dict | None:
+    """A chart's kind, title, categories and series (edit_chart's arguments); None when python-pptx cannot read it."""
+    try:
+        chart = sh.chart
+        plot = chart.plots[0]
+        kind = {"BAR_CLUSTERED": "bar", "COLUMN_CLUSTERED": "column", "PIE": "pie"}.get(
+            chart.chart_type.name, "line" if "LINE" in chart.chart_type.name else chart.chart_type.name.lower()
+        )
+        return {
+            "kind": kind,
+            "title": chart.chart_title.text_frame.text if chart.has_title and chart.chart_title.has_text_frame else None,
+            "categories": [str(c) for c in plot.categories],
+            "series": [{"name": se.name, "values": list(se.values)} for se in plot.series],
+        }
+    except Exception:  # noqa: BLE001 - a chart python-pptx cannot read (a combination chart, a missing workbook)
+        return None
 
 
 def _notes(slide) -> str:

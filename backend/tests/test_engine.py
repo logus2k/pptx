@@ -17,6 +17,8 @@ import pytest
 from lxml import etree
 from PIL import Image
 
+from pptx.oxml.ns import qn as qn_
+
 from app.docengine import ops, read
 
 from .conftest import REPO
@@ -1092,3 +1094,75 @@ def test_text_alone_is_not_put_on_a_layout_made_for_a_table():
     data, res = ops.apply(ctt, "add_slide", {"layout": "7_Tabela", "content": {"title": "Capa", "subtitle": "Outubro"}})
     assert res["instead_of"] == "7_Tabela" and res["layout"] == "2_Capa S/Imagem"
     assert read.outline(read.open_deck(data))[0]["layout"] == "2_Capa S/Imagem"
+
+
+def test_native_charts_are_made_read_and_changed():
+    """Spec NL-5: editable PowerPoint charts (their data in the file) from the person's figures; the read model gives
+    the data edit_chart takes (rendered and looked at: a column chart in the layout's chart place, a pie, a line)."""
+    ctt = (REPO / "templates" / "bancoctt.pptx").read_bytes()
+    data, made = ops.apply(ctt, "add_slide", {"layout": "4_Gráficos", "content": {"title": "Crédito"}})
+    sid = made["slides"][0]
+    series = [{"name": "2025", "values": [12, 15, 14, 18]}, {"name": "2026", "values": [14, 17, 19, 22]}]
+    args = {"slide_id": sid, "kind": "column", "title": "Crédito (M€)", "categories": ["T1", "T2", "T3", "T4"], "series": series}
+    data, res = ops.apply(data, "add_chart", args)
+    chart = next(sh for sh in get(data, sid)["shapes"] if sh["shape_id"] == res["shape_id"])
+    assert chart["type"] == "chart" and chart["chart"] == {
+        "kind": "column", "title": "Crédito (M€)", "categories": ["T1", "T2", "T3", "T4"],
+        "series": [{"name": "2025", "values": [12.0, 15.0, 14.0, 18.0]}, {"name": "2026", "values": [14.0, 17.0, 19.0, 22.0]}],
+    }  # fmt: skip
+    graphic = next(sh for sh in read.open_deck(data).slides.get(sid).shapes if sh.shape_id == res["shape_id"])
+    assert graphic.is_placeholder  # in the layout's chart place
+    data, _ = ops.apply(data, "edit_chart", {"slide_id": sid, "shape_id": res["shape_id"], "categories": ["T1"],
+                                             "series": [{"name": "2026", "values": [14]}], "title": ""})  # fmt: skip
+    chart = next(sh for sh in get(data, sid)["shapes"] if sh["shape_id"] == res["shape_id"])
+    assert chart["chart"]["categories"] == ["T1"] and chart["chart"]["title"] is None
+    on = next(sh for sh in read.open_deck(data).slides.get(sid).shapes if sh.shape_id == res["shape_id"])
+    assert on.chart.has_legend is False  # one series left: no legend
+    data, made = ops.apply(data, "add_slide", {"layout": "8_Texto", "content": {"title": "Distribuição"}})
+    pie_slide = made["slides"][0]
+    data, pie = ops.apply(data, "add_chart", {"slide_id": pie_slide, "kind": "pie", "categories": ["HPP", "HPS"],
+                                              "series": [{"name": "Peso", "values": [70, 30]}]})  # fmt: skip
+    shapes = get(data, pie_slide)["shapes"]
+    left = [s for s in shapes if s.get("placeholder") and not any(p.get("runs") for p in s.get("paragraphs") or [])]
+    assert pie["covers"] == [] and not left  # no empty text box left under it
+    for bad in ({"series": [{"name": "x", "values": [1]}]}, {"kind": "pie", "series": series}):  # 1 value for 4; a pie of 2
+        with pytest.raises(ops.OpError) as e:
+            ops.apply(data, "add_chart", {**args, "slide_id": pie_slide, **bad})
+        assert e.value.code == "BAD_CHART"
+    text_id = next(sh["shape_id"] for sh in get(data, sid)["shapes"] if sh["type"] != "chart")
+    with pytest.raises(ops.OpError) as e:
+        ops.apply(data, "edit_chart", {"slide_id": sid, "shape_id": text_id, "title": "x"})
+    assert e.value.code == "NOT_A_CHART"
+
+
+def test_a_diagram_from_a_description_is_laid_out_in_steps_and_styled_like_the_decks():
+    """M8. Measured on the Squad Model deck (rendered and looked at): its arrows are free lines, so its boxes are found
+    by their look (the most repeated, with connector lines on the slide), the nearest such slide's."""
+    ctt = (REPO / "templates" / "bancoctt.pptx").read_bytes()
+    nodes = [{"text": t} for t in ("Simulação", "Proposta", "Avaliação", "Aprovação", "Recusa")]
+    edges = [{"from": 0, "to": 1}, {"from": 1, "to": 2}, {"from": 2, "to": 3}, {"from": 2, "to": 4}]
+    data, made = ops.apply(ctt, "add_slide", {"layout": "8_Texto", "content": {"title": "Processo"}})
+    sid = made["slides"][0]
+    data, res = ops.apply(data, "draw_diagram", {"slide_id": sid, "nodes": nodes, "edges": edges})
+    assert res["styled_from"] == "the theme" and len(res["shape_ids"]) == 5 and len(res["connector_ids"]) == 4
+    shapes = {sh["shape_id"]: sh for sh in get(data, sid)["shapes"]}
+    x = [shapes[i]["box"]["x"] for i in res["shape_ids"]]
+    assert x[0] < x[1] < x[2] < x[3] and x[3] == x[4]  # steps left to right; the branch side by side
+    assert all(shapes[c].get("connects") for c in res["connector_ids"])  # attached at both ends
+    # the deck's diagram outlined in red: the next slide's diagram copies that look
+    prs = read.open_deck(data)
+    for i in res["shape_ids"]:
+        box = next(x for x in prs.slides.get(sid).shapes if x.shape_id == i)
+        ln = etree.SubElement(box._element.find(qn_("p:spPr")), qn_("a:ln"), w="38100")
+        etree.SubElement(etree.SubElement(ln, qn_("a:solidFill")), qn_("a:srgbClr"), val="E00024")
+    out = io.BytesIO()
+    prs.save(out)
+    after = {"layout": "8_Texto", "after_slide_id": sid, "content": {"title": "Outro"}}
+    data, made = ops.apply(out.getvalue(), "add_slide", after)
+    data, res = ops.apply(data, "draw_diagram", {"slide_id": made["slides"][0], "nodes": nodes[:2], "edges": edges[:1]})
+    assert res["styled_from"].startswith("shape ")
+    new = next(x for x in read.open_deck(data).slides.get(made["slides"][0]).shapes if x.shape_id == res["shape_ids"][0])
+    assert b'val="E00024"' in etree.tostring(new._element)  # the deck's red outline, copied
+    with pytest.raises(ops.OpError) as e:
+        ops.apply(data, "draw_diagram", {"slide_id": sid, "nodes": nodes, "edges": [{"from": 0, "to": 9}]})
+    assert e.value.code == "BAD_DIAGRAM"

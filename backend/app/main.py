@@ -26,6 +26,7 @@ from .domain.memory import Memory
 from .domain.projects import Projects
 from .domain.proposals import Proposals
 from .domain.templates import AdminTemplates, ProjectAssets, Templates
+from .imagegen import ImageGenerator
 from .kb import KnowledgeBase
 from .search import Reranker
 from .speech import MAX_SECONDS as SPEECH_SECONDS
@@ -65,7 +66,8 @@ class Services:
     """What the routes and the agent share."""
 
     def __init__(
-        self, settings: Settings, models: Models | None = None, kb: KnowledgeBase | None = None, stt=None, reranker=None
+        self, settings: Settings, models: Models | None = None, kb: KnowledgeBase | None = None, stt=None, reranker=None,
+        imagegen=None,
     ) -> None:
         self.settings = settings
         self.layout = Layout(settings.data_dir)
@@ -81,6 +83,7 @@ class Services:
         self.describer = None  # set below, once the models are
         self.reranker = reranker or Reranker(services.get("reranker", ""))
         self.stt = stt or SttClient(services.get("stt", "http://stt_server:2700"))
+        self.imagegen = imagegen or ImageGenerator(services.get("image_generation"))  # spec IM-6: off unless configured
         self.kb = kb or KnowledgeBase(services.get("cortex_api", "http://proxy_server:8710/cortex/api/v1"), settings.cortex_key)
         self.models = models or Models(
             services.get("agent_server", "http://agent_server:7701"),
@@ -91,7 +94,8 @@ class Services:
 
 
 def create_app(
-    settings: Settings, models: Models | None = None, kb: KnowledgeBase | None = None, stt=None, reranker=None
+    settings: Settings, models: Models | None = None, kb: KnowledgeBase | None = None, stt=None, reranker=None,
+    imagegen=None,
 ) -> socketio.ASGIApp:
     api = FastAPI(title="slides", docs_url=None, redoc_url=None, dependencies=[Depends(_span_by_route)])
     api.state.settings = settings
@@ -111,7 +115,7 @@ def create_app(
         return {"status": "ok", "version": telemetry.VERSION}
 
     # projects, decks, templates, renders, conversations, proposals; the audit trail of every change (section 11.2)
-    app = Services(settings, models, kb, stt, reranker)
+    app = Services(settings, models, kb, stt, reranker, imagegen)
     sio = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins=[], max_http_buffer_size=10 * 1024 * 1024)
 
     async def emit(event: str, payload: dict, cid: str) -> None:

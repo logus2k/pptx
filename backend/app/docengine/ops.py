@@ -94,7 +94,7 @@ def get_shape(slide, shape_id: int, *, editable: bool = True):
                 raise OpError(
                     "LOCKED_ELEMENT",
                     f"Shape {shape_id} cannot be changed safely (a chart, SmartArt, media or embedded object).",
-                    "Leave it as it is, or ask the user to change it in PowerPoint.",
+                    "A chart's data and title: edit_chart. Else leave it, or ask the person to change it in PowerPoint.",
                 )
             return sh
     # the slide's shapes in the answer: the model can retry at once (measured: after "read the slide", gemma-4
@@ -500,10 +500,13 @@ def _place_content(prs, s, content: dict) -> list[str]:
             heading, text = _point_text(point)
             lines.append(para(f"{heading}: {text}" if heading and text else heading or text))
         put(where["large"] if where["large"] in on else items[0]["body"], lines)
-    for ph in list(s.placeholders):  # only when there were points to place: a title alone keeps its text box to fill
+    # places left empty go; a title alone keeps the layout's main text box, to be filled (measured: an empty tag kept
+    # on a title-only slide showed "Click to add Text" in the preview)
+    keep = set() if points or not items else {where["large"] if where["large"] in on else items[0]["body"]}  # the roomiest
+    for ph in list(s.placeholders):
         kind = ph.placeholder_format.type.name.lower() if ph.placeholder_format.type is not None else "body"
         empty = ph.has_text_frame and not ph.text_frame.text.strip()
-        if points and kind in ("body", "object", "title", "center_title", "subtitle") and empty:
+        if kind in ("body", "object", "title", "center_title", "subtitle") and empty and ph.placeholder_format.idx not in keep:
             ph._element.getparent().remove(ph._element)
     from . import textfit
 
@@ -529,7 +532,8 @@ def add_slide(
 ) -> list[int]:
     lay = _layout(prs, layout)
     instead = None
-    if content and not placeholders and _needs_other_content(prs, lay):
+    more_than_a_title = content and (content.get("subtitle") or content.get("points"))  # a title alone: a chart slide's
+    if more_than_a_title and not placeholders and _needs_other_content(prs, lay):
         # text alone on a layout made for a table, a chart or a diagram, left empty: the layout the text fits (measured:
         # a cover on "7_Tabela", its table place left on the slide, 2 runs in 3)
         better = _layout_for_content(prs, content)
@@ -1337,6 +1341,274 @@ def set_notes(prs, slide_id: int, text: str, deck_id=None) -> list[int]:
     return [s.slide_id]
 
 
+# ── diagrams from a description (M8) ─────────────────────────────────
+def _look(sh) -> str:
+    """What a shape looks like: its geometry, fill and outline, as XML (shapes that look alike draw the same)."""
+    sp_pr = sh._element.find(qn("p:spPr"))
+    if sp_pr is None:
+        return ""
+    parts = [sp_pr.find(qn(t)) for t in ("a:prstGeom", "a:solidFill", "a:noFill", "a:gradFill", "a:ln")]
+    style = sh._element.find(qn("p:style"))
+    return "".join(etree.tostring(x).decode() for x in [*parts, style] if x is not None)
+
+
+def _diagram_boxes(sl) -> list:
+    """A slide's diagram boxes: its free shapes with text that share the most repeated look (two or more); [] if none
+    (measured: a real diagram's arrows were free lines, attached to nothing, so its boxes are found by their look)."""
+    groups: dict[str, list] = {}
+    for sh in sl.shapes:
+        if (sh.shape_type == MSO_SHAPE_TYPE.AUTO_SHAPE and not sh.is_placeholder and sh.has_text_frame
+                and sh.text_frame.text.strip() and sh._element.find(".//" + qn("a:blipFill")) is None):  # fmt: skip
+            groups.setdefault(_look(sh), []).append(sh)
+    best = max(groups.values(), key=len, default=[])
+    return best if len(best) >= 2 else []
+
+
+def _box_style(prs, slide, like: int | None):
+    """The shape a new diagram's boxes copy: `like`; else one of the diagram boxes of this slide, else of the slide
+    with the most (measured: the first shape with text on the Squad Model's slide was a borderless description);
+    None: the theme's (add_shape)."""
+    if like is not None:
+        return get_shape(slide, like, editable=False)
+    order = list(prs.slides)
+    here = next(i for i, x in enumerate(order) if x.slide_id == slide.slide_id)
+    # a diagram: look-alike boxes and connector lines on one slide; the nearest such slide (measured: by most boxes,
+    # a slide of grey table-like boxes won over the workflow diagram next to the new slide)
+    for sl in sorted(order, key=lambda x: abs(order.index(x) - here)):
+        boxes = _diagram_boxes(sl)
+        if boxes and any(sh._element.tag == qn("p:cxnSp") for sh in sl.shapes):
+            return boxes[0]
+    return None
+
+
+def _example_connector(prs, slide, style=None):
+    """The line of the deck's own arrows: the most common connector line on the slide the boxes come from (or this
+    one), else any slide's."""
+    slides = [slide, *[x for x in prs.slides if x.slide_id != slide.slide_id]]
+    if style is not None:
+        home = style.part.slide if hasattr(style.part, "slide") else None
+        if home is not None:
+            slides.insert(0, home)
+    for sl in slides:
+        lines: dict[str, list] = {}
+        for sh in sl.shapes:
+            ln = sh._element.find(".//" + qn("a:ln")) if sh._element.tag == qn("p:cxnSp") else None
+            if ln is not None:
+                lines.setdefault(etree.tostring(ln).decode(), []).append(sh)
+        if lines:
+            return max(lines.values(), key=len)[0]
+    return None
+
+
+def _ranks(n: int, edges: list[tuple[int, int]]) -> list[int]:
+    """Each node's step: its longest path from a node with no arrow into it (a cycle stops at n steps)."""
+    rank = [0] * n
+    for _ in range(n):
+        changed = False
+        for a, b in edges:
+            if rank[b] < rank[a] + 1 and rank[a] + 1 < n:
+                rank[b] = rank[a] + 1
+                changed = True
+        if not changed:
+            break
+    return rank
+
+
+def draw_diagram(
+    prs, slide_id: int, nodes: list[dict], edges: list[dict] | None = None, direction: str = "right",
+    like_shape_id: int | None = None, box: dict | None = None, deck_id=None,
+) -> dict:  # fmt: skip
+    """A diagram from a description: its boxes laid out in steps (the arrows' order: left to right, or top to bottom),
+    in the space under the slide's title (or `box`), each a copy of the deck's own diagram boxes (their shape, fill,
+    line and text style; else the theme's), joined by connectors attached to both, with the line of the deck's own
+    connectors. Returns {slides, shape_ids (in the nodes' order), connector_ids, styled_from}."""
+    s = get_slide(prs, slide_id)
+    if not 1 < len(nodes) <= 20:
+        raise OpError("BAD_DIAGRAM", "A diagram has 2 to 20 boxes.", "")
+    edges = edges or []
+    pairs = []
+    for e in edges:
+        a, b = int(e["from"]), int(e["to"])
+        if not (0 <= a < len(nodes) and 0 <= b < len(nodes)) or a == b:
+            raise OpError("BAD_DIAGRAM", f"An arrow from {a} to {b}: nodes are numbered 0 to {len(nodes) - 1}.", "")
+        pairs.append((a, b))
+    rank = _ranks(len(nodes), pairs)
+    steps = max(rank) + 1
+    per = [[i for i in range(len(nodes)) if rank[i] == r] for r in range(steps)]
+    W, H = int(prs.slide_width), int(prs.slide_height)
+    area = _box_emu(prs, box or {"x": 0.06, "y": 0.22, "w": 0.88, "h": 0.68})
+    ax, ay, aw, ah = area
+    across = max(len(p) for p in per)  # boxes side by side in the busiest step
+    if direction == "down":
+        cell_w, cell_h = aw / across, ah / steps
+    else:
+        cell_w, cell_h = aw / steps, ah / across
+    bw, bh = int(min(cell_w * 0.7, W * 0.22)), int(min(cell_h * 0.6, H * 0.16))
+    style = _box_style(prs, s, like_shape_id)
+    ids = [0] * len(nodes)
+    for r, members in enumerate(per):
+        for k, i in enumerate(members):
+            if direction == "down":
+                cx = ax + (k + 0.5) * aw / len(members)
+                cy = ay + (r + 0.5) * cell_h
+            else:
+                cx = ax + (r + 0.5) * cell_w
+                cy = ay + (k + 0.5) * ah / len(members)
+            x, y = int(cx - bw / 2), int(cy - bh / 2)
+            text = [{"runs": [{"text": str(nodes[i].get("text") or "").strip()}]}]
+            if style is not None:
+                el = copy.deepcopy(style._element)
+                new_id = _next_shape_id(s)
+                c_nv = el.find(".//" + qn("p:cNvPr"))
+                c_nv.set("id", str(new_id))
+                c_nv.set("name", f"Diagram box {new_id}")
+                for ext in c_nv.findall(qn("a:extLst")):
+                    c_nv.remove(ext)
+                for link in [*el.iter(qn("a:hlinkClick")), *el.iter(qn("a:hlinkHover"))]:  # its slide's links stay there
+                    link.getparent().remove(link)
+                xfrm = el.find(".//" + qn("a:xfrm"))
+                xfrm.find(qn("a:off")).set("x", str(x))
+                xfrm.find(qn("a:off")).set("y", str(y))
+                xfrm.find(qn("a:ext")).set("cx", str(bw))
+                xfrm.find(qn("a:ext")).set("cy", str(bh))
+                s.shapes._spTree.append(el)
+                _set_paragraphs(get_shape(s, new_id).text_frame, text)
+            else:
+                new_id = add_shape(prs, s.slide_id, "rounded_rectangle",
+                                   {"x": x / W, "y": y / H, "w": bw / W, "h": bh / H}, text)["shape_id"]  # fmt: skip
+            ids[i] = new_id
+    for sid_ in ids:  # each box's text fitted to it, as fit_text does
+        sh = get_shape(s, sid_)
+        from . import textfit
+
+        if textfit.overflows(sh):
+            try:
+                fit_text(prs, s.slide_id, sid_)
+            except OpError:
+                pass
+    example = _example_connector(prs, s, style)
+    connectors = []
+    for a, b in pairs:
+        made = connect_shapes(prs, s.slide_id, ids[a], ids[b])
+        connectors.append(made["shape_id"])
+        if example is not None and example._element.getparent() is not None:
+            ln = example._element.find(".//" + qn("a:ln"))
+            mine = get_shape(s, made["shape_id"], editable=False)._element
+            sp_pr = mine.find(qn("p:spPr"))
+            old = sp_pr.find(qn("a:ln"))
+            if old is not None:
+                sp_pr.remove(old)
+            sp_pr.append(copy.deepcopy(ln))
+    styled = f"shape {style.shape_id}" if style is not None else "the theme"
+    return {"slides": [s.slide_id], "shape_ids": ids, "connector_ids": connectors, "styled_from": styled}
+
+
+# ── charts (spec NL-5) ───────────────────────────────────────────────
+CHART_KINDS = {"column": "COLUMN_CLUSTERED", "bar": "BAR_CLUSTERED", "line": "LINE_MARKERS", "pie": "PIE"}
+
+
+def _chart_data(categories: list[str], series: list[dict], number_format: str | None = None):
+    from pptx.chart.data import CategoryChartData
+
+    if not categories or not series:
+        raise OpError("BAD_CHART", "A chart needs categories and at least one series.", "")
+    for one in series:
+        if len(one["values"]) != len(categories):
+            raise OpError(
+                "BAD_CHART",
+                f"Series {one['name']!r} has {len(one['values'])} values for {len(categories)} categories.",
+                "Give one value per category, in the categories' order.",
+            )
+    data = CategoryChartData(number_format=number_format) if number_format else CategoryChartData()
+    data.categories = [str(c) for c in categories]
+    for one in series:
+        data.add_series(str(one["name"]), [float(v) for v in one["values"]])
+    return data
+
+
+def _style_chart(chart, kind: str, title: str | None, series: list[dict]) -> None:
+    from pptx.enum.chart import XL_LEGEND_POSITION
+
+    if title:
+        chart.has_title = True
+        chart.chart_title.text_frame.text = title
+    else:
+        chart.has_title = False
+    chart.has_legend = kind == "pie" or len(series) > 1  # one series: its name is the title's job
+    if chart.has_legend:
+        chart.legend.position = XL_LEGEND_POSITION.BOTTOM
+        chart.legend.include_in_layout = False
+    if kind == "pie":
+        plot = chart.plots[0]
+        plot.has_data_labels = True
+        plot.data_labels.show_percentage = True
+        plot.data_labels.show_value = False
+
+
+def add_chart(
+    prs, slide_id: int, kind: str, categories: list[str], series: list[dict], title: str | None = None,
+    number_format: str | None = None, box: dict | None = None, deck_id=None,
+) -> dict:  # fmt: skip
+    """A native chart (its data in an embedded workbook, editable in PowerPoint): in the slide's empty chart
+    placeholder when it has one, else at `box`, else in the space under the slide's title. Colours and fonts are the
+    theme's (PowerPoint's chart style follows the deck's accents)."""
+    from pptx.enum.chart import XL_CHART_TYPE
+
+    if kind == "pie" and len(series) != 1:
+        raise OpError("BAD_CHART", "A pie chart has one series.", "Give one series, or choose column, bar or line.")
+    s = get_slide(prs, slide_id)
+    data = _chart_data(categories, series, number_format)
+    chart_type = getattr(XL_CHART_TYPE, CHART_KINDS[kind])
+    holder = next(
+        (ph for ph in s.placeholders if ph.placeholder_format.type is not None
+         and ph.placeholder_format.type.name in ("CHART", "OBJECT") and not (ph.has_text_frame and ph.text_frame.text.strip())),
+        None,
+    ) if box is None else None  # fmt: skip
+    in_place = holder is not None and holder.placeholder_format.type.name == "CHART"
+    if in_place:  # (the placeholder is replaced by the chart: read it before)
+        frame = holder.insert_chart(chart_type, data)
+    else:
+        sw, sh_ = prs.slide_width, prs.slide_height
+        b = box or {"x": 0.08, "y": 0.22, "w": 0.84, "h": 0.66}
+        frame = s.shapes.add_chart(chart_type, int(b["x"] * sw), int(b["y"] * sh_), int(b["w"] * sw), int(b["h"] * sh_), data)
+    _style_chart(frame.chart, kind, title, series)
+    covers = []
+    if not in_place:
+        mine = (frame.left, frame.top, frame.width, frame.height)
+        for ph in list(s.placeholders):  # an empty text box under the chart goes (its prompt would show beneath)
+            if ph.has_text_frame and not ph.text_frame.text.strip():
+                if _overlapping(mine, [(ph.shape_id, ph.left, ph.top, ph.width, ph.height)]):
+                    ph._element.getparent().remove(ph._element)
+        covers = _overlapping(mine, _boxes(prs, s, {frame.shape_id}))
+    return {"slides": [s.slide_id], "shape_id": frame.shape_id, "covers": covers}
+
+
+def edit_chart(
+    prs, slide_id: int, shape_id: int, title: str | None = None, categories: list[str] | None = None,
+    series: list[dict] | None = None, deck_id=None,
+) -> dict:  # fmt: skip
+    """A chart's data replaced (categories and series together), its title changed or removed; its kind, style and
+    place kept."""
+    s = get_slide(prs, slide_id)
+    sh = get_shape(s, shape_id, editable=False)  # a chart is locked to the other tools; this one changes its data
+    if not getattr(sh, "has_chart", False):
+        raise OpError("NOT_A_CHART", f"Shape {shape_id} is not a chart.", "Use the chart's shape ID from the deck map.")
+    chart = sh.chart
+    if (categories is None) != (series is None):
+        raise OpError("BAD_CHART", "Give the categories and the series together.", "")
+    if categories is not None:
+        chart.replace_data(_chart_data(categories, series))
+        pie = chart.chart_type.name == "PIE"
+        chart.has_legend = pie or len(series) > 1  # as add_chart sets it (measured: one series left, its legend stayed)
+    if title is not None:
+        if title.strip():
+            chart.has_title = True
+            chart.chart_title.text_frame.text = title.strip()
+        else:
+            chart.has_title = False
+    return {"slides": [s.slide_id], "shape_id": shape_id}
+
+
 # ── images ───────────────────────────────────────────────────────────
 def _png_or_jpeg(data: bytes) -> tuple[bytes, int, int]:
     """PNG and JPEG as they are; WebP and others converted to PNG (spec IM-1); SVG is converted by the caller."""
@@ -1501,6 +1773,9 @@ OPERATIONS = {
     "add_slide": add_slide,
     "fill_slide": fill_slide,
     "add_slides": add_slides,
+    "add_chart": add_chart,
+    "draw_diagram": draw_diagram,
+    "edit_chart": edit_chart,
     "duplicate_shape": duplicate_shape,
     "fit_text": fit_text,
     "connect_shapes": connect_shapes,

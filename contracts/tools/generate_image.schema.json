@@ -1,0 +1,27 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "tools/generate_image",
+ "title": "generate_image",
+ "description": "Make a new picture from a description with the configured image-generation service (spec IM-6). It becomes an image of the project's assets: put it on a slide with insert_image. Only when the person asks for a new picture.",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "prompt"
+ ],
+ "properties": {
+  "prompt": {
+   "type": "string",
+   "minLength": 3,
+   "maxLength": 1000,
+   "description": "What the picture shows, in English, concrete: subject, setting, style."
+  },
+  "shape": {
+   "enum": [
+    "square",
+    "wide",
+    "tall"
+   ],
+   "description": "square 1024x1024, wide 1344x768 (a slide's width), tall 768x1344. Left out: wide."
+  }
+ }
+}

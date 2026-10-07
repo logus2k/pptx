@@ -275,3 +275,25 @@ class FakeReranker:
 
         self.calls.append((query, len(texts)))
         return word_scores(query, texts)
+
+
+class FakeImageGen:
+    """The image-generation service for tests: off until `available` is set; a small PNG for every prompt."""
+
+    def __init__(self) -> None:
+        self.available = False
+        self.prompts: list[tuple[str, str]] = []
+
+    def generate(self, prompt: str, shape: str = "wide") -> bytes:
+        import io
+
+        from PIL import Image
+
+        from app.imagegen import ImageGenError
+
+        if not self.available:
+            raise ImageGenError("no image-generation service is configured")
+        self.prompts.append((prompt, shape))
+        out = io.BytesIO()
+        Image.new("RGB", (134, 77), (10, 120, 200)).save(out, "PNG")
+        return out.getvalue()
