@@ -448,6 +448,40 @@ def _point_text(point) -> tuple[str, str]:
     return "", str(point).strip()
 
 
+def _subtitle_to_notes(prs, sid: int, sentence: str) -> None:
+    """A cover's subtitle sentence that did not fit with its lines, kept in the slide's notes (under what they said)."""
+    s = get_slide(prs, sid)
+    had = (s.notes_slide.notes_text_frame.text.strip() if s.has_notes_slide else "")
+    set_notes(prs, sid, f"{had}\n\n{sentence}" if had else sentence)
+
+
+def _cover_subtitle(prs, lay, content: dict, first: bool) -> dict:
+    """A deck's first slide on a cover (a subtitle place and no text area): up to three short points - who it is for,
+    the date - become the subtitle's lines, a point repeating the title left out, rather than the slide moved to a
+    layout with a box for each (measured: "a cover for the sales team, October 2026", the model sent the audience and
+    the date as points, and the cover went on "4_Texto" and "6_Texto", its lines scattered in boxes, 2 runs in 2)."""
+    from . import layouts
+
+    points = [p for p in content.get("points") or [] if any(_point_text(p))]
+    if not first or not points or len(points) > 3:
+        return content
+    where = layouts.slots(lay, prs.slide_width, prs.slide_height)
+    if where["items"] or where["subtitle"] is None:
+        return content
+    texts = [" ".join(" ".join(x for x in _point_text(p) if x).split()) for p in points]
+    if any(len(x) > 80 for x in texts):
+        return content
+    title = " ".join(str(content.get("title") or "").split()).casefold()
+    lines = []
+    for x in [" ".join(str(content.get("subtitle") or "").split()), *texts]:
+        if x and x.casefold() != title and x.casefold() not in [y.casefold() for y in lines]:
+            lines.append(x)
+    out = {k: v for k, v in content.items() if k != "points"}
+    if lines:
+        out["subtitle"] = "\n".join(lines)
+    return out
+
+
 def _place_content(prs, s, content: dict) -> list[str]:
     """A slide's content put where its layout made a place for it (layouts.slots): the title in its heading, the
     subtitle under it, each point in a text box of its own with the box's column heading and number when the layout
@@ -475,7 +509,9 @@ def _place_content(prs, s, content: dict) -> list[str]:
                 # three times, and no slide was made)
                 left_out.append(key)
                 continue
-            put(idx, [para(str(content[key]).strip())])
+            # a subtitle's lines (a cover's: what, for whom, when) each a paragraph
+            lines = [x.strip() for x in str(content[key]).strip().split("\n") if x.strip()] if key == "subtitle" else []
+            put(idx, [para(x) for x in lines] if len(lines) > 1 else [para(str(content[key]).strip())])
     points = [p for p in content.get("points") or [] if any(_point_text(p))]
     items = [i for i in where["items"] if i["body"] in on]
     if points and not items:
@@ -484,7 +520,8 @@ def _place_content(prs, s, content: dict) -> list[str]:
             f"The layout {lay.name!r} has no place for points.",
             f"Change the slide's layout with change_layout to one that has (then call again): {_fitting(prs, len(points))}.",
         )
-    if points and 1 < len(items) and len(points) <= len(items):
+    series = 1 < len(points) <= len(items) and _alike(lay, items[: len(points)], prs.slide_width, prs.slide_height)
+    if points and 1 < len(items) and len(points) <= len(items) and not content.get("as_list") and series:
         for n, (point, item) in enumerate(zip(points, items, strict=False)):
             heading, text = _point_text(point)
             if item["header"] is not None and item["header"] in on and heading:
@@ -508,6 +545,11 @@ def _place_content(prs, s, content: dict) -> list[str]:
         empty = ph.has_text_frame and not ph.text_frame.text.strip()
         if kind in ("body", "object", "title", "center_title", "subtitle") and empty and ph.placeholder_format.idx not in keep:
             ph._element.getparent().remove(ph._element)
+        # an empty photo place over the whole slide hides the layout's background as a grey box (looked at: Banco CTT's
+        # "1_Capa C/ Imagem", its red under a full-slide picture place); a photo can still be added
+        whole = (ph.width or 0) * (ph.height or 0) >= 0.9 * prs.slide_width * prs.slide_height
+        if kind == "picture" and whole and ph._element.tag.endswith("}sp"):
+            ph._element.getparent().remove(ph._element)
     from . import textfit
 
     for ph in list(s.placeholders):  # what was placed is fitted to its box, as fit_text does (measured: a title of
@@ -520,7 +562,66 @@ def _place_content(prs, s, content: dict) -> list[str]:
     return left_out
 
 
-def add_slide(
+def add_slide(prs, layout: str, position: int | None = None, placeholders: list[dict] | None = None,
+              after_slide_id: int | None = None, before_slide_id: int | None = None, content: dict | None = None,
+              deck_id=None):  # fmt: skip
+    """A new slide (_add_one); a list too long for its box even at the smallest size goes on as many slides as it
+    needs, the same layout and title, the points in order (measured: ten criteria from the knowledge base, 1183
+    characters, ran past the slide's bottom 3 runs in 3, and the model said so instead of splitting them)."""
+    first = len(prs.slides) == 0 or position == 0
+    res = _add_one(prs, layout, position, placeholders, after_slide_id, before_slide_id, content)
+    points = [p for p in (content or {}).get("points") or [] if any(_point_text(p))]
+    if points and content and not placeholders and not _cover_subtitle(prs, _layout(prs, layout), content, first).get("points"):
+        # a cover whose points are its subtitle's lines: one slide, fitted (measured: the four lines overflowed its
+        # subtitle, the list went on over a second slide, and the date landed on "4_Texto")
+        sid = _ids(res)[0]
+        if content.get("subtitle") and _overflowing(prs, sid):
+            pos = [x.slide_id for x in prs.slides].index(sid)
+            delete_slide(prs, sid)
+            lean = {k: v for k, v in content.items() if k != "subtitle"}
+            res = _add_one(prs, layout, pos, None, None, None, lean)
+            sid = _ids(res)[0]
+            _subtitle_to_notes(prs, sid, content["subtitle"])
+            res = {**(res if isinstance(res, dict) else {}), "slides": [sid], "moved_to_notes": "subtitle"}
+        return res
+    sid = (res["slides"] if isinstance(res, dict) else res)[0]
+    if len(points) < 2 or placeholders or (content or {}).get("chart") or (content or {}).get("diagram"):
+        return res
+    if not _overflowing(prs, sid):
+        return res
+    lay = (res.get("layout") if isinstance(res, dict) else None) or layout
+    pos = [x.slide_id for x in prs.slides].index(sid)
+    delete_slide(prs, sid)
+    made, rest = [], points
+    while rest and len(made) < 4:  # at most four slides for one request
+        for k in range(len(rest), 0, -1):  # the most points that fit on this slide, in order
+            sid = _ids(_add_one(prs, lay, pos, None, None, None, {**content, "points": rest[:k]}))[0]
+            if k == 1 or not _overflowing(prs, sid):
+                break
+            delete_slide(prs, sid)
+        made.append(sid)
+        rest, pos = rest[k:], pos + 1
+    out = dict(res) if isinstance(res, dict) else {}
+    out["slides"] = made
+    out["continued"] = len(made) - 1
+    if rest:
+        out["left_out"] = [*out.get("left_out", []), f"{len(rest)} points (more than four slides hold)"]
+    return out
+
+
+def _ids(res) -> list[int]:
+    return res["slides"] if isinstance(res, dict) else res
+
+
+def _overflowing(prs, sid: int) -> bool:
+    """Does a text place of the slide still run past its box (after the fitting placement does)?"""
+    from . import textfit
+
+    s = prs.slides.get(sid)
+    return any(ph.has_text_frame and ph.text_frame.text.strip() and textfit.overflows(ph) for ph in s.placeholders)
+
+
+def _add_one(
     prs,
     layout: str,
     position: int | None = None,
@@ -534,6 +635,9 @@ def add_slide(
 
     lay = _layout(prs, layout)
     instead = None
+    if content and not placeholders:  # a new first slide on a cover: its short points are the subtitle's lines
+        first = len(prs.slides) == 0 or position == 0
+        content = _cover_subtitle(prs, lay, content, first)
     # a chart or a diagram as the slide's content: drawn where its list would go, under its title (measured: asked for
     # "a new slide with a diagram of the process", the model put the boxes in add_slide first, 8 turns in 8; for a
     # chart it wrote a filler point and drew the chart over it, 4 runs in 4)
@@ -549,6 +653,12 @@ def add_slide(
             better = _layout_for_content(prs, {"title": content["title"]})  # a heading for its title (it chose "Blank")
             if better.name != lay.name:
                 lay, instead = better, lay.name
+    npoints = len([p for p in (content or {}).get("points") or [] if any(_point_text(p))])
+    if npoints and not placeholders and not layouts.slots(lay, prs.slide_width, prs.slide_height)["items"]:
+        # a layout with no place for the points: the one they fit (measured: the cover's layout named for an index)
+        better = _best_layout(prs, npoints, bool(content.get("subtitle")))
+        if better is not None and better.name != lay.name:
+            lay, instead = better, lay.name
     more_than_a_title = content and (content.get("subtitle") or content.get("points"))  # a title alone: a chart slide's
     if more_than_a_title and not placeholders and _needs_other_content(prs, lay):
         # text alone on a layout made for a table, a chart or a diagram, left empty: the layout the text fits (measured:
@@ -618,9 +728,28 @@ def _relayout(s, lay) -> None:
     s.shapes.clone_layout_placeholders(lay)
 
 
-def _best_layout(prs, points: int):
+def _alike(lay, items: list[dict], width: int, height: int) -> bool:
+    """Are these text boxes a series - rows of an agenda, columns of a comparison - each meant for one point: the same
+    text size and weight, their widths and heights within 30% of each other? (Looked at: a list spread over "2_Texto"'s
+    bold banner, large body and two small columns read as fragments; over "1_Texto"'s five equal rows it reads as an
+    index.)"""
+    from . import layouts
+
+    if len(items) < 2:
+        return True
+    ps = {p["idx"]: p for p in layouts.placeholders(lay, width, height)}
+    boxes = [ps[i["body"]] for i in items if i["body"] in ps]
+    if len(boxes) != len(items):
+        return False
+    same = len({(b["size"], b["bold"]) for b in boxes}) == 1
+    w, h = [b["w"] for b in boxes], [b["h"] for b in boxes]
+    return same and max(w) <= 1.3 * min(w) and max(h) <= 1.3 * min(h)
+
+
+def _best_layout(prs, points: int, subtitle: bool = False):
     """The layout with a heading and the fewest text boxes that still give each point one (else the one with a box
-    with the most room)."""
+    with the most room); with a subtitle, one that also has its place when the deck has one (measured: a cover with a
+    subtitle and one point went on a layout with no subtitle place, the subtitle left out and the reply claiming it)."""
     from . import layouts
 
     best = None
@@ -629,7 +758,15 @@ def _best_layout(prs, points: int):
         items = where["items"]
         if where["heading"] is None or not items or _needs_other_content(prs, lay):  # (measured: a cover on "7_Tabela")
             continue
-        fit = len(items) - points if len(items) >= points else (1000 if max(i["room"] for i in items) >= points else None)
+        series = len(items) >= points and _alike(lay, items[:points], prs.slide_width, prs.slide_height)
+        fit = len(items) - points if series else (1000 if max(i["room"] for i in items) >= points else None)
+        if fit is not None and subtitle and where["subtitle"] is None:
+            fit += 10_000  # without a place for the subtitle: only when no layout has both
+        roles = {x["role"] for x in layouts.placeholders(lay, prs.slide_width, prs.slide_height)}
+        if fit is not None and "picture" in roles:
+            # a picture place left empty shows as a grey block (looked at: an index on "1_Agenda C/Imagem", 2 runs in
+            # 8); its layout only when none without one fits ("2_Agenda S/Imagem")
+            fit += 500
         if fit is not None and (best is None or fit < best[0]):
             best = (fit, lay)
     return best and best[1]
@@ -642,7 +779,7 @@ def _layout_for_content(prs, content: dict):
 
     points = len([p for p in content.get("points") or [] if any(_point_text(p))])
     if points:
-        found = _best_layout(prs, points)
+        found = _best_layout(prs, points, bool(content.get("subtitle")))
         if found is not None:
             return found
     plain = []  # a heading and only text: no picture, table, chart or diagram left empty on the slide
@@ -652,7 +789,8 @@ def _layout_for_content(prs, content: dict):
         if where["heading"] is None or any(r in ("picture", "table", "chart", "diagram", "media") for r in roles):
             continue
         if content.get("subtitle") and where["subtitle"] is not None and not where["items"]:
-            return lay
+            found = cover_layout(prs)
+            return found if found is not None else lay
         head = next(x for x in layouts.placeholders(lay, prs.slide_width, prs.slide_height) if x["role"] == "heading")
         # a content slide: a heading at the top and a text area (measured: by fewest places alone, the closing message;
         # then a 60 pt statement; then a layout whose text box is 8 pt)
@@ -679,6 +817,106 @@ def add_slides(prs, slides: list[dict], layout: str | None = None, after_slide_i
     return {"slides": made, "new_slide_ids": made}
 
 
+def cover_layout(prs):
+    """A cover: a layout with a heading and a subtitle and no text area, nothing a table, chart or diagram would fill,
+    whose heading can be read on its background (layouts.readable); one without a picture place first, else one whose
+    photo place is left out (_place_content). None when the template has none."""
+    from . import layouts
+
+    W, H = prs.slide_width, prs.slide_height
+    found = []
+    for lay in prs.slide_layouts:
+        where = layouts.slots(lay, W, H)
+        roles = {x["role"] for x in layouts.placeholders(lay, W, H)}
+        # (a number place: a section divider's, "00" - looked at: the cover put on "2_Separador S/Imagem")
+        others = roles & {"table", "chart", "diagram", "media", "number"}
+        if where["heading"] is None or where["subtitle"] is None or where["items"] or others:
+            continue
+        if layouts.readable(lay, W, H):
+            found.append(("picture" in roles, lay))
+    return min(found, key=lambda x: x[0])[1] if found else None
+
+
+def layout_for_new(prs, content: dict, first: bool):
+    """A new slide's layout from its content (_layout_for_content); a deck's first slide on the cover when its content
+    is a cover's - a title, and a subtitle or short points that are its lines (_cover_subtitle) - (measured: on an
+    empty deck "a cover ... for the sales team, October 2026" sent with those as points went on "6_Texto", 2 runs in 2)."""
+    if first and content.get("title"):
+        cover = cover_layout(prs)
+        if cover is not None and not _cover_subtitle(prs, cover, content, True).get("points"):
+            return cover
+    return _layout_for_content(prs, content)
+
+
+def list_layout(prs):
+    """For a generated slide's list (add_outline): the layout, with its heading at the top and nothing but text, whose
+    largest text area is wide and tall, the roomiest (looked at: Banco CTT's points spread one in each of "3_Texto"'s
+    boxes - a dark banner, a line, two columns - read as fragments; as one list in "12_Texto" they read as a slide)."""
+    from . import layouts
+
+    W, H = prs.slide_width, prs.slide_height
+    best = None
+    for lay in prs.slide_layouts:
+        where = layouts.slots(lay, W, H)
+        ps = layouts.placeholders(lay, W, H)
+        others = {x["role"] for x in ps} & {"picture", "table", "chart", "diagram", "media"}
+        if where["heading"] is None or not where["items"] or others:
+            continue
+        if any(ph.placeholder_format.type is not None and ph._element.ph.get("orient") == "vert" for ph in lay.placeholders):
+            continue  # vertical text (looked at: the default template's "Vertical Title and Text" chosen for a list)
+        head = next(x for x in ps if x["role"] == "heading")
+        big = next(x for x in ps if x["idx"] == where["large"])
+        room = max(i["room"] for i in where["items"])
+        if head["y"] < 0.2 and big["w"] >= 0.6 and big["h"] >= 0.3 and (best is None or room > best[0]):
+            best = (room, lay)
+    return best and best[1]
+
+
+def section_layout(prs):
+    """The template's section divider: a layout with a heading and a number place, no text area or picture (Banco
+    CTT's "2_Separador S/Imagem"); else the cover-like layout a title and a subtitle fit."""
+    from . import layouts
+
+    for lay in prs.slide_layouts:
+        where = layouts.slots(lay, prs.slide_width, prs.slide_height)
+        roles = {x["role"] for x in layouts.placeholders(lay, prs.slide_width, prs.slide_height)}
+        plain = not roles & {"picture", "table", "chart"}
+        if where["heading"] is not None and "number" in roles and not where["items"] and plain:
+            return lay
+    return _layout_for_content(prs, {"title": "-", "subtitle": "-"})
+
+
+def add_outline(prs, slides: list[dict], cover: dict | None = None, after_slide_id: int | None = None, deck_id=None) -> dict:
+    """A generated deck's slides (spec NL-12; domain/generations.py): a cover ({title, subtitle}), then each slide
+    ({role, title, points, notes}) on the layout its role and content fit - a "section" on the template's divider,
+    its first point as the subtitle - with its notes; a list too long for one slide goes on over the next ones
+    (add_slide). Returns {slides, cover}."""
+    made, after, first = [], after_slide_id, None
+    if cover and cover.get("title"):
+        content = {k: cover[k] for k in ("title", "subtitle") if cover.get(k)}
+        # a cover's layout even with its title alone (measured: chosen for the title only, the cover went on "Title and
+        # Content", a small title over an empty page); a subtitle place left empty is removed as any
+        lay = cover_layout(prs) or _layout_for_content(prs, {"title": content["title"], "subtitle": "-"})
+        got = add_slide(prs, lay.name, after_slide_id=after, content=content)
+        made += got["slides"] if isinstance(got, dict) else got
+        first, after = made[0], made[-1]
+    for item in slides:
+        if item.get("role") == "section":
+            content = {"title": item["title"], **({"subtitle": item["points"][0]} if item.get("points") else {})}
+            lay = section_layout(prs)
+        else:
+            content = {"title": item["title"], **({"points": item["points"], "as_list": True} if item.get("points") else {})}
+            lay = (list_layout(prs) if item.get("points") else None) or _layout_for_content(prs, content)
+        got = add_slide(prs, lay.name, after_slide_id=after, content=content)
+        ids = got["slides"] if isinstance(got, dict) else got
+        if item.get("notes"):
+            for sid in ids:  # a slide continued on the next: its notes on each
+                set_notes(prs, sid, item["notes"])
+        made += ids
+        after = made[-1]
+    return {"slides": made, "new_slide_ids": made, "cover": first}
+
+
 def fill_slide(prs, slide_id: int, content: dict, layout: str | None = None, deck_id=None) -> dict:
     """A slide's content put in its layout's places (_place_content); the text it had there is replaced. On `layout`
     when given; when its layout has no place for the points, on the layout that fits them best (measured: told the
@@ -687,17 +925,36 @@ def fill_slide(prs, slide_id: int, content: dict, layout: str | None = None, dec
 
     s = get_slide(prs, slide_id)
     moved = None
+    if not content.get("title"):  # no new title: the slide's own stays, even on another layout (measured: points
+        # alone sent for an index, its slide went without a heading)
+        head = layouts.slots(s.slide_layout, prs.slide_width, prs.slide_height)["heading"]
+        own = next((ph.text_frame.text.strip() for ph in s.placeholders
+                    if ph.placeholder_format.idx == head and ph.has_text_frame), "")  # fmt: skip
+        if own:
+            content = {**content, "title": own}
+    try:
+        target = _layout(prs, layout) if layout else s.slide_layout
+    except OpError:
+        target = s.slide_layout
+    sent_subtitle = " ".join(str(content.get("subtitle") or "").split())
+    before = content
+    content = _cover_subtitle(prs, target, content, list(prs.slides).index(s) == 0)
+    folded = content is not before
     points = len([p for p in content.get("points") or [] if any(_point_text(p))])
     if layout:
         try:
             lay = _layout(prs, layout)
         except OpError:  # measured: "Layouts of this deck" (a heading of the context) sent as the layout
             lay = _layout_for_content(prs, content)
+        if points and not layouts.slots(lay, prs.slide_width, prs.slide_height)["items"]:
+            # a layout named with no place for the points: the one they fit (measured: an index for an empty cover,
+            # sent with the cover's own layout named, refused as NO_PLACE, and the title alone written, 2 runs in 3)
+            lay = _best_layout(prs, points, bool(content.get("subtitle"))) or lay
         if lay.name != s.slide_layout.name:
             _relayout(s, lay)
             moved = lay.name
     elif points and not layouts.slots(s.slide_layout, prs.slide_width, prs.slide_height)["items"]:
-        lay = _best_layout(prs, points)
+        lay = _best_layout(prs, points, bool(content.get("subtitle")))
         if lay is not None:
             _relayout(s, lay)
             moved = lay.name
@@ -707,11 +964,27 @@ def fill_slide(prs, slide_id: int, content: dict, layout: str | None = None, dec
     for lp in s.slide_layout.placeholders:  # the places an earlier placement removed, back from the layout
         if lp.placeholder_format.idx in places - have:
             s.shapes.clone_placeholder(lp)
+    keep = {where["heading"]} if not content.get("title") else set()  # no new title: the slide's own stays
     for ph in s.placeholders:  # what the slide said in those places goes: the content is the new content
-        if ph.placeholder_format.idx in places and ph.has_text_frame:
+        if ph.placeholder_format.idx in places - keep and ph.has_text_frame:
             _set_paragraphs(ph.text_frame, [{"runs": [{"text": ""}]}])
     left_out = _place_content(prs, s, content)
-    return {"slides": [s.slide_id], **({"layout": moved} if moved else {}), **({"left_out": left_out} if left_out else {})}
+    out = {"slides": [s.slide_id], **({"layout": moved} if moved else {}), **({"left_out": left_out} if left_out else {})}
+    if folded and sent_subtitle and _overflowing(prs, s.slide_id):  # as add_slide: the cover's lines first
+        lean = {k: v for k, v in content.items() if k != "subtitle"}
+        lean["subtitle"] = "\n".join(x for x in content["subtitle"].split("\n") if x != sent_subtitle) or ""
+        if not lean["subtitle"]:
+            lean.pop("subtitle")
+        for ph in s.placeholders:
+            if ph.placeholder_format.idx in places and ph.has_text_frame:
+                _set_paragraphs(ph.text_frame, [{"runs": [{"text": ""}]}])
+        for lp in s.slide_layout.placeholders:  # places the first placement removed, back
+            if lp.placeholder_format.idx in places - {ph.placeholder_format.idx for ph in s.placeholders}:
+                s.shapes.clone_placeholder(lp)
+        _place_content(prs, s, lean)
+        _subtitle_to_notes(prs, s.slide_id, sent_subtitle)
+        out["moved_to_notes"] = "subtitle"
+    return out
 
 
 def delete_slide(prs, slide_id: int, deck_id=None) -> list[int]:
@@ -1557,7 +1830,12 @@ def draw_diagram(
             if _overlapping((int(ax), int(ay), int(aw), int(ah)), [(ph.shape_id, ph.left, ph.top, ph.width, ph.height)]):
                 ph._element.getparent().remove(ph._element)
     styled = f"shape {style.shape_id}" if style is not None else "the theme"
-    return {"slides": [s.slide_id], "shape_ids": ids, "connector_ids": connectors, "styled_from": styled}
+    # what its boxes cover, as add_chart says (looked at: a diagram drawn by the editor's control over a chart and a
+    # list, and the person told nothing)
+    drawn = {sh.shape_id: sh for sh in s.shapes if sh.shape_id in ids}
+    others = _boxes(prs, s, set(ids) | set(connectors))
+    covers = sorted({c for sh in drawn.values() for c in _overlapping((sh.left, sh.top, sh.width, sh.height), others)})
+    return {"slides": [s.slide_id], "shape_ids": ids, "connector_ids": connectors, "styled_from": styled, "covers": covers}
 
 
 def blank_layout(prs):
@@ -1878,6 +2156,7 @@ OPERATIONS = {
     "add_slide": add_slide,
     "fill_slide": fill_slide,
     "add_slides": add_slides,
+    "add_outline": add_outline,  # a generated deck (domain/generations.py: not an assistant tool)
     "add_chart": add_chart,
     "draw_diagram": draw_diagram,
     "edit_chart": edit_chart,

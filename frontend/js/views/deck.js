@@ -10,9 +10,18 @@ import { api, downloadUrl, slideImage } from '../core/api.js';
 import { html, raw, setHtml } from '../core/html.js';
 import * as store from '../core/store.js';
 import { decide } from '../assistant/assistant.js';
+import { controls } from './deck-controls.js';
 
 const phone = window.matchMedia('(max-width: 833px)');
 const INFO_ICON = '<svg class="banner-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5h.01"/></svg>';
+// the editor the Slide, Insert and Format menus act on (the one last shown); its commands are registered once
+let active = null;
+const SHAPE_ACTIONS = {   // the selected shape's actions under the slide, by its kind (the menus have the same)
+  text: [['edit-text', 'Edit text'], ['format', 'Format text'], ['fit', 'Fit text']],
+  picture: [['alt-text', 'Alt text'], ['replace-image', 'Replace picture']],
+  chart: [['edit-chart', 'Edit chart'], ['alt-text', 'Alt text']],
+  table: [['edit-table', 'Edit table']],
+};
 const SOURCES = { upload: 'Uploaded', template: 'Created from a template', restore: 'Restored', assistant: 'Assistant', manual: 'Edited', undo: 'Undone', redo: 'Redone', duplicate: 'Copied from another deck' };
 
 function when(iso) {
@@ -34,6 +43,7 @@ export function buildDeck(view, { pid, did, onTitle, onChanged }) {
   let showVersions = false;
   let review = null;              // {proposal, deck: its entry, include: Set of slide ids}
   let shapes = [];                // the selected slide's shapes (read model), for editing text in place
+  let slideRep = null;            // the selected slide's read model: its layout, notes and shapes
   let dragFrom = null;            // the strip index being dragged
   // the edit lease (spec PJ-13): taken on opening, renewed while the editor is open, released on closing; while
   // another member holds it, this editor views the deck and changes nothing ("being edited by ...")
@@ -100,6 +110,8 @@ export function buildDeck(view, { pid, did, onTitle, onChanged }) {
     store.set('deck', did);
     store.set('version', info.version);
     store.set('selection', slide && !review ? { slide_id: slide.id, shape_ids: [...selectedShapes] } : null);
+    // the menus follow the selection at once (measured: Format › Alt text still off right after a picture was picked)
+    document.dispatchEvent(new Event('ui-sections-changed'));
   }
 
   function render() {
@@ -124,6 +136,7 @@ export function buildDeck(view, { pid, did, onTitle, onChanged }) {
         <span class="editor-spacer"></span>
         <button type="button" data-action="undo" title="Undo the last accepted change" ${review || locked ? 'disabled' : ''}>Undo</button>
         <button type="button" data-action="redo" title="Redo" ${review || locked ? 'disabled' : ''}>Redo</button>
+        <button type="button" data-action="add-slide" title="Add a slide after this one (also in the Slide menu)" ${review || locked ? 'disabled' : ''}>Add slide</button>
         <button type="button" data-action="edit-text" title="Edit the selected text box (F2, or double-click it)" disabled>Edit text</button>
         <button type="button" data-action="delete-slide" ${review || !slide || locked ? 'disabled' : ''}>Delete slide</button>
         <button type="button" data-action="rename" ${off}>Rename</button>
@@ -168,7 +181,11 @@ export function buildDeck(view, { pid, did, onTitle, onChanged }) {
     // one span per sentence: each is translated on its own (i18n.js looks up whole texts)
     const note = html`<p class="stage-note">${slide.hidden ? html`<span>Hidden slide</span> · ` : ''}<span>${position}</span> · <span>Previews are approximate: they are rendered by LibreOffice, not PowerPoint.</span></p>`;
     if (!review || slide.state === 'same') {
-      return html`<div class="stage-sheet"><img alt="" src="${image(slide, 'preview')}"><div class="shape-boxes"></div></div>${note}`;
+      return html`<div class="stage-sheet"><img alt="" src="${image(slide, 'preview')}"><div class="shape-boxes"></div></div>
+        <div class="shape-actions row" role="group" aria-label="The selected shape" hidden></div>${note}
+        <section class="notes-block" aria-labelledby="notes-title"><div class="row"><h2 class="section-title" id="notes-title">Speaker notes</h2>
+          <span class="editor-spacer"></span><button type="button" data-action="notes" ${lease.mine ? '' : 'disabled'}>Edit notes</button></div>
+          <p class="notes-text user-text muted">…</p></section>`;
     }
     const before = slideImage(pid, did, slide.id, review.deck.base_version, 'preview');
     const after = draftImage(pid, review.proposal.conversation_id, review.proposal.id, did, slide.id, 'preview');
@@ -186,6 +203,12 @@ export function buildDeck(view, { pid, did, onTitle, onChanged }) {
     const layer = root.querySelector('.shape-boxes');
     if (!layer) return;
     shapes = rep.shapes || [];
+    slideRep = rep;
+    const notesEl = root.querySelector('.notes-text');
+    if (notesEl) {   // the person's notes as written; the empty state is interface text, translated
+      notesEl.classList.toggle('user-text', Boolean(rep.notes));
+      notesEl.textContent = rep.notes || (window.cortexT ? window.cortexT('No notes.') : 'No notes.');
+    }
     const boxes = shapes.filter((s) => s.box && s.type !== 'group');
     setHtml(layer, html`${boxes.map((s) => html`<button type="button" class="shape-box notranslate${selectedShapes.has(s.shape_id) ? ' on' : ''}" data-shape="${s.shape_id}"
       style="left:${s.box.x * 100}%;top:${s.box.y * 100}%;width:${s.box.w * 100}%;height:${s.box.h * 100}%"
@@ -197,12 +220,88 @@ export function buildDeck(view, { pid, did, onTitle, onChanged }) {
       b.setAttribute('aria-pressed', String(selectedShapes.has(id)));
       publishSelection(current().slide);
       editButton();
+      shapeActions();
     }));
     layer.querySelectorAll('.shape-box').forEach((b) => {
       b.addEventListener('dblclick', () => editText(Number(b.dataset.shape)));
       b.addEventListener('keydown', (e) => { if (e.key === 'F2') { e.preventDefault(); editText(Number(b.dataset.shape)); } });
     });
     editButton();
+    shapeActions();
+  }
+
+  // the kind of the one selected shape, for its actions: text, picture, chart, table, or null
+  function selectedShape() {
+    return selectedShapes.size === 1 ? shapes.find((s) => s.shape_id === [...selectedShapes][0]) || null : null;
+  }
+  function kindOf(s) {
+    if (!s) return null;
+    if (s.type === 'table') return 'table';
+    if (s.type === 'chart') return 'chart';
+    if (s.type === 'picture') return 'picture';
+    return editable(s) ? 'text' : null;
+  }
+
+  function shapeActions() {
+    const bar = root.querySelector('.shape-actions');
+    if (!bar) return;
+    const kind = lease.mine && !review ? kindOf(selectedShape()) : null;
+    bar.hidden = !kind;
+    setHtml(bar, html`${(SHAPE_ACTIONS[kind] || []).map(([a, label]) => html`<button type="button" data-shape-action="${a}">${label}</button>`)}`);
+    bar.querySelectorAll('[data-shape-action]').forEach((b) => b.addEventListener('click', () => command(b.dataset.shapeAction)));
+  }
+
+  // ── the editor's controls (deck-controls.js): each a version, as the edits below ─────
+  async function run(tool, args, done) {
+    if (!lease.mine || review) return null;
+    let got = null;
+    try {
+      got = await api(`projects/${pid}/decks/${did}/edits`, { method: 'POST', json: { base_version: info.version, op: 'tool', tool, args } });
+      window.menus.toast(done);
+      // a chart or a diagram over the slide's own content (deck-controls: placed under the title), said
+      if (got.result?.covers?.length) modalAlert('It covers other content on this slide. Undo takes it back; on a slide of its own it has the room.', { title: 'Edit' });
+      if (got.result?.moved_to_notes) modalAlert("The subtitle did not fit the cover with its other lines: it is in the slide's speaker notes.", { title: 'Edit' });
+      if (got.result?.left_out?.length) modalAlert(`The layout had no place for some of it, left out: ${got.result.left_out.join(', ')}.`, { title: 'Edit' });
+    } catch (e) {
+      if (e.status === 409) window.menus.toast('The deck had changed since you opened it: it has been reloaded. Try again.');
+      else modalAlert(e.message, { title: 'Edit' });
+    }
+    await load(true);
+    onChanged?.();
+    return got;
+  }
+
+  const ctl = controls({
+    pid, did, run,
+    slide: () => { const s = current().slide; return s && s.state !== 'removed' ? { id: s.id, layout: slideRep?.slide_id === s.id ? slideRep.layout : '' } : null; },
+    shape: selectedShape,
+    select: (slideId) => { const i = info.slides.findIndex((x) => x.id === slideId); if (i >= 0) select(i); },
+  });
+
+  function command(name) {
+    const can = lease.mine && !review;
+    if (!can) return;
+    const slide = current().slide;
+    const kind = kindOf(selectedShape());
+    const act = {
+      'add-slide': ctl.addSlide, 'duplicate-slide': slide && ctl.duplicateSlide, 'change-layout': slide && ctl.changeLayout,
+      'move-up': slide && (() => moveSlide(selected, selected - 1)), 'move-down': slide && (() => moveSlide(selected, selected + 1)),
+      'copy-slides': ctl.copySlides, 'change-template': ctl.changeTemplate, notes: slide && ctl.notes,
+      'insert-chart': slide && ctl.insertChart, 'insert-diagram': slide && ctl.diagram, 'insert-image': slide && ctl.insertImage,
+      'edit-text': kind === 'text' && (() => editText(selectedShape().shape_id)), format: kind === 'text' && ctl.formatText,
+      fit: kind === 'text' && ctl.fitText, 'alt-text': (kind === 'picture' || kind === 'chart') && ctl.altText,
+      'replace-image': kind === 'picture' && ctl.replaceImage, 'edit-chart': kind === 'chart' && ctl.editChart,
+      'edit-table': kind === 'table' && ctl.editTable,
+    }[name];
+    if (act) Promise.resolve(act()).catch((e) => modalAlert(e.message, { title: 'Edit' }));
+  }
+
+  // what the menus may offer now (menus.js reads these every half second)
+  const can = () => active === api_ && root.isConnected && !!info && lease.mine && !review && !phone.matches;
+  function contexts() {
+    const k = can() ? kindOf(selectedShape()) : null;
+    return { deckEditable: can(), slideSelected: can() && !!current().slide, shapeText: k === 'text',
+      shapePicture: k === 'picture', shapeChart: k === 'chart', shapeTable: k === 'table', shapeAlt: k === 'picture' || k === 'chart' };
   }
 
   // ── edits by hand (spec PM-7) ──────────────────────────────────────
@@ -282,6 +381,8 @@ export function buildDeck(view, { pid, did, onTitle, onChanged }) {
 
   function wire() {
     root.querySelector('[data-action="rename"]').addEventListener('click', rename);
+    root.querySelector('[data-action="add-slide"]').addEventListener('click', () => command('add-slide'));
+    root.querySelector('[data-action="notes"]')?.addEventListener('click', () => command('notes'));
     root.querySelector('[data-action="edit-text"]').addEventListener('click', () => editText([...selectedShapes][0]));
     root.querySelector('[data-action="delete-slide"]').addEventListener('click', deleteSlide);
     for (const li of root.querySelectorAll('.slide-strip li[draggable="true"]')) {
@@ -383,5 +484,20 @@ export function buildDeck(view, { pid, did, onTitle, onChanged }) {
   document.addEventListener('sa:review', (e) => { if (e.detail.deck === did && store.get('proposal')) { syncReview(store.get('proposal')); render(); } });
   phone.addEventListener('change', () => info && render());
   load();
-  return { reload: () => load(true), title: () => info?.deck.title, focus: () => info && publishSelection(current().slide), release };
+  const api_ = { reload: () => load(true), title: () => info?.deck.title, release, command, contexts,
+    focus: () => { active = api_; if (info) publishSelection(current().slide); } };
+  active = api_;
+  return api_;
 }
+
+// the menus' commands and contexts, once: they act on the editor last shown
+const COMMANDS = ['add-slide', 'duplicate-slide', 'move-up', 'move-down', 'change-layout', 'copy-slides', 'change-template',
+  'notes', 'insert-chart', 'insert-diagram', 'insert-image', 'edit-text', 'format', 'fit', 'alt-text', 'replace-image',
+  'edit-chart', 'edit-table'];
+function registerMenus() {
+  for (const c of COMMANDS) window.menus.command(`deck.${c}`, () => active?.command(c));
+  for (const key of ['deckEditable', 'slideSelected', 'shapeText', 'shapePicture', 'shapeChart', 'shapeTable', 'shapeAlt']) {
+    window.menus.context(key, () => Boolean(active?.contexts()[key]));
+  }
+}
+if (window.menus) registerMenus(); else document.addEventListener('menus-ready', registerMenus, { once: true });

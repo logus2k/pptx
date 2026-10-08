@@ -352,3 +352,24 @@ def test_reading_calls_are_not_repeated_and_an_empty_deck_is_not_replaced(server
     assert "There was no slide 1: a new slide was made" in results[3]["content"]  # measured: fill_slide 30 times on it
     decks = requests.get(f"{server}/api/projects/{pid}/decks", headers=h(), timeout=10).json()["decks"]
     assert len(decks) == 1
+
+
+def test_a_slide_in_its_own_words_is_cited_by_the_figures_it_keeps():
+    """Measured (a-slide-from-the-kb-with-its-source, 3 runs in 6): the slide was written from the cover's turn's
+    passages in the model's own words, matched none word for word, and its notes had no source."""
+    import json
+
+    from app.agent.tools import _figures, _passages_holding
+
+    assert _figures("80.000€ por mutuário; 450.000,00 euros; DL n.º 44/2024; 8.º escalão") == {"80000", "450000", "44", "2024"}
+    passage = ("Os mutuários tenham entre 18 e 35 anos de idade, rendimentos que não ultrapassem o 8.º escalão do IRS "
+               "(80.000,00 € por mutuário) e o valor da transação não exceda 450.000,00 €.")  # fmt: skip
+    kb = [{"role": "tool", "name": "kb_search", "content": json.dumps({"passages": [
+        {"document": "CH/11 - Crédito Habitação Jovem.docx", "title": "11 - Crédito Habitação Jovem", "text": passage},
+        {"document": "CH/02 - Outro.docx", "title": "02 - Outro", "text": "Sem os mesmos números: 12 e 2023."}]})}]  # fmt: skip
+    own = {"title": "Condições", "points": ["Idade: entre 18 e 35 anos.", "Rendimentos até 80.000€ por mutuário.",
+                                            "Transação até 450.000€."]}  # fmt: skip
+    held = json.loads(_passages_holding(kb, own)[0]["content"])["passages"]
+    assert [p["title"] for p in held] == ["11 - Crédito Habitação Jovem"]  # the one whose figures it states
+    thanks = {"title": "Obrigado", "points": ["Perguntas?", "Contactos da equipa em 2026"]}  # one figure: no source
+    assert _passages_holding(kb, thanks) == []

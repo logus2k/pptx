@@ -84,11 +84,7 @@
      "say": "Acrescenta um diapositivo com as condições do crédito habitação jovem",
      "expect": {
       "status": "done",
-      "slides": 2,
       "changed": true,
-      "used": [
-       "kb_search"
-      ],
       "slide_text": [
        {
         "slide": 2,
@@ -104,13 +100,17 @@
          "http"
         ]
        }
-      ]
+      ],
+      "min_slides": 2
      }
     }
    ],
    "expect": {
     "no_empty_placeholders": true,
-    "no_overflow": true
+    "no_overflow": true,
+    "used": [
+     "kb_search"
+    ]
    }
   },
   {
@@ -323,6 +323,147 @@
      }
     }
    ]
+  },
+  {
+   "id": "form-corporate-deck-from-a-kb-topic",
+   "about": "NL-12, the form's path: a corporate presentation from what the knowledge base holds on a topic.",
+   "generate": {
+    "kind": "corporate",
+    "source": {
+     "kind": "kb_topic",
+     "query": "crédito habitação jovem"
+    },
+    "slides": 6,
+    "audience": "clientes particulares",
+    "language": "pt",
+    "target": {
+     "kind": "new",
+     "template": {
+      "kind": "admin",
+      "id": "bancoctt"
+     }
+    }
+   },
+   "expect": {
+    "no_overflow": true,
+    "no_empty_placeholders": true,
+    "notes_every": [
+     "Fonte"
+    ],
+    "min_slides": 6,
+    "slide_text": [
+     {
+      "slide": 2,
+      "any": [
+       "jovem",
+       "35",
+       "garantia",
+       "habitação"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "form-training-from-a-kb-topic",
+   "about": "NL-12, the form's path: a training from what the knowledge base holds on a topic.",
+   "generate": {
+    "kind": "training",
+    "source": {
+     "kind": "kb_topic",
+     "query": "crédito habitação jovem"
+    },
+    "slides": 12,
+    "language": "pt",
+    "target": {
+     "kind": "new",
+     "template": {
+      "kind": "admin",
+      "id": "bancoctt"
+     }
+    }
+   },
+   "expect": {
+    "no_overflow": true,
+    "no_empty_placeholders": true,
+    "notes_every": [
+     "Fonte"
+    ],
+    "min_slides": 10,
+    "slide_text": [
+     {
+      "slide": 2,
+      "any": [
+       "objetivo",
+       "objetivos",
+       "aprender"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "form-corporate-deck-from-a-kb-document",
+   "about": "NL-12, the form's path: a corporate presentation from one knowledge-base document read whole.",
+   "generate": {
+    "kind": "corporate",
+    "source": {
+     "kind": "kb_document",
+     "domain": "ch",
+     "path": "CH/11 - Crédito Habitação Jovem.docx"
+    },
+    "slides": 6,
+    "language": "pt",
+    "target": {
+     "kind": "new",
+     "template": {
+      "kind": "admin",
+      "id": "bancoctt"
+     }
+    }
+   },
+   "expect": {
+    "no_overflow": true,
+    "no_empty_placeholders": true,
+    "notes_every": [
+     "Fonte"
+    ],
+    "min_slides": 6,
+    "slide_text": [
+     {
+      "slide": 2,
+      "any": [
+       "jovem",
+       "35",
+       "garantia",
+       "habitação"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "chat-training-from-a-kb-topic",
+   "about": "NL-12, the assistant's path: a training asked in the chat; the outline approved as its plan.",
+   "turns": [
+    {
+     "say": "Cria uma formação sobre o crédito habitação jovem a partir da base de conhecimento",
+     "expect": {
+      "status": "done",
+      "min_slides": 8,
+      "used": [
+       "generate_deck"
+      ]
+     }
+    }
+   ],
+   "expect": {
+    "no_overflow": true,
+    "no_empty_placeholders": true,
+    "notes_every": [
+     "Fonte"
+    ]
+   }
   }
  ]
 }

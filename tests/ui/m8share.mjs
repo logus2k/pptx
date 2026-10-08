@@ -67,7 +67,9 @@ const list = await (await pr.request.fetch(`${BASE}api/projects`, { headers: aut
 check(list.projects.some((x) => x.id === pid && x.role === 'editor'), 'the project is in Rui\'s list, as editor');
 
 // Ana writes in the conversation; Rui sees it with her address (on a tablet the pane is opened from its menu, as m3)
-writeFileSync(SCRIPT, JSON.stringify([{ text: 'Noted.' }, { text: 'Noted.' }]));
+// three: a reply with no tool is asked again (NUDGE), and once more for a change (STILL_NUDGE: the e2e router reads
+// every request as one); the last is shown
+writeFileSync(SCRIPT, JSON.stringify([{ text: 'Noted.' }, { text: 'Noted.' }, { text: 'Noted.' }]));
 async function pane(p) {
   if (await p.locator('.assistant textarea').isVisible()) return;
   await p.locator('#menu-toggle').click();

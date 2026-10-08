@@ -34,7 +34,9 @@ def font_file(family: str, bold: bool, italic: bool) -> str | None:
     """The installed file fontconfig picks for a typeface, as LibreOffice does (the decks' fonts are in fonts/)."""
     style = (":weight=bold" if bold else "") + (":slant=italic" if italic else "")
     try:
-        run = subprocess.run(["fc-match", f"{family}{style}", "--format=%{file}"], capture_output=True, timeout=10, check=False)  # noqa: S603, S607
+        # "--": a deck's font name is never read as an option (security review L6: a font named "-V" printed the version)
+        cmd = ["fc-match", "--format=%{file}", "--", f"{family}{style}"]
+        run = subprocess.run(cmd, capture_output=True, timeout=10, check=False)  # noqa: S603 - fixed arguments, the name after "--"
     except (OSError, subprocess.TimeoutExpired):
         return None
     return run.stdout.decode("utf-8", "replace").strip() or None

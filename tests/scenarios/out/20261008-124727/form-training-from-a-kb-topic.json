@@ -1,0 +1,643 @@
+{
+ "id": "form-training-from-a-kb-topic",
+ "about": "NL-12, the form's path: a training from what the knowledge base holds on a topic.",
+ "seconds": 21.0,
+ "outline": {
+  "title": "Crédito Habitação Jovem com Garantia do Estado",
+  "kind": "training",
+  "slides": [
+   {
+    "role": "objectives",
+    "title": "Objetivos da Formação",
+    "points": [
+     "Compreender o que é o Crédito Habitação Jovem.",
+     "Identificar os critérios de elegibilidade para o regime.",
+     "Saber como funciona a garantia do Estado.",
+     "Conhecer a documentação necessária para a candidatura."
+    ],
+    "notes": "Nesta formação, vamos detalhar o Crédito Habitação Jovem. Ao final, vocês serão capazes de explicar o regime, identificar quem pode beneficiar e entender os passos do processo. Vamos focar-nos nos aspetos legais e práticos deste apoio.",
+    "sources": [
+     "11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > O que é o Crédito Habitação Jovem"
+    ]
+   },
+   {
+    "role": "section",
+    "title": "O Que É o Crédito Habitação Jovem?",
+    "points": [
+     "Apresentar o regime de crédito habitação especial para jovens."
+    ],
+    "notes": "Vamos começar por definir o que é este regime. É um apoio específico criado para facilitar o acesso à habitação para os jovens portugueses. Este regime foi estabelecido por um diploma legal recente.",
+    "sources": [
+     "11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > O que é o Crédito Habitação Jovem",
+     "11 - Crédito Habitação Jovem · Crédito Habitação Jovem - Garantia do Estado"
+    ]
+   },
+   {
+    "role": "content",
+    "title": "Características Principais do Regime",
+    "points": [
+     "É um regime especial para jovens com 35 anos ou menos.",
+     "Foi estabelecido pelo Decreto-Lei n.º 44/2024, de 10 de julho.",
+     "Permite financiar até 100% do valor de aquisição do imóvel.",
+     "Elimina a necessidade de os mutuários terem capitais próprios para a entrada.",
+     "O Estado Português atua como fiador, cobrindo a diferença do LTV (85%) para 100%."
+    ],
+    "notes": "O ponto mais relevante deste regime é a possibilidade de financiar 100% do valor do imóvel. Isto significa que os jovens não precisam de ter dinheiro para a entrada. O Estado entra como fiador para cobrir essa diferença, que normalmente seria coberta pelo LTV de 85%.",
+    "sources": [
+     "11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > O que é o Crédito Habitação Jovem",
+     "11 - Crédito Habitação Jovem · Crédito Habitação Jovem - Garantia do Estado"
+    ]
+   },
+   {
+    "role": "section",
+    "title": "Critérios de Elegibilidade",
+    "points": [
+     "Definir quem pode aceder aos benefícios do Crédito Habitação Jovem."
+    ],
+    "notes": "Agora que sabemos o que é, vamos ver quem pode beneficiar. Existem critérios claros de idade, residência e rendimento que os candidatos devem cumprir. É fundamental verificar estes requisitos antes de avançar com qualquer proposta.",
+    "sources": [
+     "11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Critérios de Elegibilidade",
+     "11 - Crédito Habitação Jovem · Crédito Habitação Jovem - Garantia do Estado"
+    ]
+   },
+   {
+    "role": "content",
+    "title": "Requisitos Pessoais e Financeiros",
+    "points": [
+     "Idade entre 18 e 35 anos, e domicílio fiscal em Portugal.",
+     "Rendimentos não podem exceder o 8.º escalão do IRS.",
+     "Um mutuário pode ter rendimentos até €80.000.",
+     "Dois mutuários podem ter rendimentos até €160.000 (fator de 2).",
+     "O crédito deve ser para a primeira habitação própria permanente."
+    ],
+    "notes": "Os requisitos pessoais são bem definidos: idade e domicílio fiscal são obrigatórios. Em relação aos rendimentos, há limites específicos dependendo do número de mutuários. Além disso, o crédito deve ser destinado à primeira habitação permanente do mutuário.",
+    "sources": [
+     "11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Critérios de Elegibilidade",
+     "11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Apuramento dos Rendimentos do(s) Mutuário(s)",
+     "11 - Crédito Habitação Jovem · Crédito Habitação Jovem - Garantia do Estado"
+    ]
+   },
+   {
+    "role": "content",
+    "title": "Limites da Transação e Benefícios Fiscais",
+    "points": [
+     "O valor da transação não pode ultrapassar €450.000.",
+     "A garantia do Estado não excede 15% do valor da transação.",
+     "Os mutuários beneficiam de isenção de IMT e Imposto do Selo.",
+     "Esta isenção aplica-se a primeiras habitações até €330.539."
+    ],
+    "notes": "Há limites claros tanto para o valor do imóvel como para a garantia do Estado. É importante notar que, além do financiamento, os mutuários beneficiam de isenções fiscais importantes, mas estas têm um limite de valor associado.",
+    "sources": [
+     "11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Critérios de Elegibilidade",
+     "11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Garantia do Estado - Operacionalização",
+     "11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Isenção de IMT e Imposto do Selo",
+     "11 - Crédito Habitação Jovem · Crédito Habitação Jovem - Garantia do Estado"
+    ]
+   },
+   {
+    "role": "section",
+    "title": "Processo de Candidatura e Documentação",
+    "points": [
+     "Entender as fases de avaliação e os documentos necessários para a candidatura."
+    ],
+    "notes": "O processo de candidatura tem etapas bem definidas, começando pela proposta e seguindo para o enquadramento. A documentação necessária varia consoante a fase em que o processo se encontra. Vamos detalhar cada uma destas fases.",
+    "sources": [
+     "11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Aferição da Elegibilidade",
+     "11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Criação de Proposta",
+     "11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Enquadramento de Proposta"
+    ]
+   },
+   {
+    "role": "content",
+    "title": "Fases de Avaliação e Documentos Iniciais",
+    "points": [
+     "A avaliação ocorre em duas fases: Proposta de Risco e Enquadramento da Proposta.",
+     "As cartas de recusa são emitidas apenas para propostas submetidas ao risco.",
+     "Para criar a proposta, são necessários o formulário de adesão.",
+     "Também são exigidas a declaração de IRS e o certificado de domicílio fiscal."
+    ],
+    "notes": "É importante saber que a recusa só ocorre após a análise de risco. Na fase inicial de criação da proposta, o foco está na identificação do mutuário, exigindo o formulário de adesão, a declaração de IRS e o certificado de domicílio fiscal.",
+    "sources": [
+     "11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Aferição da Elegibilidade",
+     "11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Criação de Proposta"
+    ]
+   },
+   {
+    "role": "content",
+    "title": "Documentação para Enquadramento da Proposta",
+    "points": [
+     "Para o enquadramento, são necessários certificados do Registo e da Autoridade Tributária.",
+     "É preciso também um documento que ateste o valor de aquisição (ex: CPCV).",
+     "O Serviço de Solicitadoria é opcional, mas aplicável por defeito em aquisições.",
+     "Para estrangeiros, é obrigatório ter título de residência temporária com pelo menos 3 anos de emissão."
+    ],
+    "notes": "Na fase de enquadramento, o foco muda para o imóvel, exigindo certidões oficiais. Se o mutuário for estrangeiro, há um requisito adicional rigoroso sobre o título de residência. Lembrem-se que o serviço de solicitadoria é um apoio que pode ser usado por defeito.",
+    "sources": [
+     "11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Enquadramento de Proposta",
+     "05 - Documentos Necessários · Documentos Necessários para o Crédito Habitação",
+     "16 - Oferta Estrangeiros no Crédito Habitação · Oferta Estrangeiros no Crédito Habitação"
+    ]
+   },
+   {
+    "role": "section",
+    "title": "Considerações Operacionais",
+    "points": [
+     "Conhecer os detalhes operacionais e as parcerias envolvidas no regime."
+    ],
+    "notes": "Para finalizar, vamos abordar alguns detalhes operacionais. Isto inclui as parcerias bancárias e os quadrantes de preços aplicados a estas operações. É importante ter conhecimento destes aspetos para aconselhar corretamente os clientes.",
+    "sources": [
+     "11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Garantia do Estado - Operacionalização",
+     "11 - Crédito Habitação Jovem · Crédito Habitação Jovem - Garantia do Estado"
+    ]
+   },
+   {
+    "role": "content",
+    "title": "Parcerias e Condições de Mercado",
+    "points": [
+     "O CTT Bank aderiu ao protocolo em 2 de outubro de 2024.",
+     "As operações de CH Jovem utilizam um quadrante de preços de 65-85%.",
+     "O Estado Português atua como fiador para cobrir a diferença do LTV.",
+     "A garantia do Estado não ultrapassa 15% do valor da transação."
+    ],
+    "notes": "A operacionalização envolve parcerias específicas, como a do CTT Bank, que aderiu recentemente. Os custos são definidos por um quadrante de preços específico. Reitero que a garantia do Estado tem um limite máximo de 15% sobre o valor da transação.",
+    "sources": [
+     "11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Garantia do Estado - Operacionalização",
+     "11 - Crédito Habitação Jovem · Crédito Habitação Jovem - Garantia do Estado"
+    ]
+   },
+   {
+    "role": "questions",
+    "title": "Verificação de Conhecimento",
+    "points": [
+     "Qual é a idade máxima para beneficiar do Crédito Habitação Jovem?",
+     "Qual é o limite máximo de rendimento para um mutuário individual?",
+     "Que tipo de documentos são necessários para o enquadramento da proposta?"
+    ],
+    "notes": "Para verificar o que aprendemos, respondam a estas três questões. A idade máxima é 35 anos. O limite individual é de €80.000. Para o enquadramento, são necessários certificados do Registo e da Autoridade Tributária, e um documento de valor de aquisição como o CPCV.",
+    "sources": [
+     "11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Critérios de Elegibilidade",
+     "11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Apuramento dos Rendimentos do(s) Mutuário(s)",
+     "11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Enquadramento de Proposta"
+    ]
+   },
+   {
+    "role": "summary",
+    "title": "Principais Pontos a Retenção",
+    "points": [
+     "O CH Jovem é um regime para jovens (até 35 anos) que permite financiar até 100% do imóvel.",
+     "O Estado atua como fiador, cobrindo a diferença do LTV, com garantia máxima de 15%.",
+     "Os critérios incluem limites de rendimento (ex: €80k/mutuário) e valor da transação (até €450k).",
+     "O processo exige documentação específica, como formulário de adesão e certidões fiscais."
+    ],
+    "notes": "Para resumir, o Crédito Habitação Jovem é uma ferramenta poderosa para jovens, permitindo financiamento total com o apoio do Estado. Lembrem-se dos limites de idade, rendimento e valor. O sucesso da candidatura depende da correta apresentação de toda a documentação exigida em cada fase.",
+    "sources": [
+     "11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > O que é o Crédito Habitação Jovem",
+     "11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Garantia do Estado - Operacionalização",
+     "11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Critérios de Elegibilidade",
+     "11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Criação de Proposta"
+    ]
+   }
+  ],
+  "sources": [
+   {
+    "document": "11 - Crédito Habitação Jovem",
+    "link": "https://logus2k.com/cortex/?open=ch&path=CH%2F11%20-%20Cr%C3%A9dito%20Habita%C3%A7%C3%A3o%20Jovem.docx&page=1"
+   },
+   {
+    "document": "05 - Documentos Necessários",
+    "link": "https://logus2k.com/cortex/?open=ch&path=CH%2F05%20-%20Documentos%20Necess%C3%A1rios.docx&page=1"
+   },
+   {
+    "document": "16 - Oferta Estrangeiros no Crédito Habitação",
+    "link": "https://logus2k.com/cortex/?open=ch&path=CH%2F16%20-%20Oferta%20Estrangeiros%20no%20Cr%C3%A9dito%20Habita%C3%A7%C3%A3o.docx&page=1"
+   }
+  ],
+  "read": {
+   "passages": 39,
+   "parts": 2,
+   "points": 24
+  }
+ },
+ "deck": [
+  {
+   "slide_id": 256,
+   "layout": "1_Capa C/ Imagem",
+   "shapes": [
+    {
+     "shape_id": 4,
+     "kind": "body",
+     "lines": [
+      "Crédito Habitação Jovem com Garantia do Estado"
+     ]
+    }
+   ],
+   "empty_placeholders": [],
+   "overflowing": [],
+   "notes": "",
+   "charts": [],
+   "connectors": 0,
+   "covered": []
+  },
+  {
+   "slide_id": 257,
+   "layout": "12_Texto",
+   "shapes": [
+    {
+     "shape_id": 4,
+     "kind": "body",
+     "lines": [
+      "Compreender o que é o Crédito Habitação Jovem.",
+      "Identificar os critérios de elegibilidade para o regime.",
+      "Saber como funciona a garantia do Estado.",
+      "Conhecer a documentação necessária para a candidatura."
+     ]
+    },
+    {
+     "shape_id": 6,
+     "kind": "body",
+     "lines": [
+      "Objetivos da Formação"
+     ]
+    }
+   ],
+   "empty_placeholders": [],
+   "overflowing": [],
+   "notes": "Nesta formação, vamos detalhar o Crédito Habitação Jovem. Ao final, vocês serão capazes de explicar o regime, identificar quem pode beneficiar e entender os passos do processo. Vamos focar-nos nos aspetos legais e práticos deste apoio.\n\nFonte: 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > O que é o Crédito Habitação Jovem - https://logus2k.com/cortex/?open=ch&path=CH%2F11%20-%20Cr%C3%A9dito%20Habita%C3%A7%C3%A3o%20Jovem.docx&page=1",
+   "charts": [],
+   "connectors": 0,
+   "covered": []
+  },
+  {
+   "slide_id": 258,
+   "layout": "2_Separador S/Imagem",
+   "shapes": [
+    {
+     "shape_id": 2,
+     "kind": "title",
+     "lines": [
+      "O Que É o Crédito Habitação Jovem?"
+     ]
+    },
+    {
+     "shape_id": 3,
+     "kind": "body",
+     "lines": [
+      "Apresentar o regime de crédito habitação especial para jovens."
+     ]
+    }
+   ],
+   "empty_placeholders": [],
+   "overflowing": [],
+   "notes": "Vamos começar por definir o que é este regime. É um apoio específico criado para facilitar o acesso à habitação para os jovens portugueses. Este regime foi estabelecido por um diploma legal recente.\n\nFonte: 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > O que é o Crédito Habitação Jovem - https://logus2k.com/cortex/?open=ch&path=CH%2F11%20-%20Cr%C3%A9dito%20Habita%C3%A7%C3%A3o%20Jovem.docx&page=1\nFonte: 11 - Crédito Habitação Jovem · Crédito Habitação Jovem - Garantia do Estado - https://logus2k.com/cortex/?open=ch&path=CH%2F11%20-%20Cr%C3%A9dito%20Habita%C3%A7%C3%A3o%20Jovem.docx&page=1",
+   "charts": [],
+   "connectors": 0,
+   "covered": []
+  },
+  {
+   "slide_id": 259,
+   "layout": "12_Texto",
+   "shapes": [
+    {
+     "shape_id": 4,
+     "kind": "body",
+     "lines": [
+      "É um regime especial para jovens com 35 anos ou menos.",
+      "Foi estabelecido pelo Decreto-Lei n.º 44/2024, de 10 de julho.",
+      "Permite financiar até 100% do valor de aquisição do imóvel.",
+      "Elimina a necessidade de os mutuários terem capitais próprios para a entrada.",
+      "O Estado Português atua como fiador, cobrindo a diferença do LTV (85%) para 100%."
+     ]
+    },
+    {
+     "shape_id": 6,
+     "kind": "body",
+     "lines": [
+      "Características Principais do Regime"
+     ]
+    }
+   ],
+   "empty_placeholders": [],
+   "overflowing": [],
+   "notes": "O ponto mais relevante deste regime é a possibilidade de financiar 100% do valor do imóvel. Isto significa que os jovens não precisam de ter dinheiro para a entrada. O Estado entra como fiador para cobrir essa diferença, que normalmente seria coberta pelo LTV de 85%.\n\nFonte: 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > O que é o Crédito Habitação Jovem - https://logus2k.com/cortex/?open=ch&path=CH%2F11%20-%20Cr%C3%A9dito%20Habita%C3%A7%C3%A3o%20Jovem.docx&page=1\nFonte: 11 - Crédito Habitação Jovem · Crédito Habitação Jovem - Garantia do Estado - https://logus2k.com/cortex/?open=ch&path=CH%2F11%20-%20Cr%C3%A9dito%20Habita%C3%A7%C3%A3o%20Jovem.docx&page=1",
+   "charts": [],
+   "connectors": 0,
+   "covered": []
+  },
+  {
+   "slide_id": 260,
+   "layout": "2_Separador S/Imagem",
+   "shapes": [
+    {
+     "shape_id": 2,
+     "kind": "title",
+     "lines": [
+      "Critérios de Elegibilidade"
+     ]
+    },
+    {
+     "shape_id": 3,
+     "kind": "body",
+     "lines": [
+      "Definir quem pode aceder aos benefícios do Crédito Habitação Jovem."
+     ]
+    }
+   ],
+   "empty_placeholders": [],
+   "overflowing": [],
+   "notes": "Agora que sabemos o que é, vamos ver quem pode beneficiar. Existem critérios claros de idade, residência e rendimento que os candidatos devem cumprir. É fundamental verificar estes requisitos antes de avançar com qualquer proposta.\n\nFonte: 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Critérios de Elegibilidade - https://logus2k.com/cortex/?open=ch&path=CH%2F11%20-%20Cr%C3%A9dito%20Habita%C3%A7%C3%A3o%20Jovem.docx&page=1\nFonte: 11 - Crédito Habitação Jovem · Crédito Habitação Jovem - Garantia do Estado - https://logus2k.com/cortex/?open=ch&path=CH%2F11%20-%20Cr%C3%A9dito%20Habita%C3%A7%C3%A3o%20Jovem.docx&page=1",
+   "charts": [],
+   "connectors": 0,
+   "covered": []
+  },
+  {
+   "slide_id": 261,
+   "layout": "12_Texto",
+   "shapes": [
+    {
+     "shape_id": 4,
+     "kind": "body",
+     "lines": [
+      "Idade entre 18 e 35 anos, e domicílio fiscal em Portugal.",
+      "Rendimentos não podem exceder o 8.º escalão do IRS.",
+      "Um mutuário pode ter rendimentos até €80.000.",
+      "Dois mutuários podem ter rendimentos até €160.000 (fator de 2).",
+      "O crédito deve ser para a primeira habitação própria permanente."
+     ]
+    },
+    {
+     "shape_id": 6,
+     "kind": "body",
+     "lines": [
+      "Requisitos Pessoais e Financeiros"
+     ]
+    }
+   ],
+   "empty_placeholders": [],
+   "overflowing": [],
+   "notes": "Os requisitos pessoais são bem definidos: idade e domicílio fiscal são obrigatórios. Em relação aos rendimentos, há limites específicos dependendo do número de mutuários. Além disso, o crédito deve ser destinado à primeira habitação permanente do mutuário.\n\nFonte: 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Critérios de Elegibilidade - https://logus2k.com/cortex/?open=ch&path=CH%2F11%20-%20Cr%C3%A9dito%20Habita%C3%A7%C3%A3o%20Jovem.docx&page=1\nFonte: 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Apuramento dos Rendimentos do(s) Mutuário(s) - https://logus2k.com/cortex/?open=ch&path=CH%2F11%20-%20Cr%C3%A9dito%20Habita%C3%A7%C3%A3o%20Jovem.docx&page=1\nFonte: 11 - Crédito Habitação Jovem · Crédito Habitação Jovem - Garantia do Estado - https://logus2k.com/cortex/?open=ch&path=CH%2F11%20-%20Cr%C3%A9dito%20Habita%C3%A7%C3%A3o%20Jovem.docx&page=1",
+   "charts": [],
+   "connectors": 0,
+   "covered": []
+  },
+  {
+   "slide_id": 262,
+   "layout": "12_Texto",
+   "shapes": [
+    {
+     "shape_id": 4,
+     "kind": "body",
+     "lines": [
+      "O valor da transação não pode ultrapassar €450.000.",
+      "A garantia do Estado não excede 15% do valor da transação.",
+      "Os mutuários beneficiam de isenção de IMT e Imposto do Selo.",
+      "Esta isenção aplica-se a primeiras habitações até €330.539."
+     ]
+    },
+    {
+     "shape_id": 6,
+     "kind": "body",
+     "lines": [
+      "Limites da Transação e Benefícios Fiscais"
+     ]
+    }
+   ],
+   "empty_placeholders": [],
+   "overflowing": [],
+   "notes": "Há limites claros tanto para o valor do imóvel como para a garantia do Estado. É importante notar que, além do financiamento, os mutuários beneficiam de isenções fiscais importantes, mas estas têm um limite de valor associado.\n\nFonte: 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Critérios de Elegibilidade - https://logus2k.com/cortex/?open=ch&path=CH%2F11%20-%20Cr%C3%A9dito%20Habita%C3%A7%C3%A3o%20Jovem.docx&page=1\nFonte: 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Garantia do Estado - Operacionalização - https://logus2k.com/cortex/?open=ch&path=CH%2F11%20-%20Cr%C3%A9dito%20Habita%C3%A7%C3%A3o%20Jovem.docx&page=1\nFonte: 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Isenção de IMT e Imposto do Selo - https://logus2k.com/cortex/?open=ch&path=CH%2F11%20-%20Cr%C3%A9dito%20Habita%C3%A7%C3%A3o%20Jovem.docx&page=1\nFonte: 11 - Crédito Habitação Jovem · Crédito Habitação Jovem - Garantia do Estado - https://logus2k.com/cortex/?open=ch&path=CH%2F11%20-%20Cr%C3%A9dito%20Habita%C3%A7%C3%A3o%20Jovem.docx&page=1",
+   "charts": [],
+   "connectors": 0,
+   "covered": []
+  },
+  {
+   "slide_id": 263,
+   "layout": "2_Separador S/Imagem",
+   "shapes": [
+    {
+     "shape_id": 2,
+     "kind": "title",
+     "lines": [
+      "Processo de Candidatura e Documentação"
+     ]
+    },
+    {
+     "shape_id": 3,
+     "kind": "body",
+     "lines": [
+      "Entender as fases de avaliação e os documentos necessários para a candidatura."
+     ]
+    }
+   ],
+   "empty_placeholders": [],
+   "overflowing": [],
+   "notes": "O processo de candidatura tem etapas bem definidas, começando pela proposta e seguindo para o enquadramento. A documentação necessária varia consoante a fase em que o processo se encontra. Vamos detalhar cada uma destas fases.\n\nFonte: 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Aferição da Elegibilidade - https://logus2k.com/cortex/?open=ch&path=CH%2F11%20-%20Cr%C3%A9dito%20Habita%C3%A7%C3%A3o%20Jovem.docx&page=1\nFonte: 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Criação de Proposta - https://logus2k.com/cortex/?open=ch&path=CH%2F11%20-%20Cr%C3%A9dito%20Habita%C3%A7%C3%A3o%20Jovem.docx&page=1\nFonte: 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Enquadramento de Proposta - https://logus2k.com/cortex/?open=ch&path=CH%2F11%20-%20Cr%C3%A9dito%20Habita%C3%A7%C3%A3o%20Jovem.docx&page=1",
+   "charts": [],
+   "connectors": 0,
+   "covered": []
+  },
+  {
+   "slide_id": 264,
+   "layout": "12_Texto",
+   "shapes": [
+    {
+     "shape_id": 4,
+     "kind": "body",
+     "lines": [
+      "A avaliação ocorre em duas fases: Proposta de Risco e Enquadramento da Proposta.",
+      "As cartas de recusa são emitidas apenas para propostas submetidas ao risco.",
+      "Para criar a proposta, são necessários o formulário de adesão.",
+      "Também são exigidas a declaração de IRS e o certificado de domicílio fiscal."
+     ]
+    },
+    {
+     "shape_id": 6,
+     "kind": "body",
+     "lines": [
+      "Fases de Avaliação e Documentos Iniciais"
+     ]
+    }
+   ],
+   "empty_placeholders": [],
+   "overflowing": [],
+   "notes": "É importante saber que a recusa só ocorre após a análise de risco. Na fase inicial de criação da proposta, o foco está na identificação do mutuário, exigindo o formulário de adesão, a declaração de IRS e o certificado de domicílio fiscal.\n\nFonte: 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Aferição da Elegibilidade - https://logus2k.com/cortex/?open=ch&path=CH%2F11%20-%20Cr%C3%A9dito%20Habita%C3%A7%C3%A3o%20Jovem.docx&page=1\nFonte: 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Criação de Proposta - https://logus2k.com/cortex/?open=ch&path=CH%2F11%20-%20Cr%C3%A9dito%20Habita%C3%A7%C3%A3o%20Jovem.docx&page=1",
+   "charts": [],
+   "connectors": 0,
+   "covered": []
+  },
+  {
+   "slide_id": 265,
+   "layout": "12_Texto",
+   "shapes": [
+    {
+     "shape_id": 4,
+     "kind": "body",
+     "lines": [
+      "Para o enquadramento, são necessários certificados do Registo e da Autoridade Tributária.",
+      "É preciso também um documento que ateste o valor de aquisição (ex: CPCV).",
+      "O Serviço de Solicitadoria é opcional, mas aplicável por defeito em aquisições.",
+      "Para estrangeiros, é obrigatório ter título de residência temporária com pelo menos 3 anos de emissão."
+     ]
+    },
+    {
+     "shape_id": 6,
+     "kind": "body",
+     "lines": [
+      "Documentação para Enquadramento da Proposta"
+     ]
+    }
+   ],
+   "empty_placeholders": [],
+   "overflowing": [],
+   "notes": "Na fase de enquadramento, o foco muda para o imóvel, exigindo certidões oficiais. Se o mutuário for estrangeiro, há um requisito adicional rigoroso sobre o título de residência. Lembrem-se que o serviço de solicitadoria é um apoio que pode ser usado por defeito.\n\nFonte: 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Enquadramento de Proposta - https://logus2k.com/cortex/?open=ch&path=CH%2F11%20-%20Cr%C3%A9dito%20Habita%C3%A7%C3%A3o%20Jovem.docx&page=1\nFonte: 05 - Documentos Necessários · Documentos Necessários para o Crédito Habitação - https://logus2k.com/cortex/?open=ch&path=CH%2F05%20-%20Documentos%20Necess%C3%A1rios.docx&page=1\nFonte: 16 - Oferta Estrangeiros no Crédito Habitação · Oferta Estrangeiros no Crédito Habitação - https://logus2k.com/cortex/?open=ch&path=CH%2F16%20-%20Oferta%20Estrangeiros%20no%20Cr%C3%A9dito%20Habita%C3%A7%C3%A3o.docx&page=1",
+   "charts": [],
+   "connectors": 0,
+   "covered": []
+  },
+  {
+   "slide_id": 266,
+   "layout": "2_Separador S/Imagem",
+   "shapes": [
+    {
+     "shape_id": 2,
+     "kind": "title",
+     "lines": [
+      "Considerações Operacionais"
+     ]
+    },
+    {
+     "shape_id": 3,
+     "kind": "body",
+     "lines": [
+      "Conhecer os detalhes operacionais e as parcerias envolvidas no regime."
+     ]
+    }
+   ],
+   "empty_placeholders": [],
+   "overflowing": [],
+   "notes": "Para finalizar, vamos abordar alguns detalhes operacionais. Isto inclui as parcerias bancárias e os quadrantes de preços aplicados a estas operações. É importante ter conhecimento destes aspetos para aconselhar corretamente os clientes.\n\nFonte: 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Garantia do Estado - Operacionalização - https://logus2k.com/cortex/?open=ch&path=CH%2F11%20-%20Cr%C3%A9dito%20Habita%C3%A7%C3%A3o%20Jovem.docx&page=1\nFonte: 11 - Crédito Habitação Jovem · Crédito Habitação Jovem - Garantia do Estado - https://logus2k.com/cortex/?open=ch&path=CH%2F11%20-%20Cr%C3%A9dito%20Habita%C3%A7%C3%A3o%20Jovem.docx&page=1",
+   "charts": [],
+   "connectors": 0,
+   "covered": []
+  },
+  {
+   "slide_id": 267,
+   "layout": "12_Texto",
+   "shapes": [
+    {
+     "shape_id": 4,
+     "kind": "body",
+     "lines": [
+      "O CTT Bank aderiu ao protocolo em 2 de outubro de 2024.",
+      "As operações de CH Jovem utilizam um quadrante de preços de 65-85%.",
+      "O Estado Português atua como fiador para cobrir a diferença do LTV.",
+      "A garantia do Estado não ultrapassa 15% do valor da transação."
+     ]
+    },
+    {
+     "shape_id": 6,
+     "kind": "body",
+     "lines": [
+      "Parcerias e Condições de Mercado"
+     ]
+    }
+   ],
+   "empty_placeholders": [],
+   "overflowing": [],
+   "notes": "A operacionalização envolve parcerias específicas, como a do CTT Bank, que aderiu recentemente. Os custos são definidos por um quadrante de preços específico. Reitero que a garantia do Estado tem um limite máximo de 15% sobre o valor da transação.\n\nFonte: 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Garantia do Estado - Operacionalização - https://logus2k.com/cortex/?open=ch&path=CH%2F11%20-%20Cr%C3%A9dito%20Habita%C3%A7%C3%A3o%20Jovem.docx&page=1\nFonte: 11 - Crédito Habitação Jovem · Crédito Habitação Jovem - Garantia do Estado - https://logus2k.com/cortex/?open=ch&path=CH%2F11%20-%20Cr%C3%A9dito%20Habita%C3%A7%C3%A3o%20Jovem.docx&page=1",
+   "charts": [],
+   "connectors": 0,
+   "covered": []
+  },
+  {
+   "slide_id": 268,
+   "layout": "12_Texto",
+   "shapes": [
+    {
+     "shape_id": 4,
+     "kind": "body",
+     "lines": [
+      "Qual é a idade máxima para beneficiar do Crédito Habitação Jovem?",
+      "Qual é o limite máximo de rendimento para um mutuário individual?",
+      "Que tipo de documentos são necessários para o enquadramento da proposta?"
+     ]
+    },
+    {
+     "shape_id": 6,
+     "kind": "body",
+     "lines": [
+      "Verificação de Conhecimento"
+     ]
+    }
+   ],
+   "empty_placeholders": [],
+   "overflowing": [],
+   "notes": "Para verificar o que aprendemos, respondam a estas três questões. A idade máxima é 35 anos. O limite individual é de €80.000. Para o enquadramento, são necessários certificados do Registo e da Autoridade Tributária, e um documento de valor de aquisição como o CPCV.\n\nFonte: 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Critérios de Elegibilidade - https://logus2k.com/cortex/?open=ch&path=CH%2F11%20-%20Cr%C3%A9dito%20Habita%C3%A7%C3%A3o%20Jovem.docx&page=1\nFonte: 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Apuramento dos Rendimentos do(s) Mutuário(s) - https://logus2k.com/cortex/?open=ch&path=CH%2F11%20-%20Cr%C3%A9dito%20Habita%C3%A7%C3%A3o%20Jovem.docx&page=1\nFonte: 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Enquadramento de Proposta - https://logus2k.com/cortex/?open=ch&path=CH%2F11%20-%20Cr%C3%A9dito%20Habita%C3%A7%C3%A3o%20Jovem.docx&page=1",
+   "charts": [],
+   "connectors": 0,
+   "covered": []
+  },
+  {
+   "slide_id": 269,
+   "layout": "12_Texto",
+   "shapes": [
+    {
+     "shape_id": 4,
+     "kind": "body",
+     "lines": [
+      "O CH Jovem é um regime para jovens (até 35 anos) que permite financiar até 100% do imóvel.",
+      "O Estado atua como fiador, cobrindo a diferença do LTV, com garantia máxima de 15%.",
+      "Os critérios incluem limites de rendimento (ex: €80k/mutuário) e valor da transação (até €450k).",
+      "O processo exige documentação específica, como formulário de adesão e certidões fiscais."
+     ]
+    },
+    {
+     "shape_id": 6,
+     "kind": "body",
+     "lines": [
+      "Principais Pontos a Retenção"
+     ]
+    }
+   ],
+   "empty_placeholders": [],
+   "overflowing": [],
+   "notes": "Para resumir, o Crédito Habitação Jovem é uma ferramenta poderosa para jovens, permitindo financiamento total com o apoio do Estado. Lembrem-se dos limites de idade, rendimento e valor. O sucesso da candidatura depende da correta apresentação de toda a documentação exigida em cada fase.\n\nFonte: 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > O que é o Crédito Habitação Jovem - https://logus2k.com/cortex/?open=ch&path=CH%2F11%20-%20Cr%C3%A9dito%20Habita%C3%A7%C3%A3o%20Jovem.docx&page=1\nFonte: 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Garantia do Estado - Operacionalização - https://logus2k.com/cortex/?open=ch&path=CH%2F11%20-%20Cr%C3%A9dito%20Habita%C3%A7%C3%A3o%20Jovem.docx&page=1\nFonte: 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Critérios de Elegibilidade - https://logus2k.com/cortex/?open=ch&path=CH%2F11%20-%20Cr%C3%A9dito%20Habita%C3%A7%C3%A3o%20Jovem.docx&page=1\nFonte: 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Criação de Proposta - https://logus2k.com/cortex/?open=ch&path=CH%2F11%20-%20Cr%C3%A9dito%20Habita%C3%A7%C3%A3o%20Jovem.docx&page=1",
+   "charts": [],
+   "connectors": 0,
+   "covered": []
+  }
+ ],
+ "checks": [
+  {
+   "ok": true,
+   "check": "the generation started (201)"
+  },
+  {
+   "ok": true,
+   "check": "the outline is ready (ready: )"
+  },
+  {
+   "ok": true,
+   "check": "the slides were made (built)"
+  },
+  {
+   "ok": true,
+   "check": "the deck has at least 10 slides (14)"
+  },
+  {
+   "ok": true,
+   "check": "no slide left with empty placeholders (prompt text on show) []"
+  },
+  {
+   "ok": true,
+   "check": "no text past its box []"
+  },
+  {
+   "ok": true,
+   "check": "slide 2 mentions one of ['objetivo', 'objetivos', 'aprender']"
+  },
+  {
+   "ok": true,
+   "check": "every slide after the cover has ['Fonte'] in its notes (not: [])"
+  }
+ ],
+ "passed": true
+}

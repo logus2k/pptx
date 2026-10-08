@@ -86,7 +86,7 @@ class Describer:
                         await self.descriptions.put(pid, sha, text)
                 log.info("pictures described", extra={"images": len(new)})
             except Exception as e:  # noqa: BLE001 - background work: a failure leaves the pictures undescribed
-                log.warning(f"pictures not described: {type(e).__name__}: {e}")
+                log.warning("pictures not described", extra={"err.type": type(e).__name__})  # the type only (security review L5)
 
     async def _describe(self, model: dict, blob: bytes) -> str:
         try:

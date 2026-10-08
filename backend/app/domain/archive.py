@@ -52,7 +52,9 @@ def export(layout: Layout, project: dict, conversations: list[dict], messages_of
         z.writestr("manifest.json", json.dumps(manifest, ensure_ascii=False))
         for path in sorted(root.rglob("*")):
             rel = path.relative_to(root).as_posix()
-            if path.is_dir() or rel.startswith("renders/") or "/proposals/" in rel:
+            if path.is_dir() or rel.startswith(("renders/", "generations/")) or "/proposals/" in rel:  # drafts and caches
+                continue
+            if rel == "audit.jsonl":  # the project's audit trail stays with it: an imported project starts its own
                 continue
             z.write(path, f"data/{rel}")
         # readable/: what people open

@@ -27,6 +27,7 @@ from .domain.projects import Projects
 from .domain.proposals import Proposals
 from .domain.templates import AdminTemplates, ProjectAssets, Templates
 from .domain.leases import Leases
+from .domain.generations import Generations
 from .imagegen import ImageGenerator
 from .kb import KnowledgeBase
 from .search import Reranker
@@ -92,6 +93,7 @@ class Services:
             services.get("agent_server", "http://agent_server:7701"),
             services.get("tokenizer", "http://llama-vision:8500/tokenize"),
         )
+        self.generations = Generations(self)  # decks generated from a source (spec NL-12)
         self.describer = Describer(self)  # what the decks' pictures show (spec IM-4), after each version is published
         self.renderer.on_warm = self.describer.warm
 
@@ -119,7 +121,11 @@ def create_app(
 
     # projects, decks, templates, renders, conversations, proposals; the audit trail of every change (section 11.2)
     app = Services(settings, models, kb, stt, reranker, imagegen)
-    sio = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins=[], max_http_buffer_size=10 * 1024 * 1024)
+    # the pages allowed to open it (identity.origin_allowed; [] would check none: security review M1)
+    sio = socketio.AsyncServer(
+        async_mode="asgi", cors_allowed_origins=lambda origin, environ=None: identity.origin_allowed(settings, origin),
+        max_http_buffer_size=10 * 1024 * 1024,
+    )
 
     async def emit(event: str, payload: dict, cid: str) -> None:
         await sio.emit(event, {"conversation_id": cid, **payload}, room=f"conv:{cid}")
@@ -142,6 +148,7 @@ def create_app(
             agent,
             app.kb,
             app.memory,
+            app.generations,
         )
     )
 
@@ -324,9 +331,14 @@ def create_app(
 
     @sio.event
     async def cancel_turn(sid, data=None):
-        _, cid = ids(data)
-        agent.cancel(cid)
-        return {"ok": True}
+        pid, cid = ids(data)
+
+        async def run():
+            # a member of the conversation's project only (security review L2: any signed-in person, any conversation)
+            await asyncio.to_thread(app.conversations.get, pid, cid, who(sid))
+            agent.cancel(cid)
+
+        return await guarded(run)
 
     @sio.event
     async def answer(sid, data=None):

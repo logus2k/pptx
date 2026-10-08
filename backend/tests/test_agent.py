@@ -359,6 +359,7 @@ def test_the_turn_streams_and_ends_once(server, fake_model):
     from app.agent.loop import NUDGE
 
     pid, _, cid = setup(server)
+    fake_model.routes = [{"intent": "A greeting", "kind": "question", "groups": []}]  # as the router reads "olá"
     fake_model.script = [{"text": "Mudei o título."}, {"text": "Olá! Como posso ajudar?"}]
     chat = Chat(server, pid, cid)
     chat.send("olá")
@@ -519,14 +520,17 @@ def test_when_every_edit_fails_the_reply_carries_the_applications_notice(server,
     fake_model.script = [
         {"tools": [["update_text", {"slide_id": s2, "shape_id": 999, "paragraphs": [{"text": "x"}]}]]},
         {"text": "Vou tentar de novo."},
-        {"text": "Pronto, alterei o diapositivo 2."},  # asked once more (FAILED_NUDGE), it still makes no call
+        {"text": "Vou alterar o diapositivo 2."},  # asked once more (FAILED_NUDGE), it still makes no call
+        {"text": "Pronto, alterei o diapositivo 2."},  # asked a last time (STILL_NUDGE): still none
     ]
     chat = Chat(server, pid, cid)
     try:
         chat.send("muda o diapositivo 2")
     finally:
         chat.close()
-    assert "Nothing has changed yet: your edits failed" in fake_model.sent[-1][-1]["content"]  # it was asked again
+    asked = [m["content"] for sent in fake_model.sent for m in sent if m["role"] == "user"]
+    assert any("Nothing has changed yet: your edits failed" in c for c in asked)
+    assert "Still nothing has changed" in fake_model.sent[-1][-1]["content"]  # and a last time
     reply = chat.last("assistant_message")
     assert reply["content"] == "Pronto, alterei o diapositivo 2." and reply["notice"] == "nothing_changed"
     fake_model.script = [
@@ -592,6 +596,123 @@ def test_now_lists_the_edits_done_this_turn():
     assert _done("set_notes", "not json", {}) == "set_notes"
 
 
+def test_a_slide_the_router_names_by_a_title_the_person_did_not_say_is_the_whole_slide(server, fake_model):
+    """Measured (onboarding-13): "translate the last slide", the router's where its title "Questions?", told the title
+    names the slide, the model translated the title alone 3 runs in 3. Said by the person, the title still names it."""
+    pid, did, cid = setup(server)
+    title = outline(deck_bytes(server, pid, did))[1]["title"]
+    chat = Chat(server, pid, cid)
+    try:
+        for said in ("Translate the second slide", f"Translate {title}"):
+            route = {"intent": "Translate the slide", "where": f'2: "{title}"', "kind": "change", "groups": ["text"]}
+            fake_model.routes = [route]
+            fake_model.script = [{"text": "Done."}, {"text": "Done."}, {"text": "Done."}]
+            chat.send(said)
+            now = next(m[0]["content"] for m in fake_model.sent if m and m[0]["role"] == "system" and "## Now" in m[0]["content"])
+            fake_model.sent.clear()
+            if said.endswith("slide"):
+                assert "(where: slide 2)" in now and "is the title of slide" not in now
+            else:
+                assert f"«{title}» is the title of slide 2" in now
+    finally:
+        chat.close()
+
+
+def test_a_cover_asked_for_on_an_empty_deck_keeps_its_lines_on_the_cover(server, fake_model):
+    """The assistant's path, with the calls measured in cover-for-a-new-deck: fill_slide on "slide 1" of an empty deck,
+    the audience and the date as points; the slide is made on the cover, those its subtitle's lines."""
+    pid = requests.post(f"{server}/api/projects", json={"name": "P"}, headers=h(), timeout=10).json()["id"]
+    tpl = {"title": "Apresentação", "template": {"kind": "admin", "id": "default"}}
+    did = requests.post(f"{server}/api/projects/{pid}/decks", json=tpl, headers=h(), timeout=60).json()["id"]
+    cid = requests.post(f"{server}/api/projects/{pid}/conversations", json={"deck_id": did}, headers=h(), timeout=10).json()["id"]
+    sent = {"slide_id": 1, "content": {"title": "Crédito Habitação Jovem", "subtitle": "Crédito Habitação Jovem",
+                                       "points": ["Para a Equipa Comercial", "Outubro de 2026"]}}  # fmt: skip
+    fake_model.routes = [{"intent": "A cover", "kind": "change", "groups": ["structure", "text"]}]
+    fake_model.script = [{"tools": [("fill_slide", sent)]}, {"text": "Fiz a capa."}]
+    chat = Chat(server, pid, cid)
+    try:
+        chat.send("Cria a capa de uma apresentação sobre o Crédito Habitação Jovem, para a equipa comercial, outubro de 2026")
+        chat.decide(chat.last("proposal_updated")["id"], True)
+    finally:
+        chat.close()
+    prs = read.open_deck(deck_bytes(server, pid, did))
+    assert len(prs.slides) == 1 and prs.slides[0].slide_layout.name == "Title Slide"
+    texts = [sh.text_frame.text for sh in prs.slides[0].placeholders]
+    assert texts == ["Crédito Habitação Jovem", "Para a Equipa Comercial\nOutubro de 2026"]
+
+
+def test_points_without_a_title_get_one_from_the_request_in_the_same_call(server, fake_model):
+    """Measured (first-use-index-from-kb): an index sent as its points alone went without a heading (1 run in 4);
+    refused, the model gave up or asked the person (3 runs in 3); told to write the title after, it wrote it to a slide
+    that was not there (3 runs in 3). Titled from the request and the points, in the same call."""
+    pid, did, cid = setup(server)
+    points = {"points": ["Oferta", "Fases do processo", "Servicing"]}
+    fake_model.routes = [{"intent": "An index", "kind": "change", "groups": ["structure", "text"]}]
+    fake_model.script = [{"tools": [("add_slide", {"content": points, "layout": "Title and Content"})]},
+                         {"text": "Fiz o índice."}]  # fmt: skip
+    fake_model.titles = ["Índice: Crédito à Habitação"]
+    chat = Chat(server, pid, cid)
+    try:
+        chat.send("escreve um índice com base nos tópicos de crédito à habitação")
+        chat.decide(chat.last("proposal_updated")["id"], True)
+    finally:
+        chat.close()
+    asked = fake_model.titled[0][0]["content"]
+    assert "escreve um índice" in asked and "- Fases do processo" in asked  # the request and the points
+    assert "Índice: Crédito à Habitação" in [o["title"] for o in outline(deck_bytes(server, pid, did))]
+
+
+def test_a_slide_whose_title_alone_nobody_said_is_filled_by_the_next_request(server, fake_model):
+    """Measured (first-use-index-from-kb, 4 runs in 8): "Cria um slide" made "Novo Slide"; the next request's index went
+    on a second slide. A slide holding only a title in none of the person's words is the one to fill."""
+    pid = requests.post(f"{server}/api/projects", json={"name": "P"}, headers=h(), timeout=10).json()["id"]
+    tpl = {"title": "Apresentação", "template": {"kind": "admin", "id": "default"}}
+    did = requests.post(f"{server}/api/projects/{pid}/decks", json=tpl, headers=h(), timeout=60).json()["id"]
+    cid = requests.post(f"{server}/api/projects/{pid}/conversations", json={"deck_id": did}, headers=h(), timeout=10).json()["id"]
+    index = {"title": "Índice", "points": ["Oferta", "Fases do processo", "Servicing"]}
+    fake_model.routes = [{"intent": "A slide", "kind": "change", "groups": ["structure"]},
+                         {"intent": "An index", "where": "1", "kind": "change", "groups": ["structure", "text"]}]  # fmt: skip
+    fake_model.script = [{"tools": [("add_slide", {"content": {"title": "Novo Slide"}, "layout": "Title Only"})]},
+                         {"text": "Criei um slide."},
+                         {"tools": [("add_slide", {"content": index, "after_slide_id": 1})]},
+                         {"text": "Escrevi o índice."}]  # fmt: skip
+    chat = Chat(server, pid, cid)
+    try:
+        chat.send("Cria um slide")
+        chat.decide(chat.last("proposal_updated")["id"], True)
+        chat.send("Escreve um índice com base nos tópicos de crédito à habitação")
+        chat.decide(chat.last("proposal_updated")["id"], True)
+    finally:
+        chat.close()
+    out = outline(deck_bytes(server, pid, did))
+    assert len(out) == 1 and out[0]["title"] == "Índice"  # the index on the placeholder slide, not a second one
+
+
+def test_an_edit_made_twice_in_a_turn_or_a_paragraph_inserted_again_changes_nothing(server, fake_model):
+    """Measured: told its answer said something was still to do, the model made the same change again (an index on two
+    slides) or inserted its long point a second time (a box twice as full)."""
+    pid, did, cid = setup(server)
+    data = deck_bytes(server, pid, did)
+    sid = outline(data)[1]["slide_id"]
+    shape = body_id(data, sid)
+    words = read.slide(read.open_deck(data), sid)
+    first_line = "".join(r["text"] for r in next(x for x in words["shapes"] if x["shape_id"] == shape)["paragraphs"][0]["runs"])
+    notes = {"slide_id": sid, "text": "O que dizer."}
+    again = {"slide_id": sid, "shape_id": shape, "operations": [{"op": "insert", "after": 0, "text": first_line}]}
+    fake_model.routes = [{"intent": "Notes", "kind": "change", "groups": ["notes", "text"]}]
+    fake_model.script = [{"tools": [("set_notes", notes)]}, {"tools": [("set_notes", notes)]},
+                         {"tools": [("edit_paragraphs", again)]}, {"text": "Feito."}]  # fmt: skip
+    chat = Chat(server, pid, cid)
+    try:
+        chat.send("escreve as notas do segundo diapositivo")
+    finally:
+        chat.close()
+    from .test_kb import tool_results
+
+    assert tool_results(fake_model, "set_notes")[-1]["error"]["code"] == "ALREADY_MADE"
+    assert tool_results(fake_model, "edit_paragraphs")[-1]["error"]["code"] == "SAME_TEXT"
+
+
 def test_a_turn_resumed_after_an_approved_deletion_goes_on_with_the_same_request(server, fake_model):
     pid, did, cid = setup(server)
     second = outline(deck_bytes(server, pid, did))[1]["slide_id"]
@@ -604,7 +725,10 @@ def test_a_turn_resumed_after_an_approved_deletion_goes_on_with_the_same_request
     chat.answer(approve=True)
     assert sum(1 for m in fake_model.sent if m[0]["role"] == "user") == routed  # not routed again
     now = fake_model.sent[-1][0]["content"]
-    assert "The person wants: Delete the agenda" in now and "Done in this turn: delete_slide on slide " in now
+    assert "The person wants: Delete the agenda" in now and "Done in this turn: " in now and "(done)" in now
+    done = now.split("Done in this turn: ")[1].split("\n")[0]
+    assert "«Agenda»" in done and "258" not in done  # the slide as the approved plan named it, not its ID
+    assert not any("called no tool, so nothing has happened" in str(m.get("content")) for m in fake_model.sent[-1])
     # the same route, not every tool: no memory tools (the knowledge tools come with every change: loop._route)
     assert fake_model.offered[-1] and "delete_slide" in fake_model.offered[-1] and "remember" not in fake_model.offered[-1]
     p = chat.last("proposal_updated")
@@ -748,6 +872,11 @@ def test_a_slide_the_request_quotes_word_for_word_is_found():
     asked = "Duplica o diapositivo 4.3 Incidentes – BINCs."  # noqa: RUF001
     assert router.phrase_slide(asked, slides) == (1, "4.3 Incidentes – BINCs")  # noqa: RUF001
     assert router.phrase_slide("Duplica o diapositivo de ticketing.", slides) is None  # every slide shares the title
+    # a line of one slide whole, another slide's line close to it (devai-09: "KPIs Enabling 1/2" and "2/2")
+    kpis = [{"index": 18, "title": "", "lines": ["KPIs Enabling 1/2", "Dev.AI"]},
+            {"index": 19, "title": "", "lines": ["KPIs Enabling 2/2", "Dev.AI"]}]  # fmt: skip
+    assert router.phrase_slide("Duplica o diapositivo KPIs Enabling 2/2.", kpis) == (20, "KPIs Enabling 2/2")
+    assert router.phrase_slide("Apaga o diapositivo Dev.AI", kpis) is None  # on both, and short
 
 
 def test_text_left_too_long_is_fixed_before_the_turn_ends(server, fake_model):
@@ -987,19 +1116,19 @@ def test_charts_and_diagrams_are_offered_only_when_asked_for(server, fake_model)
         chat.close()
 
 
-def test_points_too_long_are_named_with_their_lengths_not_quoted(server, fake_model):
-    """Measured: the message quoted the whole passage and named only the first point; the model sent the same points
-    again, or fixed one and met the next (3 runs in 3)."""
+def test_points_too_long_are_placed_and_named_with_their_lengths(server, fake_model):
+    """Measured: refused, the message quoted the whole passage and the model sent the same points again until the slide
+    was lost (3 runs in 6). Placed, fitted, and named with their lengths for shortening; past 1000 characters, refused."""
     long_a, long_b = "Critérios de elegibilidade: " + "x" * 210, "O regime " + "y" * 320
     points = ["Até 35 anos", long_a, {"heading": "Garantia", "text": long_b}]
     add = {"after_slide_id": 1, "layout": "Title and Content", "content": {"title": "Condições", "points": points}}
-    prs, results = _figure_turn(server, fake_model, [("add_slide", add)])
-    error = results["add_slide"][-1]["error"]
-    assert error["code"] == "POINTS_TOO_LONG" and len(prs.slides) == 3
-    assert error["message"].startswith(f"Points 2, 3 ({len(long_a)}, {len(long_b)} characters)")
-    assert "xxxx" not in error["message"]
-    assert "set_notes" in error["hint"]
-
+    prs, results = _figure_turn(server, fake_model, [("add_slide", add)], say="Condições: até 35 anos " + long_a)
+    assert len(prs.slides) == 4 and results["add_slide"][-1].get("ok")
+    note = results["add_slide"][-1]["note"]
+    assert f"Points 2, 3 ({len(long_a)}, {len(long_b)} characters)" in note and "xxxx" not in note and "set_notes" in note
+    huge = {**add, "content": {"title": "C", "points": ["z" * 1200]}}
+    _, results = _figure_turn(server, fake_model, [("add_slide", huge)])
+    assert results["add_slide"][-1]["error"]["code"] == "POINTS_TOO_LONG"
 
 def test_an_unclear_request_once_answered_is_acted_on_with_its_tools(server, fake_model):
     """Measured: "Cria um slide", routed unclear, answered "Decide tu.": the turn offered ask_user alone after the answer,
@@ -1030,3 +1159,131 @@ def test_a_new_slide_with_its_title_alone_on_a_text_layout_is_sent_back_once(ser
     assert results["add_slide"][0]["error"]["code"] == "TITLE_ALONE" and results["add_slide"][-1].get("ok")
     _, results = _figure_turn(server, fake_model, [("add_slide", {"layout": "Title Only", "content": {"title": "Obrigado"}})])
     assert results["add_slide"][-1].get("ok")
+
+
+def test_content_asked_for_the_empty_slide_the_request_is_about_goes_on_it(server, fake_model):
+    """Measured: "Cria um slide" made an empty cover; "write an index of the topics" then made a second slide and left
+    the first showing its prompts (2 runs in 3). Also: content without a layout gets the one it fits, and a refused
+    call says nothing was changed."""
+    pid = requests.post(f"{server}/api/projects", json={"name": "P"}, headers=h(), timeout=10).json()["id"]
+    tpl = {"title": "Apresentação", "template": {"kind": "admin", "id": "default"}}
+    did = requests.post(f"{server}/api/projects/{pid}/decks", json=tpl, headers=h(), timeout=60).json()["id"]
+    cid = requests.post(f"{server}/api/projects/{pid}/conversations", json={"deck_id": did}, headers=h(), timeout=10).json()["id"]
+    chat = Chat(server, pid, cid)
+    try:
+        fake_model.routes = [{"intent": "Create a slide", "kind": "change", "groups": ["structure", "text"]}]
+        fake_model.script = [{"tools": [("add_slide", {"layout": "Title and Content"})]}, {"text": "Criei um slide."}]
+        chat.send("Cria um slide")
+        chat.decide(chat.last("proposal_updated")["id"], True)
+        index = {"content": {"title": "Índice", "points": ["Oferta", "Fases do processo", "Servicing"]}}  # no layout
+        fake_model.routes = [{"intent": "An index", "where": "1", "kind": "change", "groups": ["structure", "text"]}]
+        fake_model.script = [{"tools": [("add_slide", {**index, "after_slide_id": 1})]}, {"text": "Escrevi o índice."}]
+        chat.send("Escreve um índice")
+        chat.decide(chat.last("proposal_updated")["id"], True)
+        from .test_kb import tool_results
+
+        note = tool_results(fake_model, "add_slide")[-1]["note"]
+        assert "had no text yet: the content was written on it" in note
+        prs = read.open_deck(deck_bytes(server, pid, did))
+        assert len(prs.slides) == 1 and prs.slides[0].shapes.title.text == "Índice"
+        fake_model.routes = [{"intent": "A slide", "kind": "change", "groups": ["structure", "text"]}]
+        fake_model.script = [{"tools": [("add_slide", {"content": {"title": "X", "points": ["a" * 1200]}})]}, {"text": "?"}]
+        chat.send("acrescenta um slide")
+        assert tool_results(fake_model, "add_slide")[-1]["error"]["message"].startswith("Nothing was changed")
+    finally:
+        chat.close()
+
+
+def test_a_slide_written_from_an_earlier_turns_passages_cites_them(server, fake_model, fake_kb):
+    """Measured: the cover's turn searched, the next slide was written from those passages without searching again, and
+    its notes had no source (3 runs in 3). A slide whose text a passage does not hold is not given one."""
+    pid, did, cid = setup(server)
+    requests.patch(f"{server}/api/projects/{pid}", json={"settings": {"kb_domains": ["produtos"]}}, headers=h(), timeout=10)
+    chat = Chat(server, pid, cid)
+    try:
+        fake_model.script = [{"tools": [("kb_search", {"query": "garantia"})]}, {"text": "A garantia cobre 2 anos."}]
+        chat.send("qual é a garantia?")
+        point = "A garantia de 2026 cobre todos os equipamentos durante 2 anos a partir da data de compra."
+        fake_model.routes = [{"intent": "A slide on the warranty", "kind": "change", "groups": ["structure", "text"]}]
+        add = {"layout": "Title and Content", "content": {"title": "Garantia", "points": [point]}}
+        fake_model.script = [{"tools": [("add_slide", add)]}, {"text": "Fiz o diapositivo."}]
+        chat.send("acrescenta um diapositivo sobre a garantia")
+        made = chat.last("proposal_updated")
+        sid = made["decks"][did]["slides"][-1]["slide_id"]
+        chat.decide(made["id"], True)
+        thanks = {"title": "Obrigado", "points": ["Obrigado pela vossa atenção e até breve."]}
+        mine = {"layout": "Title and Content", "content": thanks}
+        fake_model.script = [{"tools": [("add_slide", mine)]}, {"text": "Fiz o diapositivo."}]
+        chat.send("acrescenta um diapositivo de agradecimento")
+        other = chat.last("proposal_updated")["decks"][did]["slides"][-1]["slide_id"]
+        chat.decide(chat.last("proposal_updated")["id"], True)
+    finally:
+        chat.close()
+    prs = read.open_deck(deck_bytes(server, pid, did))
+    assert "Fonte: Política de garantia 2026" in read.slide(prs, sid)["notes"]
+    assert not read.slide(prs, other)["notes"]
+
+
+def test_a_long_point_that_is_a_list_becomes_a_point_per_item(server, fake_model):
+    """As the model wrote it from the knowledge base: seven criteria in one point, which did not fit even at 14 pt."""
+    crit = ("Critérios de acesso (cumulativos): Idade entre 18 e 35 anos; domicílio fiscal em Portugal; rendimentos não "
+            "ultrapassarem o 8.º escalão do IRS; não ser proprietário de prédio urbano; nunca ter usufruído da garantia "
+            "pessoal do Estado; valor da transação não exceder 450.000,00 euros")
+    add = {"layout": "Title and Content", "content": {"title": "Condições", "points": ["Regime especial para jovens", crit]}}
+    prs, results = _figure_turn(server, fake_model, [("add_slide", add)], say="Condições: " + crit)
+    assert "Point 2 held a list" in results["add_slide"][-1]["note"]
+    lines = [p.text for sh in list(prs.slides)[-1].placeholders for p in sh.text_frame.paragraphs if p.text]
+    assert "domicílio fiscal em Portugal" in lines and "Critérios de acesso (cumulativos): Idade entre 18 e 35 anos" in lines
+
+
+def test_an_edit_that_writes_back_the_same_text_says_nothing_changed(server, fake_model):
+    """Measured: "shorten the agenda's points" sent every point back unchanged, was told "ok", and the reply said they
+    were shortened."""
+    pid, did, cid = setup(server)
+    data = deck_bytes(server, pid, did)
+    agenda = outline(data)[1]["slide_id"]
+    shape = body_id(data, agenda)
+    body = next(x for x in read.slide(read.open_deck(data), agenda)["shapes"] if x["shape_id"] == shape)
+    now = [p["runs"][0]["text"] for p in body["paragraphs"]]
+    same = {"slide_id": 2, "shape_id": shape, "operations": [{"op": "set", "index": i, "text": x} for i, x in enumerate(now)]}
+    shorter = {**same, "operations": [{"op": "set", "index": 0, "text": "Contexto"}]}
+    fake_model.script = [{"tools": [("edit_paragraphs", same)]}, {"tools": [("edit_paragraphs", shorter)]}, {"text": "Feito."}]
+    chat = Chat(server, pid, cid)
+    try:
+        chat.send("encurta os pontos da agenda")
+    finally:
+        chat.close()
+    from .test_kb import tool_results
+
+    results = tool_results(fake_model, "edit_paragraphs")
+    assert results[0]["error"]["code"] == "SAME_TEXT" and results[-1].get("ok")
+
+
+def test_a_step_left_out_is_asked_for_before_the_turn_ends(server, fake_model):
+    """Measured (squad-16, 2 runs in 6): the box copied, "I now need to connect it with an arrow", and the turn ended.
+    Changes made and the turn ending in words: the check names what is missing, and the model is asked to do it."""
+    pid, did, cid = setup(server)
+    data = deck_bytes(server, pid, did)
+    sid = outline(data)[1]["slide_id"]
+    shape = body_id(data, sid)
+    fake_model.routes = [{"intent": "Add a box, linked by an arrow", "kind": "change", "groups": ["structure"]}]
+    first = {"slide_id": sid, "shape_id": shape, "paragraphs": [{"runs": [{"text": "Caixa"}]}]}
+    fake_model.script = [{"tools": [("update_text", first)]},
+                         {"text": "Copiei a caixa. Preciso agora de a ligar com uma seta."},
+                         {"tools": [("set_notes", {"slide_id": sid, "text": "ligada"})]},
+                         {"text": "Copiei a caixa e liguei-a."}]  # fmt: skip
+    fake_model.checks = ["connect the new box to the first with an arrow"]  # what the message says is still to do
+    chat = Chat(server, pid, cid)
+    try:
+        assert chat.send("acrescenta uma caixa igual, ligada por uma seta")["status"] == "done"
+    finally:
+        chat.close()
+    said = "Your answer says this is still to be done"
+    asked = [m for call in fake_model.sent for m in call if m["role"] == "user" and said in str(m["content"])]
+    assert asked and "connect the new box" in asked[0]["content"]
+    check = fake_model.checked[0][0]["content"]
+    assert "Preciso agora de a ligar com uma seta" in check  # the closing message, checked
+    assert len(fake_model.checked) == 1  # once a turn
+    from .test_kb import tool_results
+
+    assert tool_results(fake_model, "set_notes")  # what it was asked for was then called

@@ -1,0 +1,247 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "storage/generation.schema.json",
+ "title": "DATA_DIR/projects/<pid>/generations/<id>.json: a deck being generated from a source (spec NL-12): the request, the reading's progress, the outline the person reviews, the deck it made",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "schema_version",
+  "id",
+  "created_by",
+  "created_at",
+  "updated_at",
+  "status",
+  "request"
+ ],
+ "properties": {
+  "schema_version": {
+   "const": 1
+  },
+  "id": {
+   "type": "string"
+  },
+  "created_by": {
+   "type": "string"
+  },
+  "created_at": {
+   "type": "string"
+  },
+  "updated_at": {
+   "type": "string"
+  },
+  "status": {
+   "enum": [
+    "reading",
+    "ready",
+    "failed",
+    "built"
+   ]
+  },
+  "progress": {
+   "type": "object",
+   "additionalProperties": false,
+   "properties": {
+    "stage": {
+     "type": "string"
+    },
+    "done": {
+     "type": "integer"
+    },
+    "total": {
+     "type": "integer"
+    }
+   }
+  },
+  "request": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "kind",
+    "source"
+   ],
+   "properties": {
+    "kind": {
+     "enum": [
+      "corporate",
+      "training"
+     ]
+    },
+    "source": {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "kind"
+     ],
+     "properties": {
+      "kind": {
+       "enum": [
+        "kb_topic",
+        "kb_document",
+        "document"
+       ]
+      },
+      "query": {
+       "type": "string",
+       "maxLength": 500
+      },
+      "domain": {
+       "type": "string",
+       "maxLength": 200
+      },
+      "path": {
+       "type": "string",
+       "maxLength": 1000
+      },
+      "asset_id": {
+       "type": "string",
+       "maxLength": 64
+      }
+     }
+    },
+    "slides": {
+     "type": "integer",
+     "minimum": 1,
+     "maximum": 40
+    },
+    "focus": {
+     "type": "string",
+     "maxLength": 1000
+    },
+    "audience": {
+     "type": "string",
+     "maxLength": 300
+    },
+    "language": {
+     "enum": [
+      "pt",
+      "en"
+     ]
+    },
+    "target": {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "kind"
+     ],
+     "properties": {
+      "kind": {
+       "enum": [
+        "new",
+        "deck"
+       ]
+      },
+      "deck_id": {
+       "type": "string"
+      },
+      "template": {
+       "type": "object"
+      }
+     }
+    },
+    "conversation_id": {
+     "type": "string"
+    }
+   }
+  },
+  "outline": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "title",
+    "kind",
+    "slides"
+   ],
+   "properties": {
+    "title": {
+     "type": "string",
+     "maxLength": 300
+    },
+    "kind": {
+     "enum": [
+      "corporate",
+      "training"
+     ]
+    },
+    "slides": {
+     "type": "array",
+     "maxItems": 60,
+     "items": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+       "role",
+       "title",
+       "points"
+      ],
+      "properties": {
+       "role": {
+        "enum": [
+         "content",
+         "objectives",
+         "section",
+         "questions",
+         "summary"
+        ]
+       },
+       "title": {
+        "type": "string",
+        "maxLength": 300
+       },
+       "points": {
+        "type": "array",
+        "maxItems": 30,
+        "items": {
+         "type": "string",
+         "maxLength": 1000
+        }
+       },
+       "notes": {
+        "type": "string",
+        "maxLength": 6000
+       },
+       "sources": {
+        "type": "array",
+        "maxItems": 20,
+        "items": {
+         "type": "string",
+         "maxLength": 500
+        }
+       }
+      }
+     }
+    },
+    "sources": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+       "document": {
+        "type": "string"
+       },
+       "link": {
+        "type": "string"
+       }
+      }
+     }
+    },
+    "read": {
+     "type": "object"
+    }
+   }
+  },
+  "error": {
+   "type": "string",
+   "maxLength": 1000
+  },
+  "deck_id": {
+   "type": "string"
+  },
+  "slide_ids": {
+   "type": "array",
+   "items": {
+    "type": "integer"
+   }
+  }
+ }
+}

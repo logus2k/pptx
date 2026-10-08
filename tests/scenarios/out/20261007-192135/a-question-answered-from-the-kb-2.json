@@ -1,0 +1,118 @@
+{
+ "id": "a-question-answered-from-the-kb",
+ "about": "A question about a product: answered from the knowledge base, the deck unchanged.",
+ "turns": [
+  {
+   "say": "Qual é a idade máxima para o crédito habitação jovem?",
+   "status": "done",
+   "seconds": 8.8,
+   "waits": [],
+   "replies": [
+    "A base de conhecimento não conseguiu fornecer a informação sobre a idade máxima para o crédito habitação jovem."
+   ],
+   "notices": [],
+   "tools": [
+    "kb_search"
+   ],
+   "errors": [],
+   "proposal": null,
+   "deck": [],
+   "calls": [
+    {
+     "preset": "slides_router",
+     "messages": [
+      {
+       "role": "user",
+       "content": "The open deck:\n(no deck open)\n\nThe person's request:\n<request>Qual é a idade máxima para o crédito habitação jovem?</request>\n\nFirst, intent: one sentence, in the request's language, saying what the person wants done or asks. Then where: the slide number; when part of a slide's text changes, also the one line of the deck that changes, copied as it is; for a whole slide (add, delete, move, duplicate) the slide number alone. Then choose the groups of tools that are needed:\n- text: Write, rewrite, shorten, translate, correct or format the text already on a slide: a title, a subtitle, a bullet or a list of bullets, a column, a text box; change a word, a number, a date, a name; make text bigger, bold or another colour.\n- table: Change a table on a slide: a cell's value, add or remove a row or a column, correct a figure in a table. Make or change a chart (bar, column, line, pie) from figures; draw a diagram of a process, a flow or an organisation.\n- notes: Write, change or add to the speaker notes of a slide; cite a source in the notes.\n- images: Pictures: insert, replace or remove an image or photo, put a picture from a document on a slide, write or fix the alt text of an image, look at what an image shows.\n- structure: The deck's slides and shapes: add a new slide, duplicate, delete or move slides, change a slide's layout or number of columns, add, copy, move, resize or delete a shape or text box; a diagram's boxes and the arrows between them.\n- decks: Whole decks: create a new deck or presentation, copy a deck, copy or move slides between two decks, change a deck's template or look.\n- knowledge: Facts from the organisation's documents: search the knowledge base or the project's reference documents for policies, products, figures, prices or procedures to use on slides.\n- memory: Remember a lasting decision or preference for this project, recall what was discussed or decided in an earlier conversation, or set a rule for the project's instructions.\n- history: Undo or redo the last change, or accept or reject the changes waiting for review (\"yes, apply it\", \"reject slide five\").\n\nHow to tell them apart:\n- Adding, changing or removing a point, bullet, item, word, number or line in existing text is text (not structure). Structure is for whole slides (add, delete, move, duplicate, layout) and shapes.\n- A new slide also needs text (its title and points are written).\n- At the end, last: after the deck's last slide (measured: \"at the end\" was put before the annexes).\n- A slide named by its title or subject (\"the agenda\", \"the thank-you slide\") to delete, move or duplicate is the whole slide: say slide N in the intent; where is the slide number alone.\n- A value that is in a table (see the deck) is table.\n- A new chart or diagram is table.\n- Facts the request says come from documents, the knowledge base or policies need knowledge; content written from it onto slides also needs text or structure, and notes for the source.\n- \"Here\" and \"this\" mean what the person has selected.\n- kind: change (something must change: choose its groups), question (only an answer: no groups), unclear (too vague to know what to change, like \"change it\": no groups).\nAnswer with JSON only: {\"intent\": \"...\", \"where\": \"slide N: \\\"the deck's words\\\"\", \"kind\": \"change|question|unclear\", \"groups\": [\"...\"]}"
+      }
+     ],
+     "tools": []
+    },
+    {
+     "preset": "slides_assistant",
+     "messages": [
+      {
+       "role": "system",
+       "content": "## Project\nName: <data>a-question-answered-from-the-kb</data>\n\n## Decks (id | title | slides)\n<data>\nbe99ebbb27ab57b3 | Apresentação | 0 slides | ACTIVE\n</data>\n\n## Active deck, slide by slide (slide numbers or IDs, and shape IDs, are what the editing tools take)\n<data>\n(no slides yet: the deck is empty. A new slide becomes slide 1: leave after_slide_id out.)\n</data>\n\n## Now\nThe person asks: O usuário quer saber qual é a idade máxima para o crédito habitação jovem. (the deck is empty: the new slide is its first, slide 1)\nAnswer from the deck and your context; change nothing."
+      },
+      {
+       "role": "user",
+       "content": "Qual é a idade máxima para o crédito habitação jovem?"
+      }
+     ],
+     "tools": [
+      "ask_user",
+      "get_deck_outline",
+      "get_slide",
+      "kb_read_document",
+      "kb_search",
+      "propose_plan"
+     ]
+    },
+    {
+     "preset": "slides_assistant",
+     "messages": [
+      {
+       "role": "system",
+       "content": "## Project\nName: <data>a-question-answered-from-the-kb</data>\n\n## Decks (id | title | slides)\n<data>\nbe99ebbb27ab57b3 | Apresentação | 0 slides | ACTIVE\n</data>\n\n## Active deck, slide by slide (slide numbers or IDs, and shape IDs, are what the editing tools take)\n<data>\n(no slides yet: the deck is empty. A new slide becomes slide 1: leave after_slide_id out.)\n</data>\n\n## Now\nThe person asks: O usuário quer saber qual é a idade máxima para o crédito habitação jovem. (the deck is empty: the new slide is its first, slide 1) (the deck is empty: the new slide is its first, slide 1)\nAnswer from the deck and your context; change nothing."
+      },
+      {
+       "role": "user",
+       "content": "Qual é a idade máxima para o crédito habitação jovem?"
+      },
+      {
+       "role": "assistant",
+       "content": "",
+       "tool_calls": [
+        {
+         "id": "8Qp14TWECGMGPoauU0Js9Ql0uKY96AdT",
+         "type": "function",
+         "function": {
+          "name": "kb_search",
+          "arguments": "{\"query\":\"idade máxima para crédito habitação jovem\"}"
+         }
+        }
+       ]
+      },
+      {
+       "role": "tool",
+       "tool_call_id": "8Qp14TWECGMGPoauU0Js9Ql0uKY96AdT",
+       "content": "{\"error\": {\"code\": \"KB_FAILED\", \"message\": \"Knowledge base: HTTP 502\", \"hint\": \"The knowledge base did not answer: tell the person.\"}}"
+      }
+     ],
+     "tools": [
+      "ask_user",
+      "get_deck_outline",
+      "get_slide",
+      "kb_read_document",
+      "kb_search",
+      "propose_plan"
+     ]
+    }
+   ]
+  }
+ ],
+ "checks": [
+  {
+   "turn": 1,
+   "ok": true,
+   "check": "the turn ended done (done)"
+  },
+  {
+   "turn": 1,
+   "ok": false,
+   "check": "the reply mentions one of ['35', 'anos']"
+  },
+  {
+   "turn": 1,
+   "ok": true,
+   "check": "the assistant used kb_search (['kb_search'])"
+  },
+  {
+   "turn": 1,
+   "ok": true,
+   "check": "the turn did not change the deck"
+  }
+ ],
+ "passed": false
+}

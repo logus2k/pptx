@@ -112,6 +112,14 @@ a.button-link.secondary { border-color: var(--primary); }
 .stage-sheet { width: 100%; max-width: 1100px; aspect-ratio: 16 / 9; border-radius: var(--radius-xl); overflow: hidden; background: #FFFFFF;   /* white paper (DESIGN.md rule 1) */ box-shadow: var(--shadow); }
 .stage-sheet img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .stage-note { margin: 0; color: var(--text-title); font-size: var(--fs-caption); line-height: var(--lh-caption); letter-spacing: var(--ls-caption); text-align: center; }
+/* the selected shape's actions under the slide (deck-controls.js), as the editor bar's buttons */
+.shape-actions { justify-content: center; flex-wrap: wrap; gap: var(--space-2); }
+.shape-actions[hidden] { display: none; }
+/* the slide's speaker notes: a card under it (DESIGN.md > Cards), its text as written */
+.notes-block { width: 100%; max-width: 1100px; padding: var(--space-3) var(--space-4); background: var(--surface); border: 1px solid var(--card-outline); border-radius: var(--radius-xl); }
+.notes-block .row { align-items: center; gap: var(--space-2); }
+.notes-block .section-title { margin: 0; }
+.notes-text { margin: var(--space-2) 0 0; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 9em; overflow-y: auto; }
 .versions-panel { width: 360px; max-width: 40vw; padding: var(--space-4); overflow-y: auto; background: var(--surface-page); border-left: 1px solid var(--divider); }
 .versions-panel .data-table td { height: auto; padding-top: var(--space-2); padding-bottom: var(--space-2); }
 .version-author { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -261,3 +269,16 @@ button.primary:hover:not(:disabled), button.danger:hover:not(:disabled) { backgr
   .admin-table .cell-label { display: block; flex: none; color: var(--text-weak); text-align: left; }
   .admin-filters .field-box, .admin-filters .admin-q { flex: 1 1 100%; }
 }
+
+/* ── a deck generated from a source (views/generate.js; spec NL-12) ── */
+.generate-form fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
+.generate-form legend { padding: 0; margin-bottom: var(--space-2); }
+.generate-form label.row { flex-wrap: nowrap; align-items: flex-start; }   /* a long option wraps its text, beside its radio */
+.generate-form label.row input { flex: none; margin-top: 2px; }
+.generate-form .field-box { max-width: 560px; }
+.generate-search { flex: 1 1 260px; }
+.outline-list { list-style: none; margin: var(--space-6) 0 0; padding: 0; display: grid; gap: var(--space-3); }
+.outline-head { align-items: center; }
+.outline-head .spacer { flex: 1 1 auto; }
+.outline-actions { flex: none; gap: 0; }   /* the three together, wrapping under the role as one */
+.outline-slide textarea { resize: vertical; }

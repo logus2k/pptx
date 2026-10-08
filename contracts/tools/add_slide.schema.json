@@ -5,9 +5,7 @@
  "description": "Insert ONE new slide from a layout and write what it says: content (title, subtitle, points, or a chart or diagram) is put in the layout's places by the application; placeholders by idx only for a particular place. A slide for each point of an outline: one add_slide per point.",
  "type": "object",
  "additionalProperties": false,
- "required": [
-  "layout"
- ],
+ "required": [],
  "properties": {
   "deck_id": {
    "type": "string",
@@ -15,7 +13,7 @@
   },
   "layout": {
    "type": "string",
-   "description": "A layout name from list_layouts."
+   "description": "A layout name from list_layouts. Left out with content: the layout the content fits."
   },
   "position": {
    "type": "integer",
@@ -152,7 +150,7 @@
       "anyOf": [
        {
         "type": "string",
-        "maxLength": 200
+        "maxLength": 1000
        },
        {
         "type": "object",
@@ -160,11 +158,11 @@
         "properties": {
          "heading": {
           "type": "string",
-          "maxLength": 200
+          "maxLength": 1000
          },
          "text": {
           "type": "string",
-          "maxLength": 300
+          "maxLength": 1000
          }
         }
        }

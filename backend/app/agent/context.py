@@ -169,12 +169,19 @@ def roles(s: dict, layout_roles: dict[int, str] | None = None) -> dict[int, str]
     return out
 
 
+# the reply's last words (replayed on the same calls: "say in one sentence what you changed" gave English or
+# mixed replies 4 times in 16 and slide IDs ("diapositivo 259") 2 in 16; with these, Portuguese and slide numbers 16 in 16)
+SAY = ("say in one sentence, in the language of the person's request, what you changed, naming each slide by its "
+       "number as the person sees it (a new slide: the place it is now), never by its ID")
+
+
 def slide_map(s: dict, number: str | None = None, layout_roles: dict[int, str] | None = None) -> str:
     """A slide as the model targets it (read.slide's output): a header line, then every shape with its ID and role
     (roles()), table with its cells, picture with its alt text, group with its members), then the speaker notes.
     number: the slide's number in the request's numbering ("new" for a slide made in it); its place by default."""
     number = number or str(s["index"] + 1)
-    label = "new slide" if number == "new" else f"slide {number}"
+    # a new slide's place now, for the reply (the number the person sees); the request's numbers stay for the others
+    label = f"new slide, now slide {s['index'] + 1}" if number == "new" else f"slide {number}"
     head = f"{label} · id {s['slide_id']} · {s['layout']}" + (" · hidden" if s["hidden"] else "")
     lines = [head]
     named = roles(s, layout_roles)
@@ -213,7 +220,7 @@ def deck_map(
     lines = {}
     for o in outline:
         hidden = " · hidden" if o["hidden"] else ""
-        head = "new slide" if label(o) == "new" else f"slide {label(o)}"
+        head = f"new slide, now slide {o['index'] + 1}" if label(o) == "new" else f"slide {label(o)}"
         lines[o["slide_id"]] = f"{head} · id {o['slide_id']}{hidden} · {o['title'] or '(no title)'}"
     full = [
         (
@@ -398,14 +405,20 @@ def system_context(
         if t.changes and getattr(t, "done", None):  # the edits so far: done, not to be made again
             parts.append(
                 f"## Now\nThe person wants: {t.intent}{where}\nDone in this turn: {'; '.join(t.done)}.\nIf that is all the "
-                "request asks, call no tool again: say in one sentence what you changed. Otherwise call the tools for "
-                "what is still missing."
+                f"request asks, call no tool again: {SAY}. Otherwise call the tools for what is still missing."
             )
         elif t.changes:
-            parts.append(
-                f"## Now\nThe person wants: {t.intent}{where}\nDo it now by calling your tools, writing the text "
-                "yourself from the request and what you find (never filler); then say in one sentence what you changed."
-            )
+            offered = {d["function"]["name"] for d in getattr(t, "tool_defs", None) or []}
+            if "kb_search" in offered:
+                # replayed on the same calls: told to write "from the request and what you find", the model wrote a
+                # product's conditions without searching 20 times in 20; told where facts come from, it searched 20/20
+                do = ("Do it now by calling your tools. Facts about the organisation's products, conditions, policies, "
+                      "processes or figures come from the knowledge base: kb_search for them first and write from what it "
+                      f"finds; anything else, write yourself from the request (never filler). Then {SAY}.")
+            else:
+                do = ("Do it now by calling your tools, writing the text yourself from the request and what you find "
+                      f"(never filler); then {SAY}.")
+            parts.append(f"## Now\nThe person wants: {t.intent}{where}\n{do}")
         elif getattr(t, "kind", "") == "unclear":
             # without the router's intent (measured on the same call: with a long intent, ask_user 0 times in 10;
             # without it, 10 in 10)

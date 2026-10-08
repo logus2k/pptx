@@ -29,7 +29,7 @@ class Proposals:
         self.layout = layout
 
     def _dir(self, pid: str, cid: str, prid: str):
-        if not storage.is_id(prid):
+        if not storage.is_id(prid) or not storage.is_id(cid):  # (security review L1: a cid climbing out of the project)
             raise NotFound("proposal")
         return self.layout.project(pid) / "conversations" / cid / "proposals" / prid
 
@@ -44,6 +44,8 @@ class Proposals:
 
     def open_in(self, pid: str, cid: str) -> dict | None:
         """The conversation's proposal still drafting or waiting for a decision, if any (at most one)."""
+        if not storage.is_id(cid):
+            return None
         folder = self.layout.project(pid) / "conversations" / cid / "proposals"
         if not folder.exists():
             return None

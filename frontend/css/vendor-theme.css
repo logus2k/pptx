@@ -61,8 +61,16 @@ body { color-scheme: inherit; }
   background: var(--surface); border-right: 0; position: relative; z-index: 21; }
 .menu-logo { margin: 0 11px 26px; }
 .menu-logo img { width: 83px; height: 18px; }
-.menu-logo .product { display: block; margin-top: var(--space-2); color: var(--text-section);
-  font: var(--fw-bold) var(--fs-subtitle)/var(--lh-subtitle) var(--font-sans); letter-spacing: var(--ls-subtitle); }
+/* Slides: the logo rules as Cortex has them now (its rail icon, its name spread under the wordmark) */
+/* a block in both themes: inline (the light logo's default) sat on a text line with room for descenders below it, so
+   the name under it moved 5px when the theme changed. The dark-theme rules above still hide it (more specific). */
+.menu-logo .logo-light { display: block; }
+.menu-logo .rail-logo { display: none; }   /* shown in the rail instead of the wordmark and the name (layout.css) */
+.menu-logo .rail-logo img { width: 40px; height: 40px; }
+/* the name spread across the logo's 83px: its first and last letters under the logo's edges; in --text-weak, as
+   --text-section fails contrast for read text in the light theme (2.85:1; --text-weak 5.74:1, dark 10.56:1) */
+.menu-logo .product { display: flex; justify-content: space-between; width: 83px; margin-top: var(--space-2); color: var(--text-weak);
+  font: var(--fw-regular) var(--fs-caption)/var(--lh-caption) var(--font-sans); letter-spacing: var(--ls-caption); }   /* Caption: thin letters, spread wide */
 .icon-bar-group { align-items: stretch; gap: 0; padding: 0; }
 .menu-section { margin: var(--space-4) 0 var(--space-2); color: var(--text-section); white-space: nowrap; overflow: hidden;
   font: var(--fw-regular) var(--fs-caption)/var(--lh-caption) var(--font-sans); letter-spacing: var(--ls-caption); }

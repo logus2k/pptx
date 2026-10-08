@@ -134,11 +134,61 @@ class ManualEdit(BaseModel):
     the version the page showed: a deck that has moved on since answers 409 (technical design section 5.2)."""
 
     base_version: int = Field(ge=1)
-    op: Literal["text", "move", "delete"]
-    slide_id: int = Field(ge=256)
+    op: Literal["text", "move", "delete", "tool"]
+    slide_id: int | None = Field(default=None, ge=256)
     shape_id: int | None = Field(default=None, ge=1)
     paragraphs: list[str] | None = Field(default=None, max_length=500)
     position: int | None = Field(default=None, ge=0)
+    # op "tool": one of the assistant's editing tools (MANUAL_TOOLS) with its arguments, checked against the same schema
+    # (contracts/tools): every change the assistant can make has a control (the user's rule, 2026-10-07)
+    tool: str | None = Field(default=None, max_length=40)
+    args: dict | None = None
+
+
+# the editing tools the editor's controls use, applied as the assistant's are (agent/tools.py), published at once as
+# a "manual" version that undo takes back
+MANUAL_TOOLS = ("add_slide", "duplicate_slide", "move_slide", "delete_slide", "change_layout", "add_chart", "edit_chart",
+                "draw_diagram", "insert_image", "replace_image", "set_alt_text", "set_notes", "edit_table", "format_text",
+                "fit_text", "copy_slides", "change_template")  # fmt: skip
+
+
+class GenerationSource(BaseModel):
+    kind: Literal["kb_topic", "kb_document", "document"]
+    query: str | None = Field(default=None, max_length=500)
+    domain: str | None = Field(default=None, max_length=200)
+    path: str | None = Field(default=None, max_length=1000)
+    asset_id: str | None = Field(default=None, max_length=64)
+
+
+class GenerationTarget(BaseModel):
+    kind: Literal["new", "deck"] = "new"
+    deck_id: str | None = Field(default=None, max_length=64)
+    template: TemplateRef | None = None
+
+
+class NewGeneration(BaseModel):
+    """A deck from a source (spec NL-12): a corporate presentation or a training."""
+
+    kind: Literal["corporate", "training"] = "corporate"
+    source: GenerationSource
+    slides: int | None = Field(default=None, ge=1, le=40)
+    focus: str = Field(default="", max_length=1000)
+    audience: str = Field(default="", max_length=300)
+    language: Literal["pt", "en"] = "pt"
+    target: GenerationTarget = Field(default_factory=GenerationTarget)
+
+
+class OutlineSlide(BaseModel):
+    role: Literal["content", "objectives", "section", "questions", "summary"] = "content"
+    title: str = Field(min_length=1, max_length=300)
+    points: list[str] = Field(default_factory=list, max_length=30)
+    notes: str = Field(default="", max_length=6000)
+    sources: list[str] = Field(default_factory=list, max_length=20)
+
+
+class OutlineEdit(BaseModel):
+    title: str = Field(min_length=1, max_length=300)
+    slides: list[OutlineSlide] = Field(min_length=1, max_length=60)
 
 
 class TemplateChanges(BaseModel):
@@ -163,6 +213,7 @@ def build(
     agent=None,
     kb=None,
     memory=None,
+    generations=None,
 ) -> APIRouter:
     r = APIRouter(prefix="/api")
     max_bytes = settings.file["limits"]["upload_mb"] * 1024 * 1024
@@ -297,6 +348,65 @@ def build(
     async def delete_project(pid: str, user: identity.User = Depends(identity.current_user)):
         await afound(projects.delete(pid, user.email))
         return Response(status_code=204)
+
+    # ── decks generated from a source (spec NL-12): the form's path (the assistant's: agent/tools.py) ──
+    def generation_error(e: Exception) -> HTTPException:
+        return HTTPException(400, {"code": "generation", "message": str(e)})
+
+    @r.post("/projects/{pid}/generations", status_code=201)
+    async def start_generation(
+        pid: str, body: NewGeneration, request: Request, user: identity.User = Depends(identity.current_user)
+    ):
+        req = body.model_dump(exclude_none=True)
+        try:
+            record = await afound(generations.start(pid, user.email, req))
+        except ValueError as e:
+            raise generation_error(e) from None
+        request.state.audit = {"gid": record["id"]}
+        return record
+
+    @r.get("/projects/{pid}/generations/{gid}")
+    async def get_generation(pid: str, gid: str, user: identity.User = Depends(identity.current_user)):
+        return found(generations.get, pid, gid, user.email)
+
+    @r.put("/projects/{pid}/generations/{gid}/outline")
+    async def edit_generation(pid: str, gid: str, body: OutlineEdit, user: identity.User = Depends(identity.current_user)):
+        try:
+            return found(generations.edit, pid, gid, user.email, body.title, [x.model_dump() for x in body.slides])
+        except ValueError as e:
+            raise generation_error(e) from None
+
+    @r.post("/projects/{pid}/generations/{gid}/build")
+    async def build_generation(pid: str, gid: str, request: Request, user: identity.User = Depends(identity.current_user)):
+        try:
+            record = await afound(generations.build(pid, gid, user.email))
+        except ValueError as e:
+            raise generation_error(e) from None
+        request.state.audit = {"gid": gid, "did": record["deck_id"]}
+        deck = found(decks.get, pid, record["deck_id"], user.email)
+        renderer.warm(pid, layout.version_file(pid, deck["id"], deck["current_version"]).read_bytes())
+        return record
+
+    @r.get("/projects/{pid}/kb/documents")
+    async def kb_documents(
+        pid: str, q: str = Query(min_length=2, max_length=300), user: identity.User = Depends(identity.current_user)
+    ):
+        """Knowledge-base documents for a query (the form's "a knowledge-base document"): the documents the best
+        passages come from, once each, in the order found."""
+        project = found(projects.get, pid, user.email)
+        if kb is None or not kb.available:
+            return {"available": False, "documents": []}
+        try:
+            r_ = await asyncio.to_thread(kb.search, user.email, q, project["settings"].get("kb_domains") or None, 20)
+        except KBError as e:
+            return {"available": False, "documents": [], "error": str(e)}
+        seen, docs = set(), []
+        for p in r_.get("passages") or []:
+            key = (p.get("domain"), p.get("document"))
+            if p.get("domain") and p.get("document") and key not in seen:
+                seen.add(key)
+                docs.append({"domain": p["domain"], "path": p["document"], "title": p.get("title") or p["document"]})
+        return {"available": True, "documents": docs}
 
     # ── templates and assets ─────────────────────────────────────────
     @r.get("/templates")
@@ -579,6 +689,8 @@ def build(
     ):
         """One edit by hand: applied with the assistant's own operations, published as a version (source "manual") that
         undo can take back."""
+        if body.op != "tool" and body.slide_id is None:
+            raise HTTPException(422, {"code": "bad", "message": "This edit needs slide_id."})
         if body.op == "text":
             if body.shape_id is None or body.paragraphs is None or any(len(p) > 5000 for p in body.paragraphs):
                 raise HTTPException(422, {"code": "bad", "message": "A text edit needs shape_id and paragraphs."})
@@ -587,22 +699,76 @@ def build(
             if body.position is None:
                 raise HTTPException(422, {"code": "bad", "message": "A move needs position."})
             name, args = "move_slide", {"slide_id": body.slide_id, "position": body.position}
-        else:
+        elif body.op == "delete":
             name, args = "delete_slide", {"slide_id": body.slide_id}
         record, data = await asyncio.to_thread(found, decks.version_bytes, pid, did, user.email, None)
         if record["current_version"] != body.base_version:
             raise HTTPException(409, {"code": "moved_on", "message": "The deck has changed since: reload it."})
+        template_ref = None
+        if body.op == "tool":
+            name, args = body.tool or "", await asyncio.to_thread(manual_tool_args, pid, did, user.email, body, data)
+            template_ref = args.pop("template_ref", None)
         try:
-            new, _ = await asyncio.to_thread(ops.apply, data, name, args)
+            new, result = await asyncio.to_thread(ops.apply, data, name, args)
         except ops.OpError as e:
             raise HTTPException(422, {"code": e.code, "message": str(e)}) from None
         try:
             deck = await afound(decks.publish(pid, did, user.email, new, "manual", base_version=body.base_version))
         except ValueError:
             raise HTTPException(409, {"code": "moved_on", "message": "The deck has changed since: reload it."}) from None
-        request.state.audit = {"version": deck["current_version"], "op": body.op}
+        if template_ref:  # the deck's template is now the one it was changed to (PM-10), as an accepted proposal does
+            await decks.set_template(pid, did, user.email, template_ref)
+        request.state.audit = {"version": deck["current_version"], "op": body.tool if body.op == "tool" else body.op}
         renderer.warm(pid, layout.version_file(pid, did, deck["current_version"]).read_bytes())
-        return deck
+        keys = ("slides", "new_slide_ids", "left_out", "continued", "instead_of", "layout", "shape_id", "unmatched", "covers",
+                "moved_to_notes")
+        said = {k: result[k] for k in keys if isinstance(result, dict) and k in result}
+        return {**deck, "result": said}
+
+    def manual_tool_args(pid: str, did: str, email: str, body: ManualEdit, data: bytes) -> dict:
+        """A control's tool call: an editing tool, its arguments checked against the tool's schema and resolved as the
+        assistant's are (an asset's image, a template's file, the deck slides are copied from)."""
+        from .agent.tools import ToolError, Turn
+
+        if body.tool not in MANUAL_TOOLS or agent is None:
+            raise HTTPException(422, {"code": "bad", "message": f"{body.tool!r} is not an edit the editor makes."})
+        executor = agent.executor
+        t = Turn(pid=pid, cid="", email=email, conversation={})
+        try:
+            args = executor.parse(body.tool, body.args or {})
+            args.pop("deck_id", None)  # this deck: the route's
+            if body.tool == "add_slide" and not args.get("layout"):
+                if not isinstance(args.get("content"), dict):
+                    raise ToolError("BAD_ARGUMENTS", "A new slide needs a layout or its content.", "")
+                prs = read.open_deck(data)
+                first = not len(prs.slides) or args.get("position") == 0
+                args["layout"] = ops.layout_for_new(prs, args["content"], first).name
+            if body.tool == "copy_slides":
+                args = executor._copy_source(t, did, args)
+            return executor.resolve(t)(body.tool, args)
+        except ToolError as e:
+            raise HTTPException(422, {"code": e.code, "message": str(e)}) from None
+
+    @r.get("/projects/{pid}/decks/{did}/layouts")
+    async def deck_layouts(pid: str, did: str, user: identity.User = Depends(identity.current_user)):
+        """The layouts of the deck's current version, for the editor's Add slide and Change layout: each name, and
+        whether a list of points, a subtitle or a chart has a place on it."""
+        from .docengine import layouts as lay
+
+        _, data = await asyncio.to_thread(found, decks.version_bytes, pid, did, user.email, None)
+
+        def listed():
+            prs = read.open_deck(data)
+            out = []
+            for x in prs.slide_layouts:
+                where = lay.slots(x, prs.slide_width, prs.slide_height)
+                roles = {p["role"] for p in lay.placeholders(x, prs.slide_width, prs.slide_height)}
+                out.append({"name": x.name, "heading": where["heading"] is not None, "subtitle": where["subtitle"] is not None,
+                            "points": len(where["items"]), "chart": "chart" in roles, "table": "table" in roles,
+                            "picture": "picture" in roles})  # fmt: skip
+            return out
+
+        return {"layouts": await asyncio.to_thread(listed)}
 
     @r.post("/projects/{pid}/decks/{did}/undo")
     async def undo(pid: str, did: str, user: identity.User = Depends(identity.current_user)):

@@ -85,9 +85,13 @@ function menuButton(e) {
 }
 
 const logo = Object.assign(document.createElement('div'), { className: 'menu-logo' });
+// as Cortex's sidebar.js has it: the name in capitals spread to the logo's width (a letter per span, read as one
+// word); in the rail (the menu collapsed) Banco CTT's icon, "bctt", light and its red version in the dark theme
 logo.innerHTML = '<img class="logo-light" src="static/images/bancoctt-logo.svg" alt="Banco CTT" width="83" height="18">'
   + '<img class="logo-dark" src="static/images/bancoctt-logo-dark.svg" alt="Banco CTT" width="83" height="18">'
-  + '<span class="product notranslate">Slides</span>';
+  + `<span class="product notranslate" role="img" aria-label="Slides">${[...'SLIDES'].map((c) => `<span aria-hidden="true">${c}</span>`).join('')}</span>`
+  + '<span class="rail-logo notranslate" role="img" aria-label="Banco CTT"><img class="logo-light" src="static/images/bancoctt-icon.svg" alt="" width="40" height="40">'
+  + '<img class="logo-dark" src="static/images/bancoctt-icon-dark.svg" alt="" width="40" height="40"></span>';
 // desktop: collapsed to the rail or not, remembered; tablet: the rail is the menu, the button opens it over the page
 const COLLAPSED = 'slides.menuCollapsed';
 const collapse = Object.assign(document.createElement('button'), { type: 'button', className: 'menu-collapse' });

@@ -63,6 +63,16 @@ for (const [area, rows] of [['templates', '.admin-templates li'], ['usage', '.us
   await pa.waitForSelector(rows, { timeout: 10000 }).then(() => audit(pa, `administration: ${area}`)).catch(() => check(false, `the administration's ${area} opened`));
 }
 
+// the generation form (spec NL-12), opened by the person who made its project
+{
+  const who = `a11y-gen-${Date.now()}@example.com`;
+  const pg = await open(b, who, { width: W, height: 900, storage: { 'slides.theme': theme, 'slides.uiLanguage': 'pt' } });
+  const made = await pg.request.fetch(`${BASE}api/projects`, { method: 'POST', headers: { ...authHeaders(who), 'Content-Type': 'application/json' }, data: JSON.stringify({ name: 'Gerar' }) });
+  const project = await made.json();
+  await pg.goto(`${BASE}projects/${project.id}/generate`, { waitUntil: 'networkidle' }).catch(() => {});
+  await pg.waitForSelector('.generate-form', { timeout: 10000 }).then(() => audit(pg, 'generate a deck: the form')).catch(() => check(false, 'the generation form opened'));
+  await pg.close();
+}
 await pa.close();
 const p = await open(b, user, { width: W, height: 900, storage: { 'slides.theme': theme, 'slides.uiLanguage': 'pt' } });
 await p.waitForSelector('.identity-btn');
@@ -93,6 +103,12 @@ if (W < 600) {  // spec section 8: no editor on a phone, a note that editing nee
 }
 await p.waitForSelector('.slide-strip .strip-item');
 await p.waitForFunction(() => [...document.querySelectorAll('.slide-strip img')].every((i) => i.complete && i.naturalWidth > 0), null, { timeout: 120000 });
+// the editor's controls (deck-controls.js): their largest form, opened from the keyboard
+await p.locator('.editor-bar [data-action="add-slide"]').focus();
+await p.keyboard.press('Enter');
+await p.waitForSelector('.jsPanel textarea', { timeout: 10000 }).then(() => audit(p, 'add-slide dialog')).catch(() => check(false, 'the add-slide dialog opened from the keyboard'));
+await p.keyboard.press('Escape');
+await p.waitForSelector('.jsPanel textarea', { state: 'detached', timeout: 5000 }).catch(() => {});
 if (!(await p.locator('.assistant textarea').isVisible())) {
   await p.locator('#menu-toggle').click();
   await p.locator('#menubar .menu-btn', { hasText: 'Assistente' }).click();
@@ -121,7 +137,10 @@ if (await tabTo(p, () => document.activeElement?.matches('.assistant textarea'),
     check(await tabTo(p, () => document.activeElement?.closest('.chat-card.proposal') && document.activeElement.tagName === 'BUTTON', 'the proposal\'s Review'), 'the proposal can be reviewed by keyboard');
   }
 }
-await p.locator('button', { hasText: 'Versões' }).first().click().catch(() => {});
+// on a tablet the assistant's pane lies over the editor (layout.css): closed first, as a person does
+const paneOver = p.locator('#right-panel button[title="Fechar painel"]:visible, #right-panel button[title="Close panel"]:visible');
+if (Number(width) < 1280 && await paneOver.count()) await paneOver.first().click();
+await p.locator('button', { hasText: 'Versões' }).first().click({ timeout: 10000 }).catch((e) => console.log(`versions click: ${e.message.split('\n').slice(0, 12).join(' | ')}`));
 await p.waitForSelector('.versions-panel', { timeout: 10000 }).then(() => audit(p, 'versions')).catch(() => check(false, 'the versions panel opened'));
 
 writeFileSync(`${out}a11y-${W}-${theme}.json`, JSON.stringify(found, null, 1));

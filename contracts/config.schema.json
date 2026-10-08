@@ -150,6 +150,14 @@
           "description": "An image-generation service with tti_server's API (POST /api/generate, GET /api/stream/{id}, GET /api/image/{id}), e.g. http://tti-web:80. Left out: generate_image is not offered (spec IM-6)."
         }
       }
+    },
+    "allowed_origins": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 8
+      },
+      "description": "Pages that may open the assistant's live connection (socket.io) besides public_url's own origin, as scheme://host[:port]; without a port, that host on any port (a local install: http://localhost). A browser's connection from any other page is refused (security review M1)."
     }
   }
 }

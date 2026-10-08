@@ -14,6 +14,8 @@ class FakeModels:
     ) -> None:
         self.script = list(script or [])
         self.summaries: list[str] = []
+        self.points_answers: list[dict] = []  # slides_points (outline.py): queued answers, else made from the part
+        self.outline_answers: list[dict] = []  # slides_outline: queued answers, else made from the points
         self.sent: list[list[dict]] = []
         self.offered: list[list[str]] = []  # the tool names offered with each call
         self._vision = vision
@@ -43,6 +45,20 @@ class FakeModels:
         return self._vision
 
     async def stream(self, model, preset, messages, tools, max_tokens=None):
+        if preset == "slides_titler":  # a title for points sent alone (tools._title_for): kept apart from the turn's calls
+            self.titled = [*getattr(self, "titled", []), messages]
+            queue = getattr(self, "titles", None)
+            title = queue.pop(0) if queue else "Título"
+            yield {"choices": [{"index": 0, "delta": {"content": json.dumps({"title": title})}, "finish_reason": None}]}
+            yield {"choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}]}
+            return
+        if preset == "slides_checker":  # the end-of-turn check (loop._missing): kept apart from the turn's calls
+            self.checked = [*getattr(self, "checked", []), messages]
+            queue = getattr(self, "checks", None)
+            missing = queue.pop(0) if queue else ""
+            yield {"choices": [{"index": 0, "delta": {"content": json.dumps({"pending": missing})}, "finish_reason": None}]}
+            yield {"choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}]}
+            return
         self.sent.append(messages)
         self.offered.append([d["function"]["name"] for d in tools or []])
         self.definitions = list(tools or [])  # the last call's tools, as sent
@@ -59,6 +75,12 @@ class FakeModels:
             )
             answer = route if isinstance(route, dict) else {"intent": "-", "groups": route}  # a dict: the whole answer
             yield {"choices": [{"index": 0, "delta": {"content": json.dumps(answer)}, "finish_reason": None}]}
+            yield {"choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}]}
+            return
+        if preset in ("slides_points", "slides_outline"):
+            queue = self.points_answers if preset == "slides_points" else self.outline_answers
+            answer = queue.pop(0) if queue else _outline_answer(preset, messages[-1]["content"])
+            yield {"choices": [{"index": 0, "delta": {"content": json.dumps(answer, ensure_ascii=False)}, "finish_reason": None}]}
             yield {"choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}]}
             return
         if preset == "slides_describer":  # the background describer: not part of any conversation's script
@@ -300,3 +322,29 @@ class FakeImageGen:
         out = io.BytesIO()
         Image.new("RGB", (134, 77), (10, 120, 200)).save(out, "PNG")
         return out.getvalue()
+
+
+def _outline_answer(preset: str, content: str) -> dict:
+    """The fake's own answer to outline.py's two calls, from what it was sent: each "[where] text" line of a part is a
+    point (its first ten words); "Make N slides" with "- point (where)" lines is N slides of the kind named."""
+    lines = content.splitlines()
+    if preset == "slides_points":
+        out = []
+        for line in lines:
+            if line.startswith("[") and "] " in line:
+                where, text = line[1 : line.index("] ")], line[line.index("] ") + 2 :]
+                out.append({"point": " ".join(text.split()[:10]), "where": where})
+        return {"points": out[:8]}
+    wanted = int(content.split("Make ", 1)[1].split(" ", 1)[0])
+    points = [x[2:].rsplit(" (", 1) for x in lines if x.startswith("- ")]
+    points = [(p[0], p[1].rstrip(")") if len(p) > 1 else "") for p in points] or [("Ponto", "")]
+    training = "A training" in content
+    roles = ["content"] * wanted
+    if training:
+        roles = ["objectives", "section"] + ["content"] * max(1, wanted - 5) + ["questions", "summary"]
+    slides = []
+    for n, role in enumerate(roles[:wanted]):
+        chosen = [points[(n * 3 + k) % len(points)] for k in range(3)]
+        slides.append({"role": role, "title": f"Diapositivo {n + 1}", "points": [c[0] for c in chosen],
+                       "notes": f"O formador explica o diapositivo {n + 1}.", "sources": sorted({c[1] for c in chosen if c[1]})})
+    return {"title": "Apresentação gerada", "slides": slides}

@@ -4,6 +4,7 @@ file first and deck.json last, so a reader never sees a version without its file
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import shutil
 
@@ -144,7 +145,7 @@ class Decks:
     async def upload(self, pid: str, email: str, file_name: str, raw: bytes, max_bytes: int) -> dict:
         """An uploaded .pptx (PM-1): checked by content; a deck of its own masters (no template)."""
         self.projects.get(pid, email, roles=WRITE_ROLES)
-        checked = files.check(raw, max_bytes=max_bytes)
+        checked = await asyncio.to_thread(files.check, raw, max_bytes)  # off the event loop (security review M3)
         title = file_name.rsplit("/", 1)[-1].rsplit("\\", 1)[-1]
         if title.lower().endswith((".pptx", ".potx")):
             title = title[:-5]

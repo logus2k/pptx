@@ -29,5 +29,9 @@
     "stt": "http://stt_server:2700",
     "cortex_api": "http://proxy_server:8710/cortex/api/v1",
     "reranker": "http://embeddings-server:8600"
-  }
+  },
+  "allowed_origins": [
+    "http://localhost",
+    "http://127.0.0.1"
+  ]
 }

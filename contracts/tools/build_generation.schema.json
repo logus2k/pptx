@@ -1,0 +1,17 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "tools/build_generation",
+ "title": "build_generation",
+ "description": "(The application's, after the person approves a generated outline: not offered to the model.)",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "generation_id"
+ ],
+ "properties": {
+  "generation_id": {
+   "type": "string",
+   "maxLength": 64
+  }
+ }
+}

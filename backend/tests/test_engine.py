@@ -1092,8 +1092,34 @@ def test_a_deck_reaches_nothing_outside_it_when_rendered():
 def test_text_alone_is_not_put_on_a_layout_made_for_a_table():
     ctt = (REPO / "templates" / "bancoctt.pptx").read_bytes()
     data, res = ops.apply(ctt, "add_slide", {"layout": "7_Tabela", "content": {"title": "Capa", "subtitle": "Outubro"}})
-    assert res["instead_of"] == "7_Tabela" and res["layout"] == "2_Capa S/Imagem"
-    assert read.outline(read.open_deck(data))[0]["layout"] == "2_Capa S/Imagem"
+    # the cover whose heading can be read: "2_Capa S/Imagem" is white on white (its red is each deck's own shapes)
+    assert res["instead_of"] == "7_Tabela" and res["layout"] == "1_Capa C/ Imagem"
+    assert read.outline(read.open_deck(data))[0]["layout"] == "1_Capa C/ Imagem"
+
+
+def test_a_generated_deck_has_a_readable_cover_and_each_slides_points_as_one_list():
+    """Rendered and looked at (spec NL-12): on Banco CTT's template the cover went on "2_Capa S/Imagem", a white title on
+    a white page, and each slide's points one in each of "3_Texto"'s boxes; on the default one, a list on "Vertical
+    Title and Text"."""
+    from app.docengine import layouts
+
+    slides = [{"role": "content", "title": "Regime", "points": ["Primeiro ponto.", "Segundo ponto.", "Terceiro ponto."]},
+              {"role": "section", "title": "Módulo", "points": ["O objetivo do módulo."]}]  # fmt: skip
+    ctt = read.open_deck((REPO / "templates" / "bancoctt.pptx").read_bytes())
+    W, H = ctt.slide_width, ctt.slide_height
+    assert [x.name for x in ctt.slide_layouts if not layouts.readable(x, W, H)] == ["2_Capa S/Imagem"]
+    made = ops.add_outline(ctt, slides, cover={"title": "Crédito Habitação Jovem", "subtitle": "Formação"})
+    cover, content, section = (ctt.slides.get(i) for i in made["slides"])
+    assert cover.slide_layout.name == "1_Capa C/ Imagem"
+    assert not [ph for ph in cover.placeholders if ph.placeholder_format.type.name == "PICTURE"]  # its red shows
+    assert content.slide_layout.name == "12_Texto" and section.slide_layout.name == "2_Separador S/Imagem"
+    texts = [ph.text_frame.text for ph in content.placeholders if ph.text_frame.text.strip()]
+    assert texts == ["Regime", "Primeiro ponto.\nSegundo ponto.\nTerceiro ponto."]  # one list, in one box
+    from pptx import Presentation
+
+    plain = Presentation()
+    made = ops.add_outline(plain, slides, cover={"title": "Crédito Habitação Jovem"})
+    assert [plain.slides.get(i).slide_layout.name for i in made["slides"]] == ["Title Slide", "Title and Content", "Title Slide"]
 
 
 def test_native_charts_are_made_read_and_changed():
@@ -1271,3 +1297,150 @@ def test_a_new_slide_with_a_chart_or_a_diagram_has_it_under_its_title_in_place_o
     # the chart sent whole to edit_chart, the slide's title as its own (measured): said once, by the slide
     data, _ = ops.apply(data, "edit_chart", {"slide_id": res["slides"][0], "shape_id": res["shape_id"], "title": "crédito "})
     assert next(sh for sh in get(data, res["slides"][0])["shapes"] if sh["shape_id"] == res["shape_id"])["chart"]["title"] is None
+
+
+def test_a_slide_with_a_subtitle_and_points_goes_on_a_layout_with_both():
+    """Measured: a cover sent with a subtitle and one point went on a layout with no subtitle place; the subtitle was
+    left out (and the reply claimed it)."""
+    ctt = (REPO / "templates" / "bancoctt.pptx").read_bytes()
+    content = {"title": "Apresentação", "subtitle": "Crédito Habitação Jovem", "points": ["Para a equipa comercial"]}
+    chosen = ops._layout_for_content(read.open_deck(ctt), content)  # as fill_slide on a slide not there yet chooses
+    data, res = ops.apply(ctt, "add_slide", {"layout": chosen.name, "content": content, "position": 0})
+    sid = (res["slides"] if isinstance(res, dict) else res)[0]
+    assert not (isinstance(res, dict) and res.get("left_out"))
+    text = [p["runs"][0]["text"] for sh in get(data, sid)["shapes"] for p in sh.get("paragraphs") or [] if p.get("runs")]
+    assert {"Apresentação", "Crédito Habitação Jovem", "Para a equipa comercial"} <= set(text)
+
+
+def test_points_sent_with_a_layout_that_has_no_place_for_them_go_on_one_that_has():
+    """As the model sent it: an index for an empty cover, with the cover's own layout named (refused NO_PLACE, then the
+    title alone written, 2 runs in 3)."""
+    ctt = (REPO / "templates" / "bancoctt.pptx").read_bytes()
+    data, made = ops.apply(ctt, "add_slide", {"layout": "1_Capa C/ Imagem"})
+    sid = (made["slides"] if isinstance(made, dict) else made)[0]
+    topics = ["Regime e finalidades", "Fases do processo", "Servicing", "Crédito obras"]
+    index = {"title": "Índice", "points": topics}
+    data, res = ops.apply(data, "fill_slide", {"slide_id": sid, "layout": "1_Capa C/ Imagem", "content": index})
+    lines = [p["runs"][0]["text"] for sh in get(data, sid)["shapes"] for p in sh.get("paragraphs") or [] if p.get("runs")]
+    assert res.get("layout") and res["layout"] != "1_Capa C/ Imagem" and set(topics) <= set(lines)
+    data, res = ops.apply(ctt, "add_slide", {"layout": "1_Capa C/ Imagem", "content": {"title": "Índice", "points": topics}})
+    assert res["instead_of"] == "1_Capa C/ Imagem"
+
+
+def test_a_list_too_long_for_its_slide_goes_on_over_as_many_as_it_needs():
+    """Measured: ten criteria from the knowledge base (1183 characters) ran past the slide's bottom, 3 runs in 3."""
+    from app.docengine import textfit
+
+    simple = (DECKS / "simple.pptx").read_bytes()
+    points = [f"Critério {n}: o(s) mutuário(s) do contrato cumprem a condição número {n} do regime, como a portaria "
+              f"o descreve para o crédito à habitação, com prazos e valores definidos" for n in range(1, 11)]
+    content = {"title": "Condições", "points": points}
+    data, res = ops.apply(simple, "add_slide", {"layout": "Title and Content", "content": content})
+    assert res["continued"] >= 1 and len(res["slides"]) == res["continued"] + 1
+    prs = read.open_deck(data)
+    said = []
+    for sid in res["slides"]:
+        s = prs.slides.get(sid)
+        assert s.shapes.title.text == "Condições"
+        assert not any(ph.has_text_frame and textfit.overflows(ph) for ph in s.placeholders)
+        said += [p.text for ph in s.placeholders if ph != s.shapes.title for p in ph.text_frame.paragraphs if p.text]
+    assert said == points  # every point, in order
+    assert len(prs.slides) == 3 + len(res["slides"])
+
+
+def test_a_covers_short_points_are_its_subtitles_lines():
+    """Measured (cover-for-a-new-deck): the model filled a new deck's cover with the audience and the date as points,
+    and the cover moved to "4_Texto" / "6_Texto", its lines scattered in boxes, 2 runs in 2. On a deck's first slide on
+    a cover they are the subtitle's lines; a point repeating the title is left out."""
+    ctt = read.open_deck((REPO / "templates" / "bancoctt.pptx").read_bytes())
+    cover = ops.cover_layout(ctt).name
+    first = ops._ids(ops.add_slide(ctt, cover))[0]
+    second = ops._ids(ops.add_slide(ctt, cover))[0]
+    sent = {"points": [{"text": "Crédito Habitação Jovem"}, {"text": "Para a Equipa Comercial"}, {"text": "Outubro de 2026"}],
+            "subtitle": "Crédito Habitação Jovem", "title": "Crédito Habitação Jovem"}  # fmt: skip
+    got = ops.fill_slide(ctt, first, sent)
+    assert "layout" not in got and ctt.slides.get(first).slide_layout.name == cover
+    one = read.slide(ctt, first)
+    texts = {sh["placeholder"]["idx"]: ["".join(r["text"] for r in p["runs"]) for p in sh["paragraphs"]]
+             for sh in one["shapes"] if sh.get("paragraphs")}  # fmt: skip
+    from app.docengine import layouts
+
+    where = layouts.slots(ctt.slides.get(first).slide_layout, ctt.slide_width, ctt.slide_height)
+    assert texts[where["heading"]] == ["Crédito Habitação Jovem"]
+    assert texts[where["subtitle"]] == ["Para a Equipa Comercial", "Outubro de 2026"]  # its lines, the title's echo out
+    moved = ops.fill_slide(ctt, second, sent)  # not the first slide: a list, on a layout with its boxes
+    assert moved.get("layout") and moved["layout"] != cover
+
+
+def test_a_new_first_slide_with_a_covers_content_goes_on_the_cover():
+    """Measured (cover-for-a-new-deck, after the subtitle fold): on an empty deck the slide was made from its content,
+    which chose "6_Texto" for a title and three points before the cover was ever considered, 2 runs in 2."""
+    ctt = read.open_deck((REPO / "templates" / "bancoctt.pptx").read_bytes())
+    sent = {"title": "Crédito Habitação Jovem", "points": ["Para a Equipa Comercial", "Outubro de 2026"]}
+    assert ops.layout_for_new(ctt, sent, first=True).name == ops.cover_layout(ctt).name
+    assert ops.layout_for_new(ctt, sent, first=False).name != ops.cover_layout(ctt).name  # elsewhere: its points' layout
+    long = {"title": "Índice", "points": [f"Tema {n}" for n in range(5)]}  # an index is no cover, even first
+    assert ops.layout_for_new(ctt, long, first=True).name != ops.cover_layout(ctt).name
+
+
+def test_a_cover_whose_lines_overflow_stays_one_slide():
+    """Measured (cover-for-a-new-deck, 1 run in 2): a subtitle and three points, folded into four subtitle lines,
+    overflowed the box; add_slide went on over a second slide and the date landed on "4_Texto"."""
+    ctt = read.open_deck((REPO / "templates" / "bancoctt.pptx").read_bytes())
+    sent = {"points": ["Apresentação sobre o Crédito Habitação Jovem", "Para: Equipa Comercial", "Outubro de 2026"],
+            "subtitle": "Acesso facilitado à habitação própria permanente para jovens.",
+            "title": "Crédito Habitação Jovem com Garantia do Estado"}  # fmt: skip
+    lay = ops.layout_for_new(ctt, sent, first=True)
+    made = ops._ids(ops.add_slide(ctt, lay.name, content=sent))
+    assert len(made) == 1 and len(ctt.slides) == 1 and ctt.slides[0].slide_layout.name == ops.cover_layout(ctt).name
+    text = "\n".join(ph.text_frame.text for ph in ctt.slides[0].placeholders)
+    assert "Outubro de 2026" in text and "Para: Equipa Comercial" in text
+    # the four lines did not fit even at 14 pt (measured: CANNOT_FIT, and the model gave up): the model's own subtitle
+    # sentence went to the notes, the cover's short lines stay on it, nothing past its box
+    assert "Acesso facilitado" not in text and "Acesso facilitado" in ctt.slides[0].notes_slide.notes_text_frame.text
+    assert not ops._overflowing(ctt, made[0])
+    again = read.open_deck((REPO / "templates" / "bancoctt.pptx").read_bytes())  # the same through fill_slide
+    sid = ops._ids(ops.add_slide(again, ops.cover_layout(again).name))[0]
+    got = ops.fill_slide(again, sid, sent)
+    assert got.get("moved_to_notes") == "subtitle" and not ops._overflowing(again, sid) and len(again.slides) == 1
+    assert "Outubro de 2026" in "\n".join(ph.text_frame.text for ph in again.slides[0].placeholders)
+
+
+def test_a_list_goes_one_point_a_box_only_over_boxes_alike():
+    """Looked at (first-use-index-from-kb, 1 run in 4): an index's four entries spread over "2_Texto"'s bold banner,
+    large body and two small columns read as fragments; over "1_Texto"'s five equal rows they read as an index."""
+    ctt = read.open_deck((REPO / "templates" / "bancoctt.pptx").read_bytes())
+    index = {"title": "Índice", "points": ["Oferta", "Fases do processo", "Servicing", "Regime bonificado"]}
+    assert ops._layout_for_content(ctt, index).name != "2_Texto"
+    sid = ops._ids(ops.add_slide(ctt, "2_Texto", content=index))[0]
+    one = read.slide(ctt, sid)
+    filled = [sh for sh in one["shapes"] if sh.get("paragraphs") and sh["placeholder"]["idx"] != 19]  # 19: its heading
+    assert len(filled) == 1 and len(filled[0]["paragraphs"]) == 4  # one list, in its large body
+    rows = ops._ids(ops.add_slide(ctt, "1_Texto", content=index))[0]  # rows alike: one entry a row, as designed
+    assert len([sh for sh in read.slide(ctt, rows)["shapes"] if sh.get("paragraphs")]) == 5  # the heading and four rows
+
+
+def test_fill_slide_keeps_the_slides_title_when_none_is_sent():
+    data = deck("simple.pptx")
+    prs = read.open_deck(data)
+    second = read.outline(prs)[1]
+    ops.fill_slide(prs, second["slide_id"], {"points": ["Um", "Dois"]})
+    assert read.outline(prs)[1]["title"] == second["title"]
+    ops.fill_slide(prs, second["slide_id"], {"points": ["Um", "Dois", "Três"]}, layout="Two Content")  # relaid too
+    assert read.outline(prs)[1]["title"] == second["title"]
+
+
+def test_a_list_avoids_a_layout_whose_picture_place_it_would_leave_empty():
+    """Looked at (first-use-index-from-kb, 2 runs in 8): an index on "1_Agenda C/Imagem", its picture place a grey block;
+    "2_Agenda S/Imagem" is the same without it."""
+    ctt = read.open_deck((REPO / "templates" / "bancoctt.pptx").read_bytes())
+    for n in range(2, 9):
+        lay = ops._layout_for_content(ctt, {"title": "Índice", "points": [f"Tema {i}" for i in range(n)]})
+        roles = {x["role"] for x in layouts_of(ctt, lay)}
+        assert "picture" not in roles, (n, lay.name)
+
+
+def layouts_of(prs, lay):
+    from app.docengine import layouts
+
+    return layouts.placeholders(lay, prs.slide_width, prs.slide_height)

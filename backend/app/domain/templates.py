@@ -141,7 +141,7 @@ class ProjectAssets:
     async def add_template(self, pid: str, email: str, name: str, raw: bytes, max_bytes: int) -> dict:
         """A template the person uploads (PM-9): checked like a deck, plus at least one master and layout; the fonts
         it names that the server lacks are listed, so the person is told previews substitute them (A-5)."""
-        checked = files.check(raw, max_bytes=max_bytes)
+        checked = await asyncio.to_thread(files.check, raw, max_bytes)  # off the event loop (security review M3)
         layouts = files.layouts(checked.data)
         if not layouts:
             raise files.Rejected("no_layouts", "This file has no slide layouts to use as a template.")
@@ -179,13 +179,19 @@ class ProjectAssets:
             except svg.SvgRefused as e:
                 raise files.Rejected("svg", str(e)) from None
             name = (name.rsplit(".", 1)[0] if "." in name else name) + ".png"
-        try:
-            img = Image.open(_io.BytesIO(raw))
+        def opened():
+            img = Image.open(_io.BytesIO(raw))  # the header only: its size is known before its pixels are decoded
+            if img.width * img.height > 60_000_000:
+                raise files.Rejected("too_large", "The image has too many pixels.")
             img.load()
+            return img
+
+        try:  # off the event loop (security review M3)
+            img = await asyncio.to_thread(opened)
+        except files.Rejected:
+            raise
         except Exception:  # noqa: BLE001 - Pillow raises many kinds for what is not an image
             raise files.Rejected("not_image", "This file is not an image (PNG, JPEG or WebP).") from None
-        if img.width * img.height > 60_000_000:
-            raise files.Rejected("too_large", "The image has too many pixels.")
         if img.format in ("PNG", "JPEG"):
             data, ext = raw, "png" if img.format == "PNG" else "jpg"
         else:
@@ -216,9 +222,12 @@ class ProjectAssets:
 
         if len(raw) > max_bytes:
             raise files.Rejected("too_large", f"The document is larger than {max_bytes // (1024 * 1024)} MB.")
-        try:
+        def extract():
             kind = documents.kind_of(name, raw)
-            passages = documents.passages(kind, raw)
+            return kind, documents.passages(kind, raw)
+
+        try:  # off the event loop: a long PDF takes seconds (security review M3)
+            kind, passages = await asyncio.to_thread(extract)
         except documents.Unreadable as e:
             raise files.Rejected("not_document", str(e)) from None
         if not passages:

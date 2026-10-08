@@ -21,12 +21,17 @@ services:
     image: slides:0.1
     container_name: slides
     hostname: slides
+    # security review M3: a ceiling, so a pathological file cannot take the machine's memory. Measured 2026-10-08:
+    # ~0.12 GiB at rest, LibreOffice 0.76 GiB for a 46-slide deck with pictures, two conversions at once (render._gate):
+    # ~2.4 GiB at worst with a 100 MB upload; set generously (the user's choice)
+    mem_limit: 8g
     logging:
       options:
         max-size: "10m"
         max-file: "3"
     environment:
-      # dev | test | preprod | prod: the logs' env field; prod refuses to start without the proxy secret
+      # dev | test | preprod | prod | local (./.env): the logs' env field; prod refuses to start without the proxy secret;
+      # local (a laptop, no proxy) needs SLIDES_DEV_USER and a localhost public_url
       - SLIDES_ENV=${SLIDES_ENV:-dev}
       - SLIDES_VERSION=0.1
       # the secret the proxy adds to every request (./.env); without it a request straight to port 2720 is refused
@@ -49,6 +54,10 @@ services:
       # embeddings-server's reranker (conversation and document search, technical design section 4), as Cortex reaches it
       cortex-kb:
     ports:
+      # as Cortex's: proxy_server reaches the app at host.docker.internal:2720, on the server and on a laptop alike
+      # (measured 2026-10-08: published on 127.0.0.1 only, nginx's connect() was refused and /slides/ answered 502).
+      # A request that does not come through the proxy has no proxy secret and is refused (app/identity.py); in prod
+      # the app does not start without the secret
       - "2720:2720"
     volumes:
       # projects, decks, conversations, audit (technical design section 4)

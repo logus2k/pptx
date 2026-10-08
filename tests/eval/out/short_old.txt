@@ -1,0 +1,1 @@
+«Contexto e objetivos» is in the deck at slide 2, in «Contexto e objetivos»: change it with shape_id 3, paragraph index 0 (its shape's paragraphs: [0] «Contexto e objetivos»; [1] «Solução proposta»; [2] «Arquitetura»; [3] «Calendário»; [4] «Preços e condições»; if the request is about more of them, change each).

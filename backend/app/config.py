@@ -21,7 +21,7 @@ class ConfigError(Exception):
 class Settings:
     """Everything the app reads from outside, resolved once."""
 
-    env: str  # dev | test | preprod | prod
+    env: str  # ENVS: dev | test | preprod | prod | local
     port: int
     data_dir: Path
     frontend_dir: Path
@@ -37,6 +37,11 @@ class Settings:
     @property
     def templates_dir(self) -> Path:
         return Path(self.file["templates_dir"])
+
+
+# dev and test: development; preprod and prod: behind the proxy (prod refuses to run without its secret); local: on a
+# person's own computer, without a proxy
+ENVS = ("dev", "test", "preprod", "prod", "local")
 
 
 def _check_file(data: dict) -> None:
@@ -66,6 +71,20 @@ def load(environ: dict[str, str] | None = None) -> Settings:
     _check_file(data)
     secret = (e.get("SLIDES_PROXY_SECRET") or "").strip()
     dev_user = (e.get("SLIDES_DEV_USER") or "").strip().lower()
+    if env not in ENVS:
+        raise ConfigError(f"SLIDES_ENV must be one of {', '.join(ENVS)} (it is {env!r})")
+    if env == "local":
+        # a Slides on a person's own computer (security review L4, the user's choice): no proxy, so the person is
+        # SLIDES_DEV_USER; only on a localhost address (the compose file publishes the port on 127.0.0.1 only: the
+        # container cannot see how its port is published)
+        from urllib.parse import urlsplit
+
+        if urlsplit(data["public_url"]).hostname not in ("localhost", "127.0.0.1"):
+            raise ConfigError("SLIDES_ENV=local needs a public_url on localhost or 127.0.0.1")
+        if not dev_user:
+            raise ConfigError("SLIDES_ENV=local needs SLIDES_DEV_USER: the person using it (there is no proxy to say)")
+        if secret:
+            raise ConfigError("SLIDES_ENV=local has no proxy: leave SLIDES_PROXY_SECRET empty")
     if env == "prod" and not secret:
         raise ConfigError(
             "SLIDES_PROXY_SECRET is required when SLIDES_ENV=prod: without it anyone reaching the port could claim any identity"

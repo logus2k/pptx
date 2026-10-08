@@ -1,0 +1,18 @@
+{
+ "id": "form-training-from-a-kb-topic",
+ "about": "NL-12, the form's path: a training from what the knowledge base holds on a topic.",
+ "seconds": 3.0,
+ "outline": null,
+ "deck": [],
+ "checks": [
+  {
+   "ok": true,
+   "check": "the generation started (201)"
+  },
+  {
+   "ok": false,
+   "check": "the outline is ready (failed: The source could not be read (RuntimeError).)"
+  }
+ ],
+ "passed": false
+}

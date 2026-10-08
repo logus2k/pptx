@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tools/generate_deck",
+  "title": "generate_deck",
+  "description": "Make a whole presentation (corporate) or a training from the knowledge base or a document: the application reads the source and shows the person the outline to approve. Never for one slide or a cover (\"cria a capa\", \"um diapositivo sobre X\"): those are add_slide.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "source"
+  ],
+  "properties": {
+    "kind": {
+      "enum": [
+        "corporate",
+        "training"
+      ],
+      "description": "corporate: a presentation; training: a course a trainer delivers."
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "kb_topic",
+            "kb_document",
+            "document"
+          ],
+          "description": "kb_topic: what the knowledge base holds on a topic (query); kb_document: one KB document (domain, path); document: a project document (asset_id)."
+        },
+        "query": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "domain": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "path": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "asset_id": {
+          "type": "string",
+          "maxLength": 64
+        }
+      }
+    },
+    "slides": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 40,
+      "description": "Left out: the kind's usual size."
+    },
+    "focus": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "What to keep to, in the person's words."
+    },
+    "audience": {
+      "type": "string",
+      "maxLength": 300
+    },
+    "language": {
+      "enum": [
+        "pt",
+        "en"
+      ],
+      "description": "The person's language."
+    },
+    "new_deck": {
+      "type": "boolean",
+      "description": "Left out: a new deck. false: after the open deck's slides."
+    }
+  }
+}

@@ -43,7 +43,7 @@ class SttClient:
                     request["prompt"] = prompt
                 return await self._client.call("transcribe", request, timeout=timeout)
             except Exception as e:  # noqa: BLE001 - unreachable, timeout, disconnect
-                log.warning(f"stt_server {self.url}: {type(e).__name__}: {e}")
+                log.warning("stt_server unavailable", extra={"err.type": type(e).__name__})  # the type only (security review L5)
                 client, self._client = self._client, None
                 if client is not None:
                     try:

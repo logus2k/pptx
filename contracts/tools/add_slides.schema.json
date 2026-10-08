@@ -38,7 +38,7 @@
        "anyOf": [
         {
          "type": "string",
-         "maxLength": 200
+         "maxLength": 1000
         },
         {
          "type": "object",
@@ -46,11 +46,11 @@
          "properties": {
           "heading": {
            "type": "string",
-           "maxLength": 200
+           "maxLength": 1000
           },
           "text": {
            "type": "string",
-           "maxLength": 300
+           "maxLength": 1000
           }
          }
         }

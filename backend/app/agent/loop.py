@@ -60,6 +60,16 @@ UNDONE_NUDGE = (
     "{intent}. Make it now with the tools, from what you have read or found (every change is reviewed before it is "
     "saved): do not describe it, propose it or ask for approval in words. If it cannot be done, say why."
 )
+STILL_NUDGE = (
+    "(A note from the application, not from the person.) Still nothing has changed: your answer says what you would do "
+    "or did, but no tool was called. Call the tool now with the arguments; if it cannot be done, say why in one sentence."
+)
+CHECK_NUDGE = (
+    "(A note from the application, not from the person.) Your answer says this is still to be done: {missing}. This turn "
+    "already made: {done}. If one of those already does it, change nothing and say so in one sentence. Otherwise do it "
+    "now with the tools, keeping what you already wrote (add to a text, never replace it); if it is the person's to do, "
+    "say so."
+)
 NUDGE = (
     "(A note from the application, not from the person.) Your answer called no tool, so nothing has happened yet. "
     "If the person asked for a change, it is made only by calling the tool: call it now (for a deletion or a change "
@@ -87,6 +97,8 @@ def _done(name: str, raw: str | dict, result: dict) -> str:
         args = {}
     # the slide edited, as the request numbers it; a new slide by its ID only (measured: an invented "after slide 18"
     # in an empty deck, dropped by the executor, came back as "add_slide on slide 18" and into the reply)
+    if name == "build_generation":  # the generated deck, as its result says it
+        return str(result.get("note") or "the generated deck was made").split(" The person reviews")[0]
     where = f" on slide {args['slide_id']}" if isinstance(args, dict) and "slide_id" in args else ""
     new = result.get("new_slide_ids")
     return f"{name}{where}" + (f", new slide ID {', '.join(map(str, new))}" if new else "")
@@ -146,6 +158,12 @@ class Agent:
     async def resolve(self, pid: str, cid: str, email: str, decision: dict) -> None:
         """The person answers what the turn waits for: {answer} to a question, {approve, comment} to a plan,
         {accept} to proposed instructions. The answer becomes the waiting tool call's result and the turn goes on."""
+        # an owner or editor: an answer lets the turn change the deck (security review L7: a viewer approved a plan)
+        self.app.projects.get(pid, email)  # a member (NotFound otherwise)
+        try:
+            self.app.projects.get(pid, email, roles=("owner", "editor"))
+        except NotFound:
+            raise PermissionError("Only the project's owners and editors can answer the assistant.") from None
         async with storage.lock(pid):
             conv = self.app.conversations.get(pid, cid, email)
             pending = conv["pending"]
@@ -164,7 +182,13 @@ class Agent:
                 await self.emit("tool_progress", {"tool": then["name"]}, cid)
                 result = await self.executor.call(t, then["name"], then["arguments"])
                 if "error" not in result and (conv.get("route") or {}).get("done") is not None:
-                    conv["route"]["done"].append(_done(then["name"], then["arguments"], result))
+                    # in the words of the plan the person approved ("Apagar o diapositivo 3 «Antes e depois»"), not the
+                    # slide's ID (measured: "delete_slide on slide 258" for "Apaga o diapositivo antes e depois", and the
+                    # model went on to delete the slides before and after slide 3, 2 runs in 6)
+                    steps = pending["payload"].get("steps") or []
+                    conv["route"]["done"].append(
+                        f"{steps[0]} (done)" if len(steps) == 1 else _done(then["name"], then["arguments"], result)
+                    )
             else:
                 hint = "Ask what they want instead, or leave it."
                 result = {"error": {"code": "NOT_APPROVED", "message": "The person did not approve this.", "hint": hint}}
@@ -172,6 +196,8 @@ class Agent:
             async with storage.lock(pid):
                 conv = self.app.conversations.get(pid, cid, email)
                 conv["route"] = route
+                if then["name"] == "build_generation" and result.get("deck_id"):  # the generated deck is the open one
+                    conv["active_deck"] = result["deck_id"]
                 stored = self.app.conversations.append(
                     pid,
                     conv,
@@ -247,6 +273,7 @@ class Agent:
         try:
             project = self.app.projects.get(pid, email)
             model = await asyncio.to_thread(self.app.models.resolve, project["settings"]["model"])
+            t.model = model["id"]  # for the project's audit trail (tools.Executor.call)
             t.can_see = await self._vision_of(model)
             carried = conv.get("route")
             if carried:  # the turn goes on after an answer: the same request, with the edits it already made
@@ -298,7 +325,7 @@ class Agent:
                 room, answer_tokens = await self._fitted_budget(t, model)
             t.result_chars = int(room * 0.15 * 3)  # a tool result: a sixth of the room, at ~3 characters a token
             started, model_calls, tool_calls, failed_nudged, overflow_nudged = time.monotonic(), 0, 0, False, False
-            undone_nudged, called = False, set()  # the tools called this turn
+            undone_nudged, called, still_nudged, checked = False, set(), False, False  # the tools called this turn
             await self.emit("turn_started", {"model": model["label"]}, cid)
             while True:
                 if cid in self._cancel:
@@ -320,7 +347,9 @@ class Agent:
                     # ask_user between 0 and 10 calls in 10; the question written was a good one every time)
                     calls = [_ask(text)]
                     text = ""
-                if not calls and first and self.nudge:
+                if not calls and first and self.nudge and not t.done:
+                    # (not when this turn has already changed the deck: measured, after the deletion the person approved,
+                    # "your answer called no tool, so nothing has happened" made the model delete more slides)
                     # measured (tests/eval): a small model often says it changed the deck, or asks for leave, without
                     # calling a tool; asked once more with the reason, it acts, asks properly, or answers again
                     retry = [*messages, {"role": "assistant", "content": text}, {"role": "user", "content": NUDGE}]
@@ -357,6 +386,32 @@ class Agent:
                         text, calls = await self._complete(model, retry, answer_tokens, cid, tools=t.tool_defs)
                         model_calls += 1
                         log.info("text left too long: asked again", extra={"actedOnRetry": bool(calls)})
+                nudged = failed_nudged or undone_nudged or (model_calls >= 2 and not called)
+                if (not calls and nudged and t.kind == "change" and not t.done and not (called - READS - set(EDITING))
+                        and not still_nudged and self.nudge and not self._declined(t)):  # fmt: skip
+                    # asked once already and answered in words again (measured: "vou aplicar as alterações agora", or
+                    # "the slide was added" after an approved plan, and the turn ended with nothing made, 3 runs in 9)
+                    still_nudged = True
+                    retry = [*messages, {"role": "assistant", "content": text}, {"role": "user", "content": STILL_NUDGE}]
+                    text, calls = await self._complete(model, retry, answer_tokens, cid, tools=t.tool_defs)
+                    model_calls += 1
+                    log.info("still nothing made: asked a last time", extra={"actedOnRetry": bool(calls)})
+                if (not calls and t.kind == "change" and t.done and not checked and self.nudge and not self._declined(t)
+                        and not called & {"propose_plan", "ask_user"}):  # fmt: skip
+                    # changes made, the turn ending in words that say something is still to do (measured, squad-16: the
+                    # box copied, "Preciso agora liga-lo ... com uma seta" and the turn ended, 2 runs in 6; the nudges
+                    # above fire only when nothing was changed)
+                    checked = True
+                    missing = await self._missing(t, model, text)
+                    if missing:
+                        # with the changes made (measured: "update slide 1 with the topics", already done, made the model
+                        # insert more points, and the box overflowed; the same change made again, an index on two slides)
+                        note = CHECK_NUDGE.format(missing=missing, done="; ".join(t.done))
+                        retry = [*messages, {"role": "assistant", "content": text}, {"role": "user", "content": note}]
+                        text, calls = await self._complete(model, retry, answer_tokens, cid, tools=t.tool_defs)
+                        model_calls += 1
+                    said = {"missing": bool(missing), "actedOnRetry": bool(calls)}
+                    log.info("changes checked against the request", extra=said)
                 if not calls:
                     await self._say(pid, t, text)
                     break
@@ -388,6 +443,17 @@ class Agent:
                             result = await self._decide_in_words(t, self.executor.parse(name, raw))
                         except ToolError as e:
                             result = e.as_dict()
+                    elif name == "generate_deck":
+                        # a deck from a source (spec NL-12): the application reads it and plans the slides; the outline
+                        # is the plan the person approves (or edits in the outline's editor) before the slides are made
+                        try:
+                            result = await self._generate(pid, t, self.executor.parse(name, raw))
+                        except ToolError as e:
+                            result = e.as_dict()
+                        if "plan" in result:
+                            await self._wait(pid, t, call["id"], "propose_plan", result["plan"])
+                            waiting = True
+                            continue
                     elif name in DELETING and not self._plan_approved(t):
                         # spec NL-8: a deletion waits for the person's approval; the model need not remember to
                         # plan it first (measured: gemma-4 "proposed" deletions in its reply and never made them)
@@ -704,7 +770,21 @@ class Agent:
             # without the line, the paragraph was set to the corrected word alone)
             if p.startswith("["):
                 line = texts.get((s, sid, p), "")
-                return f"slide {s}, in «{line}»: change it with shape_id {sid}, paragraph index {p[1:-1]}"
+                said = f"slide {s}, in «{line}»: change it with shape_id {sid}, paragraph index {p[1:-1]}"
+                # the router names one line; a request about a list is about all of it (measured: "shorten the agenda's
+                # points", located as its first point, edited that one alone, 8 runs in 8): the shape's lines with it
+                rest = [(q[1:-1], w) for (s_, sid_, q), w in texts.items() if s_ == s and sid_ == sid and q.startswith("[")]
+                if 1 < len(rest) <= 15:
+                    lines = "; ".join(f"[{i}] «{w}»" for i, w in rest if w)
+                    said += f" (its shape's paragraphs: {lines}; if the request is about more of them, change each)"
+                # the slide's title beside it: the router's line is a reading, not always the part meant (measured: the
+                # same router input gave the title of a section header slide or its subtitle, 4 and 4, at temperature 0;
+                # told only the subtitle's shape, "rename the section header" renamed the subtitle)
+                title = next(((sid_, w) for (s_, sid_, q), w in texts.items() if s_ == s and q == "title"), None)
+                if title and title[0] != sid and title[1]:
+                    said = (f"slide {s}, in «{line}» (shape_id {sid}, paragraph index {p[1:-1]}), or its title «{title[1]}»"
+                            f" (shape_id {title[0]}): change the one the request means" + said[len(said.split(" (its")[0]):])
+                return said
             return f"slide {s}, shape_id {sid}, {p}"
 
         found, quoted_found = [], False
@@ -728,6 +808,13 @@ class Agent:
             if 1 <= len(hits) <= 3:
                 quoted_found = quoted_found or needle != router.where_text(text)
                 titles = [s for s, _, p in hits if p == "title"]
+                if titles and len(titles) == len(hits) and needle == router.where_text(text) and (
+                    " ".join(needle.split()).casefold() not in " ".join(last["content"].split()).casefold()
+                ):
+                    # the router named the slide by its title, words the person did not say: the slide, whole
+                    # (measured: "translate the last slide", where "Questions?", the title alone translated, 3 runs in 3)
+                    t.intent = f"{t.intent.split(' (where: ')[0]} (where: slide {titles[0]})"
+                    continue
                 if titles and len(titles) == len(hits):
                     # a title names its slide; with the title's shape given, "delete the agenda" deleted the title
                     # (replayed: 6 delete_shape and 4 update_text in 10; worded as naming the slide, delete_slide 10)
@@ -745,6 +832,24 @@ class Agent:
             t.intent = t.intent.split(" (where: ")[0]
         log.info("routed", extra={"groups": ",".join(sorted(groups)) if groups is not None else "all"})
         return router.tools_of(groups)
+
+    async def _missing(self, t: Turn, model: dict, closing: str) -> str:
+        """What the turn's closing message says is still to be done, in a few words, or "" (the slides_checker preset,
+        on the message alone: measured, asked to judge the request against the changes, it named "create the cover"
+        and "the subtitle" after complete turns, and the model overwrote a cover's lines; asked only what the message
+        says is pending, it named the 3 promises of squad-16 and none of 5 complete runs, 2 of ~40 other messages)."""
+        if not closing.strip():
+            return ""
+        ask = f"The closing message:\n<message>{closing}</message>"
+        try:
+            got = ""
+            async for chunk in self.app.models.stream(model, "slides_checker", [{"role": "user", "content": ask}], None, 200):
+                got += ((chunk.get("choices") or [{}])[0].get("delta") or {}).get("content") or ""
+            answer = json.loads(got[got.find("{") : got.rfind("}") + 1])
+            return " ".join(str(answer.get("pending") or "").split())[:300]
+        except Exception as e:  # noqa: BLE001 - a check that fails leaves the turn as it was
+            log.warning("the closing message could not be checked", extra={"err.type": type(e).__name__})
+            return ""
 
     async def _fitted_budget(self, t: Turn, model: dict) -> tuple[int, int]:
         """The context budget with the offered tools trimmed, the least needed first, until they fit the window's fixed
@@ -874,6 +979,42 @@ class Agent:
         if name == "delete_slide":
             return f"Apagar o diapositivo {where}" if pt else f"Delete slide {where}"
         return f"Apagar a forma «{shape}» do diapositivo {where}" if pt else f"Delete the shape «{shape}» on slide {where}"
+
+    async def _generate(self, pid: str, t: Turn, args: dict) -> dict:
+        """generate_deck: the generation started and read (its progress in the panel), then {"plan"} - the outline's
+        slides as the plan's steps, the build as its "then" - or an error the model tells the person."""
+        target = {"kind": "new"}
+        if args.get("new_deck") is False and t.conversation.get("active_deck"):
+            target = {"kind": "deck", "deck_id": t.conversation["active_deck"]}
+        request = {k: args[k] for k in ("kind", "source", "slides", "focus", "audience", "language") if args.get(k)}
+        request["target"] = target
+
+        async def progress(record: dict) -> None:
+            pr = record.get("progress") or {}
+            if pr.get("stage") in ("reading", "condensing") and pr.get("total"):
+                detail = f"Reading part {min(pr['done'] + 1, pr['total'])} of {pr['total']}"
+            elif pr.get("stage") == "planning":
+                detail = "Planning the slides"
+            else:
+                return
+            await self.emit("tool_progress", {"tool": "generate_deck", "detail": detail}, t.cid)
+
+        try:
+            record = await self.app.generations.start(pid, t.email, request, on_progress=progress)
+        except NotFound:
+            hint = "Use an id from the project's documents."
+            raise ToolError("NOT_FOUND", "There is no such document in the project.", hint) from None
+        except ValueError as e:
+            raise ToolError("BAD_SOURCE", str(e), "Tell the person.") from None
+        await self.app.generations.wait(pid, record["id"])
+        record = self.app.generations.get(pid, record["id"], t.email)
+        if record["status"] != "ready":
+            raise ToolError("NOT_GENERATED", record.get("error") or "The outline could not be made.", "Tell the person why.")
+        out = record["outline"]
+        steps = [f"Capa: «{out['title']}»"] + [f"{s['title']}" for s in out["slides"]]
+        plan = {"steps": steps, "generation_id": record["id"],
+                "then": {"name": "build_generation", "arguments": {"generation_id": record["id"]}}}  # fmt: skip
+        return {"plan": plan}
 
     async def _wait(self, pid: str, t: Turn, call_id: str, name: str, args: dict) -> None:
         kind = {"ask_user": "question", "propose_plan": "plan", "update_instructions": "instructions"}[name]
@@ -1028,8 +1169,15 @@ class Agent:
                 self.app.renderer.warm(pid, self.app.layout.version_file(pid, did, published["current_version"]).read_bytes())
                 await self.emit("deck_changed", {"deck_id": did}, cid)
             p.update(status="partially_accepted" if partial else "accepted", decided_at=storage.now(), decided_by=email)
+            versions = {k: d["result_version"] for k, d in p["decks"].items() if d.get("result_version")}
+            line = {"at": storage.now(), "user": email, "event": "proposal_accepted", "conversation_id": cid,
+                    "proposal_id": p["id"], "versions": versions}  # the versions its tool calls became (M4)
+            await asyncio.to_thread(storage.append_line, self.app.layout.project_audit(pid), line, "project-audit-line")
         except Stale as e:
-            log.info("a proposal went stale", extra={"reason": str(e)[:200]})
+            # the edit and its error code, never its message (security review L5: it may quote what was written)
+            cause = e.__cause__
+            code = getattr(cause, "code", type(cause).__name__)
+            log.info("a proposal went stale", extra={"op": str(e).split(":")[0][:40], "code": code})
             p.update(status="stale", decided_at=storage.now(), decided_by=email)
         self.app.proposals.write(pid, p)
         self.app.proposals.drop_drafts(pid, p)

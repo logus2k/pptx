@@ -1,0 +1,158 @@
+{
+ "id": "chat-training-from-a-kb-topic",
+ "about": "NL-12, the assistant's path: a training asked in the chat; the outline approved as its plan.",
+ "turns": [
+  {
+   "say": "Cria uma formação sobre o crédito habitação jovem a partir da base de conhecimento",
+   "status": "done",
+   "seconds": 2.7,
+   "waits": [],
+   "replies": [
+    "Lamento, mas não foi possível criar a formação porque não consegui ler a fonte da base de conhecimento."
+   ],
+   "notices": [],
+   "tools": [
+    "generate_deck"
+   ],
+   "errors": [],
+   "proposal": null,
+   "deck": [],
+   "calls": [
+    {
+     "preset": "slides_router",
+     "messages": [
+      {
+       "role": "user",
+       "content": "The open deck:\n(no deck open)\n\nThe person's request:\n<request>Cria uma formação sobre o crédito habitação jovem a partir da base de conhecimento</request>\n\nFirst, intent: one sentence, in the request's language, saying what the person wants done or asks. Then where: the slide number; when part of a slide's text changes, also the one line of the deck that changes, copied as it is; for a whole slide (add, delete, move, duplicate) the slide number alone. Then choose the groups of tools that are needed:\n- text: Write, rewrite, shorten, translate, correct or format the text already on a slide: a title, a subtitle, a bullet or a list of bullets, a column, a text box; change a word, a number, a date, a name; make text bigger, bold or another colour.\n- table: Change a table on a slide: a cell's value, add or remove a row or a column, correct a figure in a table. Make or change a chart (bar, column, line, pie) from figures; draw a diagram of a process, a flow or an organisation.\n- notes: Write, change or add to the speaker notes of a slide; cite a source in the notes.\n- images: Pictures: insert, replace or remove an image or photo, put a picture from a document on a slide, write or fix the alt text of an image, look at what an image shows.\n- structure: The deck's slides and shapes: add a new slide, duplicate, delete or move slides, change a slide's layout or number of columns, add, copy, move, resize or delete a shape or text box; a diagram's boxes and the arrows between them.\n- decks: Whole decks: create a new deck or presentation, copy a deck, copy or move slides between two decks, change a deck's template or look; make a whole presentation or a training from the knowledge base or a document.\n- knowledge: Facts from the organisation's documents: search the knowledge base or the project's reference documents for policies, products, figures, prices or procedures to use on slides.\n- memory: Remember a lasting decision or preference for this project, recall what was discussed or decided in an earlier conversation, or set a rule for the project's instructions.\n- history: Undo or redo the last change, or accept or reject the changes waiting for review (\"yes, apply it\", \"reject slide five\").\n\nHow to tell them apart:\n- Adding, changing or removing a point, bullet, item, word, number or line in existing text is text (not structure). Structure is for whole slides (add, delete, move, duplicate, layout) and shapes.\n- A new slide also needs text (its title and points are written).\n- At the end, last: after the deck's last slide (measured: \"at the end\" was put before the annexes).\n- A slide named by its title or subject (\"the agenda\", \"the thank-you slide\") to delete, move or duplicate is the whole slide: say slide N in the intent; where is the slide number alone.\n- A value that is in a table (see the deck) is table.\n- A new chart or diagram is table.\n- Facts the request says come from documents, the knowledge base or policies need knowledge; content written from it onto slides also needs text or structure, and notes for the source.\n- \"Here\" and \"this\" mean what the person has selected.\n- kind: change (something must change: choose its groups), question (only an answer: no groups), unclear (too vague to know what to change, like \"change it\": no groups).\nAnswer with JSON only: {\"intent\": \"...\", \"where\": \"slide N: \\\"the deck's words\\\"\", \"kind\": \"change|question|unclear\", \"groups\": [\"...\"]}"
+      }
+     ],
+     "tools": []
+    },
+    {
+     "preset": "slides_assistant",
+     "messages": [
+      {
+       "role": "system",
+       "content": "## Project\nName: <data>chat-training-from-a-kb-topic</data>\n\n## Decks (id | title | slides)\n<data>\n9a9fba87f1a87c2a | Apresentação | 0 slides | ACTIVE\n</data>\n\n## Active deck, slide by slide (slide numbers or IDs, and shape IDs, are what the editing tools take)\n<data>\n(no slides yet: the deck is empty. A new slide becomes slide 1: leave after_slide_id out.)\n</data>\n\n## Now\nThe person wants: O usuário quer criar uma formação sobre crédito habitação jovem a partir da base de conhecimento. (the deck is empty: the new slide is its first, slide 1)\nDo it now by calling your tools. Facts about the organisation's products, conditions, policies, processes or figures come from the knowledge base: kb_search for them first and write from what it finds; anything else, write yourself from the request (never filler). Then say in one sentence, in the language of the person's request, what you changed, naming each slide by its number as the person sees it (a new slide: the place it is now), never by its ID."
+      },
+      {
+       "role": "user",
+       "content": "Cria uma formação sobre o crédito habitação jovem a partir da base de conhecimento"
+      }
+     ],
+     "tools": [
+      "ask_user",
+      "change_template",
+      "create_deck",
+      "duplicate_deck",
+      "edit_paragraphs",
+      "fill_slide",
+      "fit_text",
+      "format_text",
+      "generate_deck",
+      "get_deck_outline",
+      "get_slide",
+      "kb_read_document",
+      "kb_search",
+      "list_templates",
+      "propose_plan",
+      "update_text"
+     ]
+    },
+    {
+     "preset": "slides_points",
+     "messages": [
+      {
+       "role": "user",
+       "content": "Part 1 of 2 of «crédito habitação jovem»:\n[11 - Crédito Habitação Jovem · Crédito Habitação Jovem - Garantia do Estado > O que é o Crédito Habitação Jovem] 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > O que é o Crédito Habitação Jovem O Crédito Habitação Jovem com Garantia do Estado é um regime especial de acesso ao crédito habitação destinado a jovens com idade igual ou inferior a 35 anos, criado pelo Decreto-Lei n.º 44/2024, de 10 de julho, e regulamentado pela Portaria n.º 236-A/2024/1, de 27 de setembro. O objetivo do regime é facilitar o acesso à habitação própria permanente por parte de jovens, permitindo o financiamento de até 100% do valor de aquisição do imóvel, eliminando a necessidade de capitais próprios para a entrada. A garantia é prestada pelo Estado Português, que atua como fiador, cobrindo a diferença entre o LTV máximo habitualmente permitido (85%) e os 100% do valor de aquisição.\n[11 - Crédito Habitação Jovem · Crédito Habitação Jovem - Garantia do Estado > Critérios de Elegibilidade] 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Critérios de Elegibilidade - Para acesso à garantia pública, devem ser cumpridos cumulativamente os seguintes critérios: a) O(s) mutuário(s) tenha(m) entre 18 e 35 anos de idade; b) O(s) mutuário(s) tenham domicílio fiscal em Portugal; c) O(s) mutuário(s) do contrato usufruam de rendimentos que não ultrapassem o 8.º escalão do imposto sobre o rendimento das pessoas singulares (IRS); d) O(s) mutuário(s) do contrato não seja(m) proprietário(s) de prédio urbano ou de fração autónoma de prédio urbano habitacional; e) O(s) mutuário(s) do contrato nunca tenha(m) usufruído da garantia pessoal do Estado ao abrigo do Decreto-Lei n.º 44/2024, de 10 de julho; f) O valor da transação não exceda 450.000,00 euros; g) O crédito se destine a primeira aquisição de habitação própria permanente; h) A garantia pessoal do Estado não ultrapasse 15% do valor da transação do prédio urbano ou de fração autónoma de prédio urbano; i) A garantia pessoal do Estado se destine a viabilizar que a instituição de crédito financie a totalidade do valor da transação do prédio urbano ou de fração autónoma de prédio urbano, ou um valor inferior desde que este seja igual ou superior a 85% do referido valor da transação; j) O(s) mutuário(s) tenham a sua situação fiscal, bem como a sua situação à luz do regime previdencial que lhes seja aplicável, regularizadas.\n[11 - Crédito Habitação Jovem · Crédito Habitação Jovem - Garantia do Estado > Apuramento dos Rendimentos do(s) Mutuário(s)] 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Apuramento dos Rendimentos do(s) Mutuário(s) O limite máximo do 8.º escalão do IRS (atualmente 80.000 euros) respeita a cada mutuário individualmente. Um mutuário: limite máximo 80.000 euros. Dois mutuários: limite máximo 160.000 euros (80.000 euros por mutuário), por via da aplicação do quociente familiar de 2. Para efeitos do Protocolo, considera-se rendimento anual: quanto aos mutuários que não sejam casados nem unidos de facto: o total do rendimento para determinação da taxa apurado pela AT na liquidação do IRS do beneficiário referente ao último período de tributação disponível; quanto aos mutuários casados ou unidos de facto com tributação conjunta: o resultado da aplicação do quociente familiar ao total do rendimento para determinação da taxa do IRS apurado relativamente aos dois sujeitos passivos na sua liquidação conjunta; quanto aos mutuários casados ou unidos de facto com tributação separada: o resultado da aplicação do quociente familiar a soma do total do rendimento para determinação da taxa do IRS apurado na liquidação relativa a cada um dos sujeitos passivos nas suas liquidações individuais.\n[11 - Crédito Habitação Jovem · Crédito Habitação Jovem - Garantia do Estado > Garantia do Estado - Operacionalização] 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Garantia do Estado - Operacionalização A garantia pessoal do Estado não ultrapassa 15% do valor da transação. A garantia destina-se a viabilizar que a instituição de crédito financie a totalidade do valor da transação (ate 100%) ou um valor inferior desde que igual ou superior a 85% do valor da transação. O Estado é automaticamente caracterizado pelo sistema como Fiador da operação, sempre que selecionada a flag SIM CH Jovem no workflow. As operações de CH Jovem detêm um pricing dentro do quadrante de 65-85% (mesmo que o LTV real seja superior a 85%, o pricing aplicado é o da faixa 65-85%). As instituições de crédito têm 30 dias para aderir ao protocolo e 60 dias para implementar as adaptações necessárias à sua disponibilização aos clientes. O Banco CTT aderiu ao protocolo no dia 2 de outubro de 2024.\n[11 - Crédito Habitação Jovem · Crédito Habitação Jovem - Garantia do Estado > Isenção de IMT e Imposto do Selo] 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Isenção de IMT e Imposto do Selo Nos termos da legislação aplicável ao CH Jovem, os mutuários beneficiam de isenção de IMT (Imposto Municipal sobre as Transmissões Onerosas de Imóveis) e de Imposto do Selo na aquisição do imóvel, desde que cumpram os critérios de elegibilidade. A isenção de IMT e IS aplica-se na compra da primeira habitação própria e permanente para imóveis até 330.539 euros. Para imóveis acima desse montante até 633.453 euros, mantem-se a isenção máxima do escalão anterior, não havendo qualquer isenção para imóveis de valor superior.\n[11 - Crédito Habitação Jovem · Crédito Habitação Jovem - Garantia do Estado > Aferição da Elegibilidade] 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Aferição da Elegibilidade A aferição da elegibilidade ocorre em dois momentos: Momento 1 - Proposta submetida a Risco: se o cliente está elegível, a proposta segue para análise de Risco; se não está elegível, a proposta não segue para risco e é emitida a carta de recusa. Momento 2 - Enquadramento de proposta: se o cliente está elegível, a proposta e enquadrada e é emitida a FINE de enquadramento/aprovação; se não está elegível, a proposta não e enquadrada e e emitida carta de recusa. Só são emitidas cartas de recusa, com indicação dos motivos de não elegibilidade, sobre as propostas submetidas a risco. Qualquer processo que não seja submetido não terá o apuramento da elegibilidade e por consequência não é formalmente comunicada a não elegibilidade ao cliente. Esta comunicação será da responsabilidade dos serviços centrais.\n[11 - Crédito Habitação Jovem · Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Criação de Proposta] 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Criação de Proposta Documentos obrigatórios para criação de proposta (origina devolução de processo pela Finsolutia): 1. Formulário de adesão (disponível na intranet); 2. Declaração de IRS: Mutuários com declaração IRS - Declaração de IRS, emitida pela AT, referente ao último período de tributação disponível. Mutuários sem declaração IRS (i) Certidão de dispensa de entrega de IRS + declarações da segurança social (SS) ou da entidade previdencial em causa, comprovativas dos rendimentos mensais declarados a SS ou da entidade previdencial em causa dos últimos três meses; (ii) Certidão de dispensa de entrega de IRS + declarações SS, comprovativas do valor mensal das prestações sociais e da respetiva tipologia. 3. Nota de liquidação de IRS; 4. Certidão de domicílio fiscal (se cidadão de nacionalidade portuguesa passa para enquadramento); 5. Cartão de cidadão (ou equivalente; título de residência permanente ou temporário); 6. Mais restantes documentos indispensáveis para o CH Geral, com as regras em vigor (ex: FAP ou CRC para ICs).\n[11 - Crédito Habitação Jovem · Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Enquadramento de Proposta] 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Enquadramento de Proposta Documentos para enquadramento da proposta (ANEXO V da Portaria n.º 236-A/2024/1): 1. Certidão predial, emitida pela Conservatória de Registo Predial (do imóvel que vai adquirir); 2. Caderneta Predial no caso de pretender justificar a posse de imóvel que não exclua do DL; 3. Certidão Predial Negativa, emitida pela Autoridade Tributária e Aduaneira - pode ser obtida através do login no site da AT em Serviços, Documentos e Certidões, Pedir Certidão, selecionar a opção Predial ou Predial Negativa e obter; 4. Certidão de não dívida, emitida pela Autoridade Tributária Aduaneira (AT) - pode ser obtida através do login no site da AT em Serviços, Documentos e Certidões, Pedir Certidão, selecionar a opção Dívida e Não Dívida e obter; 5. Certidão de não dívida, emitida pela segurança social (SS) ou entidade previdencial em causa - pode ser obtida através do login no site da SS Direta em Conta-corrente, Situação contributiva, obter declaração de situação contributiva; 6. Documento onde conste o valor de aquisição do imóvel - Contrato de Promessa Compra e Venda (CPCV), Ficha de Adesão do processo do Banco CTT (FAP), ou outro documento que ateste o valor de aquisição do imóvel; 7. Caderneta Predial Urbana (CPU) do imóvel a adquirir.\n[11 - Crédito Habitação Jovem · Crédito Habitação Jovem - Garantia do Estado > Declarações do Mutuário] 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Declarações do Mutuário No Formulário de acesso o(s) mutuário(s) declaram que nunca usufruíram da garantia pessoal do Estado ao abrigo do presente Diploma e que o crédito se destina a primeira aquisição de habitação própria permanente (ANEXO VI da Portaria n.º 236-A/2024/1).\n[11 - Crédito Habitação Jovem · Crédito Habitação Jovem - Garantia do Estado > Alterações ao Workflow de Crédito Habitação] 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Alterações ao Workflow de Crédito Habitação Todas as simulações com LTV superior a 85% permitem a seleção da flag do CH Jovem. Para avançar com a simulação CH Jovem devem selecionar na flag SIM. Se ajustarem o montante de empréstimo, sem alteração do valor de aquisição ou do valor de avaliação, o sistema ajusta o montante associado a Garantia do Estado (para todos os casos com LTV superior a 85%). Se for selecionada a opção não na flag do CH Jovem, devem ajustar o montante do empréstimo, por forma a enquadrar na oferta do Banco CTT (LTV máximo de 90% para HPP).\n[11 - Crédito Habitação Jovem · Crédito Habitação Jovem - Garantia do Estado > Crédito Sinal Jovem] 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Crédito Sinal Jovem O Banco CTT disponibiliza também o Crédito Sinal Jovem, destinado ao financiamento do sinal e princípio de pagamento em contratos de promessa de compra e venda. O Crédito Sinal Jovem é um crédito de curto prazo que é posteriormente integrado no crédito habitação principal, no momento da escritura. No momento da formalização do crédito habitação principal, o ISUC já pago no crédito sinal é descontado do ISUC a suportar no crédito principal de aquisição, evitando dupla tributação. O Crédito Sinal Jovem está disponível apenas no workflow de CH (backoffice), não estando disponível na proposta de crédito online, simulador online ou portal de parceiros. As garantias exigidas são apenas fiança (a pedido do banco), sem garantia hipotecaria. Como vendas associadas facultativas, são exigidas apenas conta DO e domiciliação de ordenado, sem exigência de seguros. A documentação adicional exigida inclui copias da minuta do contrato-promessa de compra e venda do imóvel, que contenha clausula de obrigação de devolução de sinal pelo(s) promitente(s) vendedor(es) ao(s) mutuário(s) caso o crédito habitação não seja aprovado pelo Banco CTT, e que o(s) promitente(s) comprador(es) e vendedor(es) prescinde(m) do reconhecimento presencial das assinaturas. Em caso de reembolso antecipado por recusa do crédito pelo Banco CTT, o cliente não paga comissão de reembolso antecipado.\n[11 - Crédito Habitação Jovem · Crédito Habitação Jovem - Garantia do Estado > Deveres de Informação] 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Deveres de Informação O projeto de aviso do BdP que regula esta informação exige conteúdos nas seguintes plataformas: Site Banco CTT (página dedicada à medida, conteúdos e FAQs); Homebanking e aplicação movel; Extratos bancários; Intranet Banco CTT (página de produto com FAQs).\n[11 - Crédito Habitação Jovem · Crédito Habitação Jovem - Garantia do Estado > Enquadramento Legal] 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Enquadramento Legal Decreto-Lei n.º 44/2024, de 10 de julho - estabelece as condições em que o Estado pode prestar garantia pessoal a instituições de crédito com vista a viabilização de concessão de crédito à habitação própria permanente a jovens até aos 35 anos. Portaria n.º 236-A/2024/1, de 27 de setembro - Procede à regulamentação das condições da concessão de garantia pessoal pelo Estado para assegurar a realização, por parte de instituições de crédito com sede em Portugal e sucursais em Portugal de instituições de crédito com sede no estrangeiro, de operações de crédito com vista a aquisição da primeira habitação própria permanente.\n[11 - Crédito Habitação Jovem · Crédito Habitação Jovem - Garantia do Estado > Critérios de Elegibilidade] 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Critérios de Elegibilidade Crédito Habitação Jovem - Garantia do Estado > Critérios de Elegibilidade - Para acesso à garantia pública, devem ser cumpridos cumulativamente os seguintes critérios: a) O(s) mutuário(s) tenha(m) entre 18 e 35 anos de idade; b) O(s) mutuário(s) tenham domicílio fiscal em Portugal; c) O(s) mutuário(s) do contrato usufruam de rendimentos que não ultrapassem o 8.º escalão do imposto sobre o rendimento das pessoas singulares (IRS); d) O(s) mutuário(s) do contrato não seja(m) proprietário(s) de prédio urbano ou de fração autónoma de prédio urbano habitacional; e) O(s) mutuário(s) do contrato nunca tenha(m) usufruído da garantia pessoal do Estado ao abrigo do Decreto-Lei n.º 44/2024, de 10 de julho; f) O valor da transação não exceda 450.000,00 euros; g) O crédito se destine a primeira aquisição de habitação própria permanente; h) A garantia pessoal do Estado não ultrapasse 15% do valor da transação do prédio urbano ou de fração autónoma de prédio urbano; i) A garantia pessoal do Estado se destine a viabilizar que a instituição de crédito financie a totalidade do valor da transação do prédio urbano ou de fração autónoma de prédio urbano, ou um valor inferior desde que este seja igual ou superior a 85% do referido valor da transação; j) O(s) mutuário(s) tenham a sua situação fiscal, bem como a sua situação à luz do regime previdencial que lhes seja aplicável, regularizadas.\n[11 - Crédito Habitação Jovem · Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Criação de Proposta] 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Criação de Proposta Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Criação de Proposta - Formulário de adesão (disponível na intranet);\n[11 - Crédito Habitação Jovem · Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Criação de Proposta] 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Criação de Proposta Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Criação de Proposta - Declaração de IRS: Mutuários com declaração IRS - Declaração de IRS, emitida pela AT, referente ao último período de tributação disponível. Mutuários sem declaração IRS (i) Certidão de dispensa de entrega de IRS + declarações da segurança social (SS) ou da entidade previdencial em causa, comprovativas dos rendimentos mensais declarados a SS ou da entidade previdencial em causa dos últimos três meses; (ii) Certidão de dispensa de entrega de IRS + declarações SS, comprovativas do valor mensal das prestações sociais e da respetiva tipologia.\n[11 - Crédito Habitação Jovem · Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Criação de Proposta] 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Criação de Proposta Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Criação de Proposta - Nota de liquidação de IRS;\n[11 - Crédito Habitação Jovem · Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Criação de Proposta] 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Criação de Proposta Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Criação de Proposta - Certidão de domicílio fiscal (se cidadão de nacionalidade portuguesa passa para enquadramento);\n[11 - Crédito Habitação Jovem · Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Criação de Proposta] 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Criação de Proposta Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Criação de Proposta - Cartão de cidadão (ou equivalente; título de residência permanente ou temporário);\n[11 - Crédito Habitação Jovem · Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Criação de Proposta] 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Criação de Proposta Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Criação de Proposta - Mais restantes documentos indispensáveis para o CH Geral, com as regras em vigor (ex: FAP ou CRC para ICs).\n[11 - Crédito Habitação Jovem · Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Enquadramento de Proposta] 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Enquadramento de Proposta Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Enquadramento de Proposta - Certidão predial, emitida pela Conservatória de Registo Predial (do imóvel que vai adquirir);\n[11 - Crédito Habitação Jovem · Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Enquadramento de Proposta] 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Enquadramento de Proposta Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Enquadramento de Proposta - Caderneta Predial no caso de pretender justificar a posse de imóvel que não exclua do DL;\n[11 - Crédito Habitação Jovem · Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Enquadramento de Proposta] 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Enquadramento de Proposta Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Enquadramento de Proposta - Certidão Predial Negativa, emitida pela Autoridade Tributária e Aduaneira - pode ser obtida através do login no site da AT em Serviços, Documentos e Certidões, Pedir Certidão, selecionar a opção Predial ou Predial Negativa e obter;\n[11 - Crédito Habitação Jovem · Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Enquadramento de Proposta] 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Enquadramento de Proposta Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Enquadramento de Proposta - Certidão de não dívida, emitida pela Autoridade Tributária Aduaneira (AT) - pode ser obtida através do login no site da AT em Serviços, Documentos e Certidões, Pedir Certidão, selecionar a opção Dívida e Não Dívida e obter;\n[11 - Crédito Habitação Jovem · Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Enquadramento de Proposta] 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Enquadramento de Proposta Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Enquadramento de Proposta - Certidão de não dívida, emitida pela segurança social (SS) ou entidade previdencial em causa - pode ser obtida através do login no site da SS Direta em Conta-corrente, Situação contributiva, obter declaração de situação contributiva;\n[11 - Crédito Habitação Jovem · Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Enquadramento de Proposta] 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Enquadramento de Proposta Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Enquadramento de Proposta - Documento onde conste o valor de aquisição do imóvel - Contrato de Promessa Compra e Venda (CPCV), Ficha de Adesão do processo do Banco CTT (FAP), ou outro documento que ateste o valor de aquisição do imóvel;\n[11 - Crédito Habitação Jovem · Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Enquadramento de Proposta] 11 - Crédito Habitação Jovem > Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Enquadramento de Proposta Crédito Habitação Jovem - Garantia do Estado > Documentação Obrigatória - Enquadramento de Proposta - Caderneta Predial Urbana (CPU) do imóvel a adquirir."
+      }
+     ],
+     "tools": []
+    },
+    {
+     "preset": "slides_assistant",
+     "messages": [
+      {
+       "role": "system",
+       "content": "## Project\nName: <data>chat-training-from-a-kb-topic</data>\n\n## Decks (id | title | slides)\n<data>\n9a9fba87f1a87c2a | Apresentação | 0 slides | ACTIVE\n</data>\n\n## Active deck, slide by slide (slide numbers or IDs, and shape IDs, are what the editing tools take)\n<data>\n(no slides yet: the deck is empty. A new slide becomes slide 1: leave after_slide_id out.)\n</data>\n\n## Now\nThe person wants: O usuário quer criar uma formação sobre crédito habitação jovem a partir da base de conhecimento. (the deck is empty: the new slide is its first, slide 1) (the deck is empty: the new slide is its first, slide 1)\nDo it now by calling your tools. Facts about the organisation's products, conditions, policies, processes or figures come from the knowledge base: kb_search for them first and write from what it finds; anything else, write yourself from the request (never filler). Then say in one sentence, in the language of the person's request, what you changed, naming each slide by its number as the person sees it (a new slide: the place it is now), never by its ID."
+      },
+      {
+       "role": "user",
+       "content": "Cria uma formação sobre o crédito habitação jovem a partir da base de conhecimento"
+      },
+      {
+       "role": "assistant",
+       "content": "",
+       "tool_calls": [
+        {
+         "id": "BE8Lqbft0zSN0TskK7cwIMtzx5E04Ho6",
+         "type": "function",
+         "function": {
+          "name": "generate_deck",
+          "arguments": "{\"focus\":\"crédito habitação jovem\",\"kind\":\"training\",\"language\":\"pt\",\"source\":{\"kind\":\"kb_topic\",\"query\":\"crédito habitação jovem\"}}"
+         }
+        }
+       ]
+      },
+      {
+       "role": "tool",
+       "tool_call_id": "BE8Lqbft0zSN0TskK7cwIMtzx5E04Ho6",
+       "content": "{\"error\": {\"code\": \"NOT_GENERATED\", \"message\": \"The source could not be read (RuntimeError).\", \"hint\": \"Tell the person why.\"}}"
+      }
+     ],
+     "tools": [
+      "ask_user",
+      "change_template",
+      "create_deck",
+      "duplicate_deck",
+      "edit_paragraphs",
+      "fill_slide",
+      "fit_text",
+      "format_text",
+      "generate_deck",
+      "get_deck_outline",
+      "get_slide",
+      "kb_read_document",
+      "kb_search",
+      "list_templates",
+      "propose_plan",
+      "update_text"
+     ]
+    }
+   ]
+  }
+ ],
+ "checks": [
+  {
+   "turn": 1,
+   "ok": true,
+   "check": "the turn ended done (done)"
+  },
+  {
+   "turn": 1,
+   "ok": false,
+   "check": "the deck has at least 8 slides (0)"
+  },
+  {
+   "turn": 1,
+   "ok": true,
+   "check": "the assistant used generate_deck (['generate_deck'])"
+  },
+  {
+   "turn": "end",
+   "ok": false,
+   "check": "no slide left with empty placeholders (prompt text on show) []"
+  },
+  {
+   "turn": "end",
+   "ok": false,
+   "check": "no text past its box []"
+  },
+  {
+   "turn": "end",
+   "ok": false,
+   "check": "every slide after the cover has ['Fonte'] in its notes (not: [])"
+  }
+ ],
+ "passed": false
+}

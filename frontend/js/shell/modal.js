@@ -71,7 +71,8 @@ function modalAlert(message, { title = 'Notice', buttonText = 'OK' } = {}) {
 }
 
 // A small form: resolves {name: value, ...} on confirm, null on Cancel / close / Escape.
-// fields: [{name, label, value?, placeholder?, options?: [[value, text], ...], hint?}]
+// fields: [{name, label, value?, placeholder?, options?: [[value, text], ...], hint?, multiline?, rows?}]
+// (Slides: multiline and rows added)
 // `validate(values)` (optional) returns an error text to keep the dialog open.
 function modalForm({ title = 'Edit', fields = [], confirmText = 'OK', validate = null } = {}) {
   return new Promise((resolve) => {
@@ -84,6 +85,9 @@ function modalForm({ title = 'Edit', fields = [], confirmText = 'OK', validate =
       if (f.options) {
         input = document.createElement('select');
         for (const [value, text] of f.options) input.append(new Option(text, value));
+      } else if (f.multiline) {
+        // Slides: several lines (a slide's points, its notes, a chart's or a table's data), as the editor's controls need
+        input = Object.assign(document.createElement('textarea'), { rows: f.rows || 5, placeholder: f.placeholder || '' });
       } else {
         input = Object.assign(document.createElement('input'), { type: 'text', placeholder: f.placeholder || '' });
       }

@@ -8,6 +8,7 @@ import { buildDesignSystem } from './views/design-system.js';
 import { buildProjectsView, markCurrent, newProject, refreshProjects } from './views/projects.js';
 import { buildProject } from './views/project.js';
 import { buildDeck } from './views/deck.js';
+import { buildGenerate } from './views/generate.js';
 import { buildAdminTemplates, buildUsage, buildAuditLog } from './views/admin.js';
 import * as store from './core/store.js';
 import { showAssistant, newConversation } from './assistant/assistant.js';
@@ -69,6 +70,7 @@ function openProject(pid) {
       projectViews.set(pid, buildProject(view, {
         pid,
         openDeck: (did) => navigate(`projects/${pid}/decks/${did}`),
+        generate: () => navigate(`projects/${pid}/generate`),
         onChanged: (p) => { setTitle(key, p.name); setProject(p); refreshProjects(); },
         onDeleted: () => { closeTab(key); projectViews.delete(pid); setProject(null); refreshProjects(); navigate(''); },
       }));
@@ -108,8 +110,27 @@ function openAdmin(area) {
   activate(`admin:${area}`);
 }
 
+// a deck generated from a source (spec NL-12): the form, then its outline; the assistant's plan card opens the outline
+const generateViews = new Map();
+function openGenerate(pid, gid = null) {
+  if (!isOpen(`project:${pid}`)) openProject(pid);
+  const key = gid ? `generate:${gid}` : `generate:new:${pid}`;
+  openTab(key, {
+    title: window.cortexT('Generate a deck'),
+    build: (view) => generateViews.set(key, buildGenerate(view, {
+      pid, gid,
+      openDeck: (did) => { projectViews.get(pid)?.reload(); navigate(`projects/${pid}/decks/${did}`); },
+      onStarted: (id) => history.replaceState({}, '', `${BASE}projects/${pid}/generate/${id}`),
+    })),
+    onClose: () => { generateViews.get(key)?.close(); generateViews.delete(key); },
+  });
+  activate(key);
+}
+document.addEventListener('sa:open-generation', (e) => { const pid = store.get('project'); if (pid) navigate(`projects/${pid}/generate/${e.detail.id}`); });
+
 function render() {
   const parts = route().split('/');
+  if (parts[0] === 'projects' && parts[1] && parts[2] === 'generate') { openGenerate(parts[1], parts[3] || null); return; }
   if (parts[0] === 'admin') { openAdmin(parts[1]); return; }
   if (parts[0] === 'projects' && parts[1]) {
     if (!isOpen(`project:${parts[1]}`)) openProject(parts[1]);

@@ -126,6 +126,10 @@ class Layout:
     def audit(self) -> Path:
         return self.root / "audit.jsonl"
 
+    def project_audit(self, pid: str) -> Path:
+        """The assistant's work in the project (technical design section 11.2): deleted with the project."""
+        return self.project(pid) / "audit.jsonl"
+
     def project(self, pid: str) -> Path:
         if not is_id(pid):
             raise NotFound("project")

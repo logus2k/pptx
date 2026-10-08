@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "storage/project-audit-line.schema.json",
+  "title": "One line of a project's audit.jsonl: the assistant's work - each tool call with its arguments, the model, its result - and the versions accepted proposals and generations published (technical design section 11.2; spec Auditability). Project data: deleted with the project, never sent to the logs.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["at", "user", "event"],
+  "properties": {
+    "at": { "type": "string" },
+    "user": { "type": "string", "description": "The person whose turn or decision it was" },
+    "event": { "enum": ["tool_call", "proposal_accepted", "generation_built"] },
+    "conversation_id": { "type": ["string", "null"] },
+    "tool": { "type": "string" },
+    "arguments": { "description": "As the model sent them (parsed when they parse)" },
+    "model": { "type": "string", "description": "The model's id, or \"application\" for a call the application made" },
+    "ok": { "type": "boolean" },
+    "error": { "type": "string", "description": "The error's code" },
+    "deck_id": { "type": ["string", "null"] },
+    "proposal_id": { "type": ["string", "null"] },
+    "generation_id": { "type": "string" },
+    "version": { "type": "integer", "description": "The deck version the call published (undo, redo, a generated deck)" },
+    "versions": { "type": "object", "description": "deck id -> the version an accepted proposal published" }
+  }
+}

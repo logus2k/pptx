@@ -62,7 +62,10 @@ def placeholders(layout, width: int, height: int) -> list[dict]:
             if p is not head and abs(p["x"] - head["x"]) < 0.03 and head["y"] < p["y"] <= head["y"] + head["h"] + 0.08
             and p["size"] < head["size"] and not p["prompt"] and p["h"] <= 0.2 and p["w"] >= 0.6 * head["w"]
         ]  # fmt: skip
-        if under:
+        declared = [p for p in texts if p is not head and p["kind"] == "subtitle"]
+        if declared:  # the template says so (the default template's title slide: its subtitle 0.21 below the heading)
+            declared[0]["role"] = "subtitle"
+        elif under:
             min(under, key=lambda p: p["y"])["role"] = "subtitle"
     for p in texts:
         if p["role"] != "text":
@@ -156,3 +159,55 @@ def slots(layout, width: int, height: int) -> dict:
         items.append(item)
     large = max(items, key=lambda i: i["room"])["body"] if items else None
     return {"heading": head and head["idx"], "subtitle": sub and sub["idx"], "items": items, "large": large}
+
+
+def _theme_colours(layout) -> dict:
+    """The theme's colours by role (bg1, tx1, ...: the master's colour map applied), as hex."""
+    from lxml import etree
+
+    master = layout.slide_master
+    theme = etree.fromstring(master.part.part_related_by(
+        "http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme").blob)  # fmt: skip
+    scheme = {}
+    for c in theme.iter(f"{A}clrScheme"):
+        for k in c:
+            v = next(iter(k), None)
+            if v is not None:
+                scheme[etree.QName(k).localname] = (v.get("val") if v.get("val") and len(v.get("val")) == 6 else v.get("lastClr"))
+        break
+    mapping = master._element.find(f"{P}clrMap")
+    out = dict(scheme)
+    for role, name in (mapping.attrib.items() if mapping is not None else []):
+        out[role] = scheme.get(name)
+    return out
+
+
+def _fill(element, colours: dict) -> str | None:
+    """The first solid fill's colour under the element (hex), or None (none, or not a plain colour)."""
+    for f in element.iter(f"{A}solidFill"):
+        c = next(iter(f), None)
+        if c is None:
+            return None
+        tag = c.tag.split("}")[1]
+        return (c.get("val") if tag == "srgbClr" else colours.get(c.get("val")) if tag == "schemeClr" else None) or None
+    return None
+
+
+def readable(layout, width: int, height: int) -> bool:
+    """Is the layout's heading a colour other than its background? (Banco CTT's "2_Capa S/Imagem": a white heading on
+    the master's white page, its red drawn by each deck's own shapes - a cover made on it rendered blank, looked at.)
+    A background that is a picture or a gradient, or a colour not set, counts as readable."""
+    idx = heading(layout, width, height)
+    if idx is None:
+        return True
+    colours = _theme_colours(layout)
+    ph = next((p for p in layout.placeholders if p.placeholder_format.idx == idx), None)
+    body = ph._element.find(f"{P}txBody") if ph is not None else None
+    text = _fill(body, colours) if body is not None else None
+    bg = None
+    for owner in (layout, layout.slide_master):
+        found = owner._element.find(f"{P}cSld/{P}bg")
+        if found is not None:
+            bg = _fill(found, colours)
+            break
+    return not (text and bg and text.upper() == bg.upper())

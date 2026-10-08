@@ -13,7 +13,7 @@ const TOOL_LABELS = {
   get_deck_outline: 'Reading the outline', get_slide: 'Reading a slide', render_slide: 'Looking at a slide',
   list_layouts: 'Looking at the layouts', update_text: 'Writing text', edit_paragraphs: 'Editing bullets', format_text: 'Formatting text', add_slide: 'Adding a slide',
   duplicate_slide: 'Duplicating a slide', delete_slide: 'Deleting a slide', move_slide: 'Moving a slide',
-  change_layout: 'Changing a layout', add_shape: 'Adding a shape', duplicate_shape: 'Copying a shape', connect_shapes: 'Connecting shapes', fit_text: 'Fitting text to its box', fill_slide: 'Writing a slide', add_slides: 'Adding slides', add_chart: 'Making a chart', draw_diagram: 'Drawing a diagram', generate_image: 'Making a picture', edit_chart: 'Changing a chart', move_resize_shape: 'Moving a shape', delete_shape: 'Deleting a shape',
+  change_layout: 'Changing a layout', add_shape: 'Adding a shape', duplicate_shape: 'Copying a shape', connect_shapes: 'Connecting shapes', fit_text: 'Fitting text to its box', fill_slide: 'Writing a slide', add_slides: 'Adding slides', add_chart: 'Making a chart', draw_diagram: 'Drawing a diagram', generate_image: 'Making a picture', generate_deck: 'Reading the source', build_generation: 'Making the deck', edit_chart: 'Changing a chart', move_resize_shape: 'Moving a shape', delete_shape: 'Deleting a shape',
   insert_image: 'Inserting an image', replace_image: 'Replacing an image', set_alt_text: 'Writing alt text', edit_table: 'Editing a table',
   set_notes: 'Writing speaker notes', undo: 'Undoing', redo: 'Redoing',
   kb_search: 'Searching the knowledge base', kb_get: 'Reading a passage', kb_read_document: 'Reading a document',
@@ -146,9 +146,13 @@ function questionCard(q) {
 }
 
 function planCard(p) {
+  // a generated deck's plan (generate_deck): its outline opens in the generation's page, to be changed before the slides
   const el = card('plan', html`<h3>Plan</h3><ol class="user-text">${p.steps.map((s) => html`<li>${s}</li>`)}</ol>
-    <div class="row"><button type="button" class="primary" data-approve="1">Go ahead</button><button type="button" data-approve="0">Don't</button></div>`);
+    <div class="row"><button type="button" class="primary" data-approve="1">Go ahead</button>
+    ${p.generation_id ? html`<button type="button" class="secondary" data-outline>Edit the outline</button>` : ''}
+    <button type="button" data-approve="0">Don't</button></div>`);
   el.querySelectorAll('[data-approve]').forEach((b) => b.addEventListener('click', () => answer({ approve: b.dataset.approve === '1' })));
+  el.querySelector('[data-outline]')?.addEventListener('click', () => document.dispatchEvent(new CustomEvent('sa:open-generation', { detail: { id: p.generation_id } })));
 }
 
 function instructionsCard(p) {
@@ -177,10 +181,15 @@ function proposalCard(p) {
 function ids() { return { project_id: store.get('project'), conversation_id: store.get('conversation') }; }
 
 async function answer(decision) {
-  log.querySelectorAll('.chat-card.question, .chat-card.plan, .chat-card.instructions').forEach((c) => c.remove());
+  const cards = [...log.querySelectorAll('.chat-card.question, .chat-card.plan, .chat-card.instructions')];
+  cards.forEach((c) => { c.hidden = true; });
   setBusy(true, 'Working…');
   const r = await socket.emitWithAck('answer', { ...ids(), ...decision });
-  if (!r.ok) { setBusy(false); bubble('err').textContent = r.error; }
+  if (r.ok) { cards.forEach((c) => c.remove()); return; }
+  // refused (a viewer: security review L7): the question stays for an editor to answer
+  cards.forEach((c) => { c.hidden = false; });
+  setBusy(false);
+  bubble('err').textContent = r.error;
 }
 
 export async function decide(p, accept, slides = null) {
@@ -490,7 +499,7 @@ socket.on('assistant_message', (m) => {
   lastSeq = Math.max(lastSeq, m.seq || 0);
   document.dispatchEvent(new CustomEvent('sa:assistant-reply', { detail: m }));
 });
-socket.on('tool_progress', (d) => { if (mine(d)) { streaming = null; status.textContent = `${TOOL_LABELS[d.tool] || 'Working'}…`; } });
+socket.on('tool_progress', (d) => { if (mine(d)) { streaming = null; status.textContent = `${d.detail || TOOL_LABELS[d.tool] || 'Working'}…`; } });
 socket.on('question', (d) => { if (mine(d)) { streaming = null; questionCard(d); } });
 socket.on('plan', (d) => { if (mine(d)) { streaming = null; planCard(d); } });
 socket.on('instructions_proposed', (d) => { if (mine(d)) { streaming = null; instructionsCard(d); } });

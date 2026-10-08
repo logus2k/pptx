@@ -28,7 +28,7 @@ const me = () => (window.__user?.email || '').toLowerCase();
 
 function nameOf(t) { return t.name?.[window.uiLanguage()] || t.name?.en || t.id; }
 
-export function buildProject(view, { pid, openDeck, onChanged, onDeleted }) {
+export function buildProject(view, { pid, openDeck, onChanged, onDeleted, generate }) {
   const page = document.createElement('div');
   page.className = 'page';
   view.append(page);
@@ -67,6 +67,7 @@ export function buildProject(view, { pid, openDeck, onChanged, onDeleted }) {
         <div class="row" style="margin-bottom: var(--space-4)">
           <button type="button" class="primary" data-action="new-deck" ${canWrite ? '' : 'disabled'}>New deck</button>
           <button type="button" class="secondary" data-action="upload-deck" ${canWrite ? '' : 'disabled'}>Upload a presentation</button>
+          <button type="button" class="secondary" data-action="generate" ${canWrite ? '' : 'disabled'}>Generate a deck</button>
         </div>
         ${decks.length ? html`<div class="deck-grid">${decks.map((d) => html`
           <button type="button" class="deck-card" data-id="${d.id}">
@@ -154,6 +155,7 @@ export function buildProject(view, { pid, openDeck, onChanged, onDeleted }) {
     page.querySelector('[data-action="delete"]')?.addEventListener('click', remove);
     page.querySelector('[data-action="new-deck"]').addEventListener('click', newDeck);
     page.querySelector('[data-action="upload-deck"]').addEventListener('click', uploadDeck);
+    page.querySelector('[data-action="generate"]').addEventListener('click', () => generate?.());  // spec NL-12: the form
     page.querySelector('[data-action="upload-template"]').addEventListener('click', uploadTemplate);
     page.querySelector('[data-action="save-instructions"]').addEventListener('click', async () => {
       try {

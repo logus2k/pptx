@@ -182,6 +182,8 @@ def run_scenario(sc: dict, out: Path) -> dict:
     assert deck.status_code == 201, deck.text
     did = deck.json()["id"]
     cid = requests.post(f"{URL}/api/projects/{pid}/conversations", json={"deck_id": did}, headers=H, timeout=10).json()["id"]
+    if sc.get("generate"):  # the form's path (views/generate.js): start, wait for the outline, make the slides
+        return run_generation(sc, out, pid, did)
     person = Person(pid, cid)
     answers = list(sc.get("answers") or [])
     turns, checks = [], []
@@ -207,6 +209,10 @@ def run_scenario(sc: dict, out: Path) -> dict:
             accepted = None
             if proposal and proposal.get("status") == "pending":
                 accepted = person.accept(proposal["id"])
+            conv = requests.get(f"{URL}/api/projects/{pid}/conversations/{cid}", headers=H, timeout=10).json()
+            active = (conv.get("conversation") or conv).get("active_deck")
+            if active and active != did:  # the turn made a deck (create_deck, a generated deck): the checks are on it
+                did = active
             after = slides_of(deck_bytes(pid, did))
             record = {
                 "say": turn["say"], "status": status, "seconds": round(time.monotonic() - t0, 1), "waits": waits,
@@ -226,8 +232,43 @@ def run_scenario(sc: dict, out: Path) -> dict:
     name = sc["id"] if not (out / f"{sc['id']}.pptx").exists() else f"{sc['id']}-{len(list(out.glob(sc['id'] + '*.pptx'))) + 1}"
     (out / f"{name}.pptx").write_bytes(final)
     pictures(final, out, name)
-    checks += [{"turn": "end", **c} for c in judge(sc.get("expect") or {}, turns[-1] if turns else {}, slides_of(final))]
+    # at the end, "used" means in any turn of the conversation (a fact read once serves the later turns)
+    every_tool = {"tools": [x for tt in turns for x in tt.get("tools") or []], **{k: v for k, v in (turns[-1] if turns else {}).items() if k != "tools"}}
+    checks += [{"turn": "end", **c} for c in judge(sc.get("expect") or {}, every_tool, slides_of(final))]
     report = {"id": sc["id"], "about": sc.get("about"), "turns": turns, "checks": checks, "passed": all(c["ok"] for c in checks)}
+    (out / f"{name}.json").write_text(json.dumps(report, ensure_ascii=False, indent=1))
+    return report
+
+
+def run_generation(sc: dict, out: Path, pid: str, did: str) -> dict:
+    """A deck generated through the form's routes, with the real model and knowledge base; the deck it makes is judged
+    as a turn's (sc["expect"]), its outline kept in the report."""
+    body = dict(sc["generate"])
+    if body.get("target", {}).get("kind") == "deck":
+        body["target"]["deck_id"] = did
+    t0 = time.monotonic()
+    r = requests.post(f"{URL}/api/projects/{pid}/generations", json=body, headers=H, timeout=30)
+    g = r.json()
+    checks = [{"ok": r.status_code == 201, "check": f"the generation started ({r.status_code})"}]
+    while r.status_code == 201 and g.get("status") == "reading" and time.monotonic() - t0 < 1200:
+        time.sleep(3)
+        g = requests.get(f"{URL}/api/projects/{pid}/generations/{g['id']}", headers=H, timeout=10).json()
+    read_s = round(time.monotonic() - t0, 1)
+    checks.append({"ok": g.get("status") == "ready", "check": f"the outline is ready ({g.get('status')}: {g.get('error', '')})"})
+    slides, built = [], {}
+    if g.get("status") == "ready":
+        built = requests.post(f"{URL}/api/projects/{pid}/generations/{g['id']}/build", headers=H, timeout=300).json()
+        checks.append({"ok": built.get("status") == "built", "check": f"the slides were made ({built.get('status')})"})
+        if built.get("deck_id"):
+            final = deck_bytes(pid, built["deck_id"])
+            name = sc["id"] if not (out / f"{sc['id']}.pptx").exists() else f"{sc['id']}-{len(list(out.glob(sc['id'] + '*.pptx'))) + 1}"
+            (out / f"{name}.pptx").write_bytes(final)
+            pictures(final, out, name)
+            slides = slides_of(final)
+            checks += judge(sc.get("expect") or {}, {}, slides)
+    report = {"id": sc["id"], "about": sc.get("about"), "seconds": read_s, "outline": g.get("outline"), "deck": slides,
+              "checks": checks, "passed": all(c["ok"] for c in checks)}  # fmt: skip
+    name = sc["id"] if not (out / f"{sc['id']}.json").exists() else f"{sc['id']}-{len(list(out.glob(sc['id'] + '*.json'))) + 1}"
     (out / f"{name}.json").write_text(json.dumps(report, ensure_ascii=False, indent=1))
     return report
 
@@ -309,6 +350,10 @@ def judge(expect: dict, record: dict, slides: list[dict]) -> list[dict]:
         text = " ".join(x for sh in boxes for x in sh["lines"]).lower()
         for w in want.get("all") or []:
             check(w.lower() in text, f"slide {n}'s boxes say {w!r}")
+    if expect.get("notes_every"):  # every slide after the cover cites in its notes (KB-3)
+        bare = [n + 1 for n, s in enumerate(slides[1:], 1)
+                if not any(w.lower() in str(s.get("notes") or "").lower() for w in expect["notes_every"])]  # fmt: skip
+        check(len(slides) > 1 and not bare, f"every slide after the cover has {expect['notes_every']} in its notes (not: {bare})")
     if expect.get("reply_any"):
         reply = " ".join(x or "" for x in record.get("replies") or []).lower()
         check(any(w.lower() in reply for w in expect["reply_any"]), f"the reply mentions one of {expect['reply_any']}")

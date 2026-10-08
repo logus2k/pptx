@@ -21,7 +21,7 @@ GROUPS: dict[str, list[str]] = {
     "images": ["insert_image", "replace_image", "set_alt_text", "render_slide", "kb_list_images", "generate_image"],
     "structure": ["add_slide", "duplicate_slide", "delete_slide", "move_slide", "change_layout", "add_shape",
                   "move_resize_shape", "delete_shape", "duplicate_shape", "connect_shapes", "add_slides"],
-    "decks": ["create_deck", "duplicate_deck", "copy_slides", "change_template", "list_templates"],
+    "decks": ["create_deck", "duplicate_deck", "copy_slides", "change_template", "list_templates", "generate_deck"],
     "knowledge": ["kb_search", "kb_read_document", "search_project"],
     "memory": ["remember", "search_conversations", "update_instructions"],
     "history": ["undo", "redo", "decide_changes"],
@@ -45,7 +45,7 @@ DESCRIPTIONS = {
     "layout or number of columns, add, copy, move, resize or delete a shape or text box; a diagram's boxes and the "
     "arrows between them.",
     "decks": "Whole decks: create a new deck or presentation, copy a deck, copy or move slides between two decks, "
-    "change a deck's template or look.",
+    "change a deck's template or look; make a whole presentation or a training from the knowledge base or a document.",
     "knowledge": "Facts from the organisation's documents: search the knowledge base or the project's reference "
     "documents for policies, products, figures, prices or procedures to use on slides.",
     "memory": "Remember a lasting decision or preference for this project, recall what was discussed or decided in "
@@ -217,6 +217,19 @@ def phrase_slide(request: str, slides: list[dict], least: int = 15, ahead: int =
     and a wording change in its prompt moved it). [(number, the shared text)]; None when no slide stands out."""
     req = " ".join(request.split())
     low = req.casefold()
+    # a whole line of one slide, and of no other, in the request word for word: that slide, however close another
+    # slide's words come (measured: "KPIs Enabling 2/2" shared 18 characters with its slide and 15 with "KPIs Enabling
+    # 1/2"'s, not ahead enough; the router's where named slide 10, and slide 9 was duplicated)
+    holders: dict[str, set[int]] = {}
+    for s in slides:
+        for line in [s.get("title") or "", *s.get("lines", [])]:
+            key = " ".join(line.split()).casefold()
+            if len(key) >= 8 and " " in key:  # two words at least (one, "Destaques", is said in passing)
+                holders.setdefault(key, set()).add(s["index"] + 1)
+    whole = sorted((len(k), k) for k in holders if k in low)
+    if whole and len(holders[whole[-1][1]]) == 1:
+        at = low.find(whole[-1][1])
+        return next(iter(holders[whole[-1][1]])), req[at : at + whole[-1][0]]
     scored = []
     for s in slides:
         text = " ".join(" ".join([s.get("title") or "", *s.get("lines", [])]).split()).casefold()

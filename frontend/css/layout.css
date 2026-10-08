@@ -39,9 +39,10 @@ h1.brand { display: none; }
 #app.menu-collapsed .menu-section { height: 1px; margin: var(--space-3) var(--space-1); background: var(--divider); font-size: 0; }
 #app.menu-collapsed .icon-bar-group > .menu-section:first-child { display: none; }
 #app.menu-collapsed .menu-logo { margin: 0 0 26px; text-align: center; }
-#app.menu-collapsed .menu-logo img { display: none !important; }
-#app.menu-collapsed .menu-logo .product { margin: 0; font-size: 0; }
-#app.menu-collapsed .menu-logo .product::before { content: 'S';  /* Slides: the product's initial (Cortex: 'C') */ color: var(--text); font: var(--fw-bold) var(--fs-h6)/var(--lh-h6) var(--font-sans); }
+/* Slides: the rail's icon, as Cortex now has it (was the product's initial) */
+/* the rail's icon (40px) centred where the wordmark (18px) is, so both are as far from the top bar's middle */
+#app.menu-collapsed .menu-logo > img, #app.menu-collapsed .menu-logo .product { display: none !important; }
+#app.menu-collapsed .menu-logo .rail-logo { display: flex; justify-content: center; margin-top: calc((18px - 40px) / 2); }
 
 /* ── tablet: 834-1279px ── */
 @media (min-width: 834px) and (max-width: 1279px) {
@@ -53,16 +54,14 @@ h1.brand { display: none; }
   #app:not(.menu-expanded) .menu-section { height: 1px; margin: var(--space-3) var(--space-1); background: var(--divider); font-size: 0; }
   #app:not(.menu-expanded) .icon-bar-group > .menu-section:first-child { display: none; }
   #app:not(.menu-expanded) .menu-logo { margin: 0 0 26px; text-align: center; }
-  #app:not(.menu-expanded) .menu-logo img { display: none !important; }
-  #app:not(.menu-expanded) .menu-logo .product { margin: 0; font-size: 0; }
-  #app:not(.menu-expanded) .menu-logo .product::before { content: 'S';  /* Slides: the product's initial (Cortex: 'C') */ color: var(--text); font: var(--fw-bold) var(--fs-h6)/var(--lh-h6) var(--font-sans); }
+  /* Slides: the rail's icon, as Cortex now has it (was the product's initial) */
+  #app:not(.menu-expanded) .menu-logo > img, #app:not(.menu-expanded) .menu-logo .product { display: none !important; }
+  #app:not(.menu-expanded) .menu-logo .rail-logo { display: flex; justify-content: center; margin-top: calc((18px - 40px) / 2); }
   #app.menu-expanded #icon-bar { position: fixed; left: 0; top: 0; bottom: 28px; width: var(--menu-width); padding-left: var(--space-4); padding-right: var(--space-4);
     background: var(--surface-raised); box-shadow: var(--shadow-float); z-index: 5200; }
   #app.menu-expanded .icon-bar-btn { justify-content: flex-start; padding: 7px 11px; }
   #app.menu-expanded .icon-bar-label { display: block; }
   #app.menu-expanded .menu-logo { margin: 0 11px 26px; text-align: left; }
-  #app.menu-expanded .menu-logo .product { margin-top: var(--space-2); font-size: var(--fs-subtitle); }
-  #app.menu-expanded .menu-logo .product::before { content: none; }
   #app.menu-expanded::before { content: ''; position: fixed; inset: 0; background: var(--overlay); z-index: 5100; }
   /* the assistants pane: an overlay from the right, at most 400px */
   #right-panel { position: fixed; top: var(--topbar-height); right: 0; bottom: 28px; width: min(400px, 100%) !important; flex: none; z-index: 30; box-shadow: var(--shadow-float); }

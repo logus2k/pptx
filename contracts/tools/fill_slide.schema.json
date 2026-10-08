@@ -6,7 +6,6 @@
  "type": "object",
  "additionalProperties": false,
  "required": [
-  "slide_id",
   "content"
  ],
  "properties": {
@@ -16,7 +15,7 @@
   },
   "slide_id": {
    "type": "integer",
-   "description": "The slide's number or ID."
+   "description": "The slide's number or ID. Left out: the slide the request is about; in an empty deck, a new first slide."
   },
   "content": {
    "type": "object",
@@ -39,7 +38,7 @@
       "anyOf": [
        {
         "type": "string",
-        "maxLength": 200
+        "maxLength": 1000
        },
        {
         "type": "object",
@@ -47,11 +46,11 @@
         "properties": {
          "heading": {
           "type": "string",
-          "maxLength": 200
+          "maxLength": 1000
          },
          "text": {
           "type": "string",
-          "maxLength": 300
+          "maxLength": 1000
          }
         }
        }

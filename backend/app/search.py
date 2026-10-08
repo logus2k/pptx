@@ -89,7 +89,7 @@ def rank(reranker: Reranker | None, query: str, passages: list[dict], top_k: int
             raise SearchUnavailable("no reranker is configured")
         scores = reranker.scores(query, texts)
     except SearchUnavailable as e:
-        log.warning(f"search by words only: {e}")
+        log.warning("search by words only", extra={"err.type": type(e).__name__})  # the type only (security review L5)
         scores = word_scores(query, texts)
         note = f"Search by meaning is unavailable ({e}): passages were matched by their words only."
     order = sorted(range(len(passages)), key=lambda i: -scores[i])[:top_k]

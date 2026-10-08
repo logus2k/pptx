@@ -44,6 +44,14 @@ PRESETS = {
         "router.md",
         {"max_tokens": 1024, "temperature": 0, "chat_template_kwargs": {"enable_thinking": False}},
     ),
+    "slides_checker": (  # did a turn's changes do all the request asks (agent/loop.py: a step left out)
+        "checker.md",
+        {"max_tokens": 200, "temperature": 0, "chat_template_kwargs": {"enable_thinking": False}},
+    ),
+    "slides_titler": (  # a slide's title when the model sent its points alone (agent/tools.py: _untitled)
+        "titler.md",
+        {"max_tokens": 100, "temperature": 0, "chat_template_kwargs": {"enable_thinking": False}},
+    ),
     "slides_describer": (
         "describer.md",
         {"max_tokens": 512, "temperature": 0.2, "top_p": 0.9, "chat_template_kwargs": {"enable_thinking": False}},
@@ -51,6 +59,15 @@ PRESETS = {
     "slides_summariser": (
         "summary.md",
         {"max_tokens": 1500, "temperature": 0.2, "top_p": 0.9, "chat_template_kwargs": {"enable_thinking": False}},
+    ),
+    # a deck from a source (outline.py, spec NL-12): each part's key points, then the outline
+    "slides_points": (
+        "points.md",
+        {"max_tokens": 1500, "temperature": 0.1, "chat_template_kwargs": {"enable_thinking": False}},
+    ),
+    "slides_outline": (
+        "outline.md",
+        {"max_tokens": 6000, "temperature": 0.2, "top_p": 0.9, "chat_template_kwargs": {"enable_thinking": False}},
     ),
 }
 

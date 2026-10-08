@@ -14,6 +14,7 @@ import asyncio
 import base64
 import io
 import json
+import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -22,11 +23,13 @@ from PIL import Image
 
 from ..config import REPO_DIR
 from ..docengine import files, ops, read, render
-from .. import search
+from .. import search, storage
 from .context import describe as context_describe
 from ..kb import KBError
 from ..domain.leases import Leased
 from ..storage import NotFound
+
+log = logging.getLogger("slides.tools")
 
 TOOLS_DIR = REPO_DIR / "contracts" / "tools"
 EDITING = (
@@ -98,6 +101,53 @@ def sources_of(messages: list[dict]) -> list[dict]:
     return list(out.values())
 
 
+def _point_text_of(point) -> tuple[str, str]:
+    """A point as (heading, text), as ops reads it."""
+    if isinstance(point, dict):
+        return str(point.get("heading") or "").strip(), str(point.get("text") or "").strip()
+    return "", str(point).strip()
+
+
+def _figures(text: str) -> set[str]:
+    """The figures a text states, as values: "80.000€" and "80 000" are 80000, "450.000,00" is 450000, "44/2024" is 44
+    and 2024; at least two digits ("8.º" is not one). String methods only: a lexical fact."""
+    out = set()
+    for word in str(text).replace("/", " ").replace("(", " ").replace(")", " ").split():
+        kept = "".join(c for c in word if c.isdigit() or c in ".,").strip(".,")
+        whole = kept.split(",")[0].replace(".", "")  # the decimal part aside, the thousands' dots out
+        if len(whole) >= 2 and whole.isdigit():
+            out.add(str(int(whole)))
+    return out
+
+
+def _passages_holding(messages: list[dict], content: dict) -> list[dict]:
+    """The stored knowledge-base results reduced to the passages that hold, word for word, one of the content's lines of
+    25 characters or more (case and spacing aside), or two of its figures or more, as sources_of reads them (measured:
+    a slide written from the cover's turn's passages, in the model's own words - "Idade: Mutuário(s) entre 18 e 35
+    anos", "80.000€", "450.000" - matched none word for word and had no source, 3 runs in 6; the figures it keeps
+    exactly, as the prompt asks)."""
+    flat = lambda x: " ".join(str(x).split()).lower()  # noqa: E731
+    lines = []
+    for point in content.get("points") or []:
+        lines += list(point.values()) if isinstance(point, dict) else [point]
+    # a line's own end punctuation aside (measured: "...anos de idade." in the slide, "...anos de idade;" in the passage)
+    figures = set().union(*[_figures(x) for x in lines]) if lines else set()
+    lines = [flat(x).rstrip(".;:, ") for x in lines if len(flat(x)) >= 25]
+    out = []
+    for m in messages:
+        if m.get("role") != "tool" or m.get("name") not in KB_TOOLS or not (lines or len(figures) >= 2):
+            continue
+        try:
+            r = json.loads(m.get("content") or "{}")
+        except ValueError:
+            continue
+        held = [p for p in r.get("passages") or []
+                if any(x in flat(p.get("text") or "") for x in lines) or len(figures & _figures(p.get("text") or "")) >= 2]
+        if held:
+            out.append({**m, "content": json.dumps({**r, "passages": held}, ensure_ascii=False)})
+    return out
+
+
 def _without_nulls(node):
     """An optional field sent as null is a field left out (measured: gemma-4 sends "theme_color": null on every run,
     and repeated the refused call until the turn ended); a required one, left out, is then refused by name."""
@@ -139,6 +189,29 @@ def _plain_paragraphs(node):
     if isinstance(node, list):
         return [_plain_paragraphs(v) for v in node]
     return node
+
+
+def _split_lists(name: str, args: dict) -> str:
+    """A long point that is a list ("Critérios: A; B; C; ...": over 200 characters, three or more parts between "; ")
+    becomes a point per part (measured: a 7-item criteria list as one point did not fit its box even at 14 pt, and the
+    turn ended with it overflowing). Literal splitting at "; " only. Returns the note."""
+    items = args.get("slides") if name == "add_slides" else [args.get("content")]
+    said = []
+    for item in items or []:
+        if not isinstance(item, dict) or not item.get("points"):
+            continue
+        out = []
+        for n, point in enumerate(item["points"], 1):
+            parts = [x.strip() for x in point.split("; ")] if isinstance(point, str) and len(point) > 200 else []
+            if len([x for x in parts if x]) >= 3:
+                out += [x.rstrip(";") for x in parts if x]
+                said.append(str(n))
+            else:
+                out.append(point)
+        item["points"] = out
+    if not said:
+        return ""
+    return f" Point{'s' if len(said) > 1 else ''} {', '.join(said)} held a list: each of its items is a point of its own."
 
 
 def _drop_echo(name: str, args: dict) -> str:
@@ -272,7 +345,7 @@ TEXT_EDITS = (
 
 # what the context already gives (the decks, the layouts) or another tool returns (kb_search: the passages' text):
 # still run when called, not offered - each costs part of the fixed share of the window (technical design 6.2: 25%)
-NOT_OFFERED = ("list_decks", "list_layouts", "kb_get")
+NOT_OFFERED = ("list_decks", "list_layouts", "kb_get", "build_generation")  # build_generation: the app's, after approval
 
 
 def definitions(schemas: dict[str, dict]) -> list[dict]:
@@ -333,6 +406,8 @@ class Turn:
     overflowing: set = field(default_factory=set)  # (deck, slide id, shape id) an edit of this turn left too long
     result_chars: int = 12_000  # how much one tool result may hold (the loop sets it from the context budget)
     read_calls: set = field(default_factory=set)  # (tool, arguments) called this turn: a reading call is not repeated
+    model: str = "application"  # the model's id (the loop sets it); "application": a call the application made
+    made_calls: set = field(default_factory=set)  # (tool, arguments) of the edits made this turn: never made twice
     sources_asked: bool = False  # the turn was told once that a new slide had its title alone (_unfounded)
 
 
@@ -374,6 +449,51 @@ class Executor:
             return self.app.proposals.draft_path(t.pid, p, did).read_bytes()
         _, data = self.app.decks.version_bytes(t.pid, did, t.email)
         return data
+
+    async def _title_for(self, t: Turn, points: list) -> str:
+        """A short title for points sent without one: from the person's request and the points (slides_titler); "" when
+        it cannot be had (the slide is then made as sent)."""
+        try:
+            request = next((m["content"] for m in reversed(self.app.conversations.messages(t.pid, t.cid))
+                            if m["role"] == "user"), "")  # fmt: skip
+            lines = "\n".join(f"- {' '.join(x for x in _point_text_of(p) if x)}" for p in points)
+            ask = f"The request:\n<request>{request}</request>\n\nThe slide's points:\n{lines}"
+            model = await asyncio.to_thread(self.app.models.resolve, None if t.model == "application" else t.model)
+            got = ""
+            async for chunk in self.app.models.stream(model, "slides_titler", [{"role": "user", "content": ask}], None, 100):
+                got += ((chunk.get("choices") or [{}])[0].get("delta") or {}).get("content") or ""
+            title = json.loads(got[got.find("{") : got.rfind("}") + 1]).get("title") or ""
+            return " ".join(str(title).split())[:120]
+        except Exception as e:  # noqa: BLE001 - no title rather than no slide
+            log.warning("no title could be given", extra={"err.type": type(e).__name__})
+            return ""
+
+    def _unsaid(self, t: Turn, title: str) -> bool:
+        """Is a title in none of the person's words (its words of 4 letters or more, "slide" and "diapositivo" aside,
+        in no message of theirs)? A lexical fact: "Novo Slide", "Título do Slide" for "Cria um slide"."""
+        words = {w for w in (x.strip(".,;:!?«»\"'()").casefold() for x in title.split())
+                 if len(w) >= 4 and w not in ("slide", "slides", "diapositivo", "diapositivos")}  # fmt: skip
+        said = " ".join(str(m.get("content") or "") for m in self.app.conversations.messages(t.pid, t.cid)
+                        if m["role"] == "user").casefold()  # fmt: skip
+        return not any(w in said for w in words)
+
+    def _untitled(self, t: Turn, name: str, args: dict) -> bool:
+        """Points sent with no title, for a new slide or one whose heading is empty (a chart's or a diagram's slide
+        aside: their figure is the content)."""
+        c = args.get("content")
+        if not isinstance(c, dict) or not c.get("points") or str(c.get("title") or "").strip():
+            return False
+        if c.get("chart") or c.get("diagram"):
+            return False
+        if name == "add_slide" or not args.get("slide_id"):
+            return True
+        try:
+            order = read.outline(read.open_deck(self._bytes(t, self._deck_id(t, args))))
+        except (NotFound, ToolError):
+            return False
+        x = int(args["slide_id"])
+        found = order[x - 1] if x < 256 and 1 <= x <= len(order) else next((o for o in order if o["slide_id"] == x), None)
+        return found is None or not (found.get("title") or "").strip()
 
     def _copy_source(self, t: Turn, did: str, args: dict) -> dict:
         """The deck slides are copied from: in the project, not the target, not itself in review (its slides would
@@ -450,6 +570,74 @@ class Executor:
         sid = int(args.get("slide_id") or 0)
         start = t.start_order.get(self._deck_id(t, args)) or ids
         return (sid < 256 and not 1 <= sid <= len(start)) or (sid >= 256 and sid not in ids)
+
+    def _empty_focus(self, t: Turn, args: dict) -> int | None:
+        """The slide the router named for this request (t.focus), when it has no text at all and add_slide brings
+        text content (not a figure) right after it or with no place given; None otherwise."""
+        content = args.get("content")
+        if not isinstance(content, dict) or content.get("chart") or content.get("diagram"):
+            return None
+        if not (content.get("title") or content.get("points")):
+            return None
+        try:
+            prs = read.open_deck(self._bytes(t, self._deck_id(t, args)))
+        except (NotFound, ToolError):
+            return None
+        order = [o["slide_id"] for o in read.outline(prs)]
+        focus = t.focus if t.focus in order else (order[0] if len(order) == 1 else None)  # no slide named: the only one
+        if focus is None:
+            return None
+        after = args.get("after_slide_id")
+        start = t.start_order.get(self._deck_id(t, args)) or order
+        after_id = start[after - 1] if isinstance(after, int) and 0 < after <= len(start) else after
+        if after is not None and after_id != focus:
+            return None
+        s = read.slide(prs, focus)
+        texts = [p for sh in s["shapes"] for x in [sh, *(sh.get("shapes") or [])] for p in x.get("paragraphs") or []
+                 if any((r.get("text") or "").strip() for r in p.get("runs") or [])]
+        has_table = any(sh.get("type") in ("table", "chart") for sh in s["shapes"])
+        if texts and not has_table:
+            # its title alone, in none of the person's words, is a placeholder: the slide is still to be written
+            # (measured: "Cria um slide" made "Novo Slide" / "Título do Slide", and the next request's index went on a
+            # second slide, 4 runs in 8)
+            # (a cover's heading is a text box, not a title placeholder: measured, the outline's title was "" and
+            # "Novo Slide" on "2_Capa S/Imagem" was not seen; so: one box with text, a short line)
+            holders = [sh for sh in s["shapes"] if any(any((r.get("text") or "").strip() for r in p.get("runs") or [])
+                                                        for p in sh.get("paragraphs") or [])]  # fmt: skip
+            words = " ".join(" ".join("".join(r.get("text") or "" for r in p.get("runs") or []) for p in texts).split())
+            if len(holders) == 1 and len(words.split()) <= 8 and self._unsaid(t, words):
+                return focus
+        return None if texts or has_table else focus
+
+    def _same_text(self, t: Turn, name: str, args: dict) -> bool:
+        """Does the edit only write back the text the shape already has (each paragraph set to its own text)?"""
+        try:
+            prs = read.open_deck(self._bytes(t, self._deck_id(t, args)))
+            sid = args["slide_id"]
+            order = [o["slide_id"] for o in read.outline(prs)]
+            start = t.start_order.get(self._deck_id(t, args)) or order
+            if isinstance(sid, int) and sid < 256:
+                sid = start[sid - 1] if 0 < sid <= len(start) else None
+            shape = next(x for x in read.slide(prs, sid)["shapes"] if x["shape_id"] == args.get("shape_id"))
+        except (NotFound, ToolError, KeyError, StopIteration, TypeError, ValueError):
+            return False
+        now = ["".join(r.get("text", "") for r in p.get("runs") or []).strip() for p in shape.get("paragraphs") or []]
+        if name == "update_text":
+            new = [str(p.get("text") or "".join(r.get("text", "") for r in p.get("runs") or [])).strip()
+                   for p in args.get("paragraphs") or []]  # fmt: skip
+            return bool(new) and new == now
+        ops_ = args.get("operations") or []
+        if ops_ and all(o.get("op") == "insert" for o in ops_):
+            # a paragraph the shape already holds, inserted again (measured: asked to fit a box it could not, the model
+            # inserted its 300-character point a second time)
+            return all(" ".join(str(o.get("text") or "").split()) in [" ".join(x.split()) for x in now] for o in ops_)
+        if not ops_ or any(o.get("op") != "set" for o in ops_):
+            return False
+        def same(o):
+            i = o.get("index")
+            return isinstance(i, int) and 0 <= i < len(now) and str(o.get("text") or "").strip() == now[i]
+
+        return all(same(o) for o in ops_)
 
     def _next_slide(self, t: Turn, args: dict) -> bool:
         """Does a figure name, by its number, the slide after the last one (a slide not made yet)?"""
@@ -536,10 +724,17 @@ class Executor:
         one unused, 0.60 for one used)."""
         if sid is None:
             return
-        since = []
-        for m in self.app.conversations.messages(t.pid, t.cid):
+        since, every = [], self.app.conversations.messages(t.pid, t.cid)
+        for m in every:
             since = [] if m["role"] == "user" else [*since, m]
         read_docs = sources_of(since)
+        if not read_docs:
+            # read in an earlier turn of the conversation: cited only for what the slide says in a passage's own words
+            # (measured: the cover's turn searched, the next slide was written from those passages without searching
+            # again, 3 runs in 3, and its notes had no source); a literal match, case and spacing aside
+            read_docs = sources_of(_passages_holding(every, content))
+            for d in read_docs:  # its own words: the source, not only consulted
+                content = {**content, "sources": [*(content.get("sources") or []), d.get("title") or d.get("document")]}
         if not read_docs:
             return
         named = {" ".join(str(x).split()).lower() for x in content.get("sources") or []}
@@ -615,16 +810,52 @@ class Executor:
             if e.validator == "maxLength" and "points" in e.absolute_path:
                 # every point too long, by its length (measured: the message quoted the whole passage and named the
                 # first only; the model sent the same points again, or fixed one and met the next: 3 runs in 3)
-                raise ToolError("POINTS_TOO_LONG", _long_points(args, self.schemas[name]),
+                raise ToolError("POINTS_TOO_LONG", "Nothing was changed: a point is longer than 1000 characters.",
                                 "A point is one short line on a slide: say each in your words, the key fact only; "
                                 "the details can go in the speaker notes (set_notes).") from None  # fmt: skip
             if name == "edit_paragraphs" and "'index' is a required property" in e.message:
                 hint = "set and delete need the paragraph's [n] from the deck map; update_text replaces all of a shape's text."
-            raise ToolError("BAD_ARGUMENTS", f"{where}: {e.message}", hint) from None
+            # "nothing was changed": measured, after a refused add_slide the model edited "the slide it had added"
+            prefix = "Nothing was changed. " if name in EDITING else ""
+            raise ToolError("BAD_ARGUMENTS", f"{prefix}{where}: {e.message}", hint) from None
         return args
 
     async def call(self, t: Turn, name: str, raw_args: str | dict) -> dict:
-        """The result the model reads (a dict, sent as JSON), errors included."""
+        """The result the model reads (a dict, sent as JSON), errors included; each call recorded in the project's
+        audit trail with its arguments, the model and its result (security review M4: never written)."""
+        if name in ("add_slide", "fill_slide"):
+            try:
+                parsed = self.parse(name, raw_args)
+            except ToolError:
+                parsed = None
+            if parsed is not None and self._untitled(t, name, parsed):
+                # points and no title for an untitled slide (measured: an index sent as its points alone went without
+                # a heading, 1 run in 4; refused, the model gave up or asked the person, 3 runs in 3; told to write the
+                # title after, it wrote it to "slide 2", a slide that was not there, 3 runs in 3): titled from the
+                # request and the points, in the same call (prompts/titler.md)
+                title = await self._title_for(t, parsed["content"]["points"])
+                if title:
+                    raw_args = {**parsed, "content": {**parsed["content"], "title": title}}
+        result = await self._call(t, name, raw_args)
+        try:
+            args = json.loads(raw_args) if isinstance(raw_args, str) else raw_args
+        except ValueError:
+            args = raw_args
+        error = result.get("error") if isinstance(result, dict) else None
+        line = {"at": storage.now(), "user": t.email, "event": "tool_call", "conversation_id": t.cid, "tool": name,
+                "arguments": args, "model": t.model or "application", "ok": not error,
+                **({"error": str(error.get("code") or "error")} if isinstance(error, dict) else {}),
+                "deck_id": (result.get("deck_id") if isinstance(result, dict) else None) or None,
+                "proposal_id": (t.proposal or {}).get("id"),
+                **({"version": result["current_version"]} if isinstance(result, dict)
+                   and isinstance(result.get("current_version"), int) else {})}  # fmt: skip
+        try:
+            await asyncio.to_thread(storage.append_line, self.app.layout.project_audit(t.pid), line, "project-audit-line")
+        except Exception as e:  # noqa: BLE001 - the trail never stops the work; its failure is logged (type only)
+            log.error("the project's audit line was not written", extra={"err.type": type(e).__name__})
+        return result
+
+    async def _call(self, t: Turn, name: str, raw_args: str | dict) -> dict:
         try:
             args = self.parse(name, raw_args)
             key = (name, json.dumps(args, sort_keys=True, ensure_ascii=False))
@@ -635,12 +866,57 @@ class Executor:
                 return {"error": {"code": "ALREADY_READ", "message": said, "hint": hint}}
             t.read_calls.add(key)
             echo = _drop_echo(name, args) if name in ("add_slide", "fill_slide", "add_slides") else ""
+            if name in ("add_slide", "fill_slide", "add_slides"):
+                echo += _split_lists(name, args)
+            if name in ("add_slide", "fill_slide", "add_slides") and "longer" in _long_points(args, {}):
+                # placed, and said (measured: refused, a 438-character point was sent again unchanged and the slide
+                # was lost, 3 runs in 6): the slide exists, its text fitted to its box, to be shortened
+                echo += " " + _long_points(args, {}).replace("longer than a point may be", "long for a point") + (
+                    " A point is one short line: shorten them (edit_paragraphs), the details in the notes (set_notes).")
+            if name == "add_slide" and not args.get("layout"):
+                # with content, the layout it fits (measured: content sent without a layout was refused, and the turn
+                # ended with nothing made)
+                if not isinstance(args.get("content"), dict):
+                    raise ToolError("BAD_ARGUMENTS", "Nothing was changed: add_slide needs a layout or the slide's content.",
+                                    "Give the slide's content (the layout it fits is chosen), or a layout.")  # fmt: skip
+                prs = read.open_deck(self._bytes(t, self._deck_id(t, args)))
+                first = not len(prs.slides) or args.get("position") == 0
+                args["layout"] = ops.layout_for_new(prs, args["content"], first).name
+            if name == "add_slide" and self._empty_focus(t, args) is not None:
+                # the slide the request is about has no text yet: its content goes on it (measured: "Cria um slide",
+                # then "write an index of the topics": the index made a second slide, the first left showing its
+                # prompts, 2 runs in 3; told the slide was empty, the model filled it 3 replays in 10)
+                sid = self._empty_focus(t, args)
+                fill = {"slide_id": sid, "content": args["content"], **({"layout": args["layout"]} if args.get("layout") else {})}
+                if args.get("deck_id"):
+                    fill["deck_id"] = args["deck_id"]
+                done = await self._edit(t, "fill_slide", fill)
+                if "error" not in done:
+                    done["note"] += " The slide the request is about had no text yet: the content was written on it."
+                return done
+            if name == "fill_slide" and not args.get("slide_id"):
+                # (measured: on an empty deck the model sent fill_slide with no slide, refused, and the cover was lost)
+                did = self._deck_id(t, args)
+                order = [o["slide_id"] for o in read.outline(read.open_deck(self._bytes(t, did)))]
+                if t.focus in order:
+                    args["slide_id"] = t.focus
+                elif len(order) == 1:
+                    args["slide_id"] = order[0]
+                elif not order:
+                    args["slide_id"] = 1  # not there yet: made below, as a slide named by the next number is
+                else:
+                    raise ToolError("BAD_ARGUMENTS", "Nothing was changed: fill_slide needs the slide (slide_id).",
+                                    "Name the slide by its number or ID; for a new slide, use add_slide.")  # fmt: skip
+            if name == "fill_slide" and self._missing_slide(t, args):
+                empty = self._empty_focus(t, {**args, "slide_id": None})
+                if empty is not None:  # a slide not there yet, while the one the request is about is empty: that one
+                    args = {**args, "slide_id": empty}
             if name == "fill_slide" and self._missing_slide(t, args):
                 # a slide that is not there yet: written, it is made (measured: on an empty deck the model called
                 # fill_slide for "slide 1" 30 times, told each time to use add_slide)
                 data = self._bytes(t, self._deck_id(t, args))
                 prs = read.open_deck(data)
-                lay = ops._layout_for_content(prs, args["content"])
+                lay = ops.layout_for_new(prs, args["content"], first=not len(prs.slides))
                 if args.get("layout"):
                     try:
                         lay = ops._layout(prs, args["layout"])
@@ -663,8 +939,21 @@ class Executor:
                 if added is None:
                     return await self._figure_on_a_new_slide(t, name, args)
                 args = {**args, "slide_id": added}  # the slide this turn added there: the figure goes on it
+            if name in ("edit_paragraphs", "update_text") and self._same_text(t, name, args):
+                # (measured: "shorten the agenda's points" sent every point back unchanged, was told "ok", and the
+                # reply said they were shortened)
+                return {"error": {"code": "SAME_TEXT", "message": "Nothing was changed: the new text is the slide's text "
+                        "as it is.", "hint": "Write the changed text the request asks for."}}  # fmt: skip
+            key = (name, json.dumps(args, sort_keys=True, ensure_ascii=False))
+            if name in EDITING and key in t.made_calls:
+                # (measured: told its answer said something was still to do, the model made the same fill_slide again,
+                # and the index was on two slides)
+                return {"error": {"code": "ALREADY_MADE", "message": "Nothing was changed: this exact change was made "
+                        "earlier in this turn.", "hint": "If the request is done, say what you changed."}}  # fmt: skip
             if name in EDITING:
                 done = await self._edit(t, name, args)
+                if "error" not in done:
+                    t.made_calls.add(key)
                 if echo and "error" not in done:
                     done["note"] += echo
                 return done
@@ -724,8 +1013,14 @@ class Executor:
             out["note"] += " Text that had no place in the new layout was kept as a text box: mention it."
         if result.get("left_out"):
             out["note"] += f" Its layout has no place for the {' and '.join(result['left_out'])}: it was left out; say so."
+        if result.pop("moved_to_notes", None):
+            out.pop("moved_to_notes", None)
+            out["note"] += " The cover's subtitle sentence did not fit with its other lines: it is in the slide's notes; say so."
+        if name == "add_slide" and result.get("continued"):
+            ids = ", ".join(map(str, result["slides"][1:]))
+            out["note"] += f" Its points did not fit one slide: they continue on {result['continued']} more (ID {ids}), in order."
         if name == "add_slide" and result.get("instead_of"):
-            why = "has no place for its title" if result.get("figure") else "is made for a table or a chart"
+            why = "has no place for its title" if result.get("figure") else "has no place for this content"
             out["note"] += f" {result['instead_of']!r} {why}: the slide is on {result['layout']!r}."
         if name == "fill_slide" and result.get("layout"):
             out["note"] += f" The slide is now on the layout {result['layout']!r}, which has a place for each part: say so."
@@ -743,6 +1038,11 @@ class Executor:
         if name == "draw_diagram":
             boxes, arrows = ", ".join(map(str, result["shape_ids"])), ", ".join(map(str, result["connector_ids"])) or "none"
             out["note"] += f" Boxes {boxes} (in the nodes' order), styled like {result['styled_from']}; arrows {arrows}."
+            if result.get("covers"):  # as add_chart's (ops.draw_diagram now says what its boxes cover)
+                ids = ", ".join(map(str, result["covers"]))
+                out["note"] += (f" It covers shape {ids}: move what is under it (move_resize_shape), or draw it on a "
+                                "slide of its own.")
+            out.pop("covers", None)
         if name == "add_chart":
             out["note"] += f" The chart is shape {result['shape_id']}."
             if result.get("covers"):
@@ -1036,6 +1336,20 @@ class Executor:
         return {"ok": True, "note": "The slide's image follows; LibreOffice renders it, so it is close to PowerPoint, not exact."}
 
     # ── project ──────────────────────────────────────────────────────
+    async def t_build_generation(self, t: Turn, args: dict) -> dict:
+        """The slides of a generated outline the person approved (domain/generations.py)."""
+        try:
+            record = await self.app.generations.build(t.pid, args["generation_id"], t.email)
+        except NotFound:
+            raise ToolError("NOT_FOUND", "There is no such generated outline.", "") from None
+        except ValueError as e:
+            raise ToolError("NOT_READY", str(e), "Tell the person.") from None
+        t.conversation["active_deck"] = record["deck_id"]
+        title = record["outline"]["title"]
+        n = len(record["slide_ids"])
+        return {"ok": True, "deck_id": record["deck_id"], "note": f"The deck «{title}» was made: {n} slides, now the "
+                "open deck. The person reviews it as any change (undo takes it back)."}  # fmt: skip
+
     async def t_create_deck(self, t: Turn, args: dict) -> dict:
         project = self.app.projects.get(t.pid, t.email, roles=("owner", "editor"))
         active = t.conversation.get("active_deck")

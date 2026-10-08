@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import hmac
 import json
 import logging
 import time
@@ -33,7 +34,36 @@ class User:
 
 def proxy_secret_ok(settings: Settings, value: str | None) -> bool:
     """True when the request came through the proxy (or no secret is configured: development only)."""
-    return not settings.proxy_secret or value == settings.proxy_secret
+    if not settings.proxy_secret:
+        return True
+    # in constant time (security review L3: == returns at the first differing character)
+    return value is not None and hmac.compare_digest(value.encode(), settings.proxy_secret.encode())
+
+
+def origin_allowed(settings: Settings, origin: str | None) -> bool:
+    """May a browser page at `origin` open the live connection (security review M1: no origin was checked, so any site
+    a signed-in person visited could open it with their cookie)? public_url's own origin, and each allowed_origins
+    entry: scheme://host[:port], an entry without a port matching that host on any port (a local install). A request
+    with no Origin header is no browser page and is not refused here (the proxy secret and identity still apply)."""
+    if not origin:
+        return True
+    from urllib.parse import urlsplit
+
+    try:
+        got = urlsplit(origin.strip().lower())
+        got_port = got.port
+    except ValueError:
+        return False
+    for entry in [settings.file["public_url"], *settings.file.get("allowed_origins", [])]:
+        want = urlsplit(entry.strip().lower())
+        if want.scheme != got.scheme or want.hostname != got.hostname:
+            continue
+        if want.port is None and urlsplit(entry).netloc.count(":") == 0 and entry != settings.file["public_url"]:
+            return True  # no port given: any port of that host
+        default = {"http": 80, "https": 443}.get(got.scheme)
+        if (want.port or default) == (got_port or default):
+            return True
+    return False
 
 
 def address_of(settings: Settings, header_value: str | None) -> str | None:

@@ -1,46 +1,155 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "storage/deck.schema.json",
-  "title": "DATA_DIR/projects/<pid>/decks/<id>/deck.json (technical design section 4)",
-  "type": "object",
-  "additionalProperties": false,
-  "required": ["schema_version", "id", "project_id", "title", "template", "current_version", "versions", "undo", "redo", "created_at", "updated_at"],
-  "properties": {
-    "schema_version": { "const": 1 },
-    "id": { "type": "string", "minLength": 8, "maxLength": 32 },
-    "project_id": { "type": "string" },
-    "title": { "type": "string", "minLength": 1, "maxLength": 200 },
-    "template": {
-      "description": "The deck's template (spec PM-9): an administrator template, a project asset, or null for an uploaded deck (its own masters).",
-      "oneOf": [
-        { "type": "null" },
-        { "type": "object", "additionalProperties": false, "required": ["kind", "id"],
-          "properties": { "kind": { "enum": ["admin", "asset"] }, "id": { "type": "string" } } }
-      ]
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "storage/deck.schema.json",
+ "title": "DATA_DIR/projects/<pid>/decks/<id>/deck.json (technical design section 4)",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "schema_version",
+  "id",
+  "project_id",
+  "title",
+  "template",
+  "current_version",
+  "versions",
+  "undo",
+  "redo",
+  "created_at",
+  "updated_at"
+ ],
+ "properties": {
+  "schema_version": {
+   "const": 1
+  },
+  "id": {
+   "type": "string",
+   "minLength": 8,
+   "maxLength": 32
+  },
+  "project_id": {
+   "type": "string"
+  },
+  "title": {
+   "type": "string",
+   "minLength": 1,
+   "maxLength": 200
+  },
+  "template": {
+   "description": "The deck's template (spec PM-9): an administrator template, a project asset, or null for an uploaded deck (its own masters).",
+   "oneOf": [
+    {
+     "type": "null"
     },
-    "current_version": { "type": "integer", "minimum": 1 },
-    "versions": {
-      "type": "array", "minItems": 1,
-      "items": {
-        "type": "object", "additionalProperties": false,
-        "required": ["number", "source", "author", "created_at", "slide_count", "sha256", "size"],
-        "properties": {
-          "number": { "type": "integer", "minimum": 1 },
-          "source": { "enum": ["upload", "template", "restore", "assistant", "manual", "undo", "redo", "duplicate"] },
-          "author": { "type": "string" },
-          "created_at": { "type": "string" },
-          "slide_count": { "type": "integer", "minimum": 0 },
-          "sha256": { "type": "string", "minLength": 64, "maxLength": 64 },
-          "size": { "type": "integer", "minimum": 0 },
-          "restored_from": { "type": "integer", "minimum": 1 },
-          "proposal_id": { "type": "string" },
-          "file_name": { "type": "string", "description": "The uploaded file's name (upload only)." }
-        }
+    {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "kind",
+      "id"
+     ],
+     "properties": {
+      "kind": {
+       "enum": [
+        "admin",
+        "asset"
+       ]
+      },
+      "id": {
+       "type": "string"
       }
-    },
-    "undo": { "type": "array", "items": { "type": "integer", "minimum": 1 } },
-    "redo": { "type": "array", "items": { "type": "integer", "minimum": 1 } },
-    "created_at": { "type": "string" },
-    "updated_at": { "type": "string" }
+     }
+    }
+   ]
+  },
+  "current_version": {
+   "type": "integer",
+   "minimum": 1
+  },
+  "versions": {
+   "type": "array",
+   "minItems": 1,
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "number",
+     "source",
+     "author",
+     "created_at",
+     "slide_count",
+     "sha256",
+     "size"
+    ],
+    "properties": {
+     "number": {
+      "type": "integer",
+      "minimum": 1
+     },
+     "source": {
+      "enum": [
+       "upload",
+       "template",
+       "restore",
+       "assistant",
+       "manual",
+       "undo",
+       "redo",
+       "duplicate",
+       "generated"
+      ]
+     },
+     "author": {
+      "type": "string"
+     },
+     "created_at": {
+      "type": "string"
+     },
+     "slide_count": {
+      "type": "integer",
+      "minimum": 0
+     },
+     "sha256": {
+      "type": "string",
+      "minLength": 64,
+      "maxLength": 64
+     },
+     "size": {
+      "type": "integer",
+      "minimum": 0
+     },
+     "restored_from": {
+      "type": "integer",
+      "minimum": 1
+     },
+     "proposal_id": {
+      "type": "string"
+     },
+     "file_name": {
+      "type": "string",
+      "description": "The uploaded file's name (upload only)."
+     }
+    }
+   }
+  },
+  "undo": {
+   "type": "array",
+   "items": {
+    "type": "integer",
+    "minimum": 1
+   }
+  },
+  "redo": {
+   "type": "array",
+   "items": {
+    "type": "integer",
+    "minimum": 1
+   }
+  },
+  "created_at": {
+   "type": "string"
+  },
+  "updated_at": {
+   "type": "string"
   }
+ }
 }

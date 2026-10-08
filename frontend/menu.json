@@ -30,6 +30,126 @@
     ]
   },
   {
+    "label": "Slide",
+    "key": "s",
+    "items": [
+      {
+        "label": "Add slide...",
+        "command": "deck.add-slide",
+        "enabled": "deckEditable"
+      },
+      {
+        "label": "Duplicate slide",
+        "command": "deck.duplicate-slide",
+        "enabled": "slideSelected"
+      },
+      {
+        "label": "Move up",
+        "command": "deck.move-up",
+        "enabled": "slideSelected"
+      },
+      {
+        "label": "Move down",
+        "command": "deck.move-down",
+        "enabled": "slideSelected"
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "label": "Change layout...",
+        "command": "deck.change-layout",
+        "enabled": "slideSelected"
+      },
+      {
+        "label": "Speaker notes...",
+        "command": "deck.notes",
+        "enabled": "slideSelected"
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "label": "Copy slides from another deck...",
+        "command": "deck.copy-slides",
+        "enabled": "deckEditable"
+      },
+      {
+        "label": "Change the deck's template...",
+        "command": "deck.change-template",
+        "enabled": "deckEditable"
+      }
+    ]
+  },
+  {
+    "label": "Insert",
+    "key": "i",
+    "items": [
+      {
+        "label": "Chart...",
+        "command": "deck.insert-chart",
+        "enabled": "slideSelected"
+      },
+      {
+        "label": "Diagram...",
+        "command": "deck.insert-diagram",
+        "enabled": "slideSelected"
+      },
+      {
+        "label": "Picture...",
+        "command": "deck.insert-image",
+        "enabled": "slideSelected"
+      }
+    ]
+  },
+  {
+    "label": "Format",
+    "key": "f",
+    "items": [
+      {
+        "label": "Edit text",
+        "command": "deck.edit-text",
+        "enabled": "shapeText"
+      },
+      {
+        "label": "Format text...",
+        "command": "deck.format",
+        "enabled": "shapeText"
+      },
+      {
+        "label": "Fit text to its box",
+        "command": "deck.fit",
+        "enabled": "shapeText"
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "label": "Edit chart...",
+        "command": "deck.edit-chart",
+        "enabled": "shapeChart"
+      },
+      {
+        "label": "Edit table...",
+        "command": "deck.edit-table",
+        "enabled": "shapeTable"
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "label": "Replace picture...",
+        "command": "deck.replace-image",
+        "enabled": "shapePicture"
+      },
+      {
+        "label": "Alt text...",
+        "command": "deck.alt-text",
+        "enabled": "shapeAlt"
+      }
+    ]
+  },
+  {
     "label": "View",
     "key": "v",
     "items": [

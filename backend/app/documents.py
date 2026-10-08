@@ -26,10 +26,18 @@ def kind_of(name: str, raw: bytes) -> str:
         return "pdf"
     if raw.startswith(b"PK"):
         try:
-            if "word/document.xml" in zipfile.ZipFile(io.BytesIO(raw)).namelist():
-                return "docx"
+            infos = zipfile.ZipFile(io.BytesIO(raw)).infolist()
         except zipfile.BadZipFile:
-            pass
+            infos = []
+        if "word/document.xml" in {i.filename for i in infos}:
+            # what it unpacks to, before anything is read (security review M3: a 60 KB file unpacked to 60 MB, read
+            # whole into memory): the limits a deck upload has (docengine/files.py)
+            from .docengine import files
+
+            unpacked = sum(i.file_size for i in infos)
+            if len(infos) > files.MAX_ENTRIES or unpacked > files.MAX_UNCOMPRESSED or unpacked > files.MAX_RATIO * len(raw):
+                raise Unreadable("This document unpacks to far more data than a Word document holds.")
+            return "docx"
         raise Unreadable("Only PDF, Word (.docx), text and Markdown documents can be added.")
     try:
         text = raw.decode("utf-8")
@@ -74,8 +82,13 @@ def _pdf(raw: bytes) -> list[tuple[str, list[str]]]:
 
 
 def _docx(raw: bytes) -> list[tuple[str, list[str]]]:
-    xml = zipfile.ZipFile(io.BytesIO(raw)).read("word/document.xml")
-    body = etree.fromstring(xml).find(f"{W}body")
+    # no entities expanded, nothing fetched; a damaged file is said, not a server error (security review M3)
+    parser = etree.XMLParser(resolve_entities=False, no_network=True)
+    try:
+        xml = zipfile.ZipFile(io.BytesIO(raw)).read("word/document.xml")
+        body = etree.fromstring(xml, parser).find(f"{W}body")
+    except (zipfile.BadZipFile, KeyError, etree.XMLSyntaxError):
+        raise Unreadable("This Word document could not be read: it may be damaged.") from None
     out: list[tuple[str, list[str]]] = []
     heading, current = "", []
     for el in body if body is not None else []:
