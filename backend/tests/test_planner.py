@@ -56,6 +56,28 @@ def test_key_points_are_grouped_into_topics_by_document_or_by_section():
     assert outline.topics_of(points, "Fonte") == ["B", "A", "Fonte"]
 
 
+def test_a_document_holding_most_of_the_source_is_read_by_its_sections():
+    """Measured: one guide, 439 passages of 447, was one topic; a module serving one of its goals was shown all its key
+    points and planned 18 slides for 3. Read by its top sections, its goals can take chapters of it."""
+    docs = lambda *sizes: [{"document": f"D{d}"} for d, n in enumerate(sizes) for _ in range(n)]  # noqa: E731
+    assert outline.sectioned_documents(docs(5, 3)) == {"D0", "D1"}  # few documents: all by section
+    assert outline.sectioned_documents(docs(43, 34, 28, 15, 7)) == set()  # several, none most of it
+    assert outline.sectioned_documents(docs(439, 5, 2, 1)) == {"D0"}
+
+
+def test_the_planners_answer_of_the_size_asked_is_kept_over_fewer_problems():
+    """Measured: 18 slides for 3 (one problem, the number) kept over 3 slides with two problems."""
+    answers = iter(['{"n": 18, "wrong": 1}', '{"n": 3, "wrong": 2}', '{"n": 18, "wrong": 1}'])
+
+    class Models:
+        async def stream(self, *_a):
+            yield {"choices": [{"delta": {"content": next(answers)}}]}
+
+    app = type("App", (), {"models": Models()})()
+    check = lambda got: (got["n"], ["x"] * got["wrong"], got["n"] == 3)  # noqa: E731
+    assert asyncio.run(outline._asked(app, {}, "slides_storyboard", "ask", check, "module 1")) == 3
+
+
 def test_goals_and_modules_that_hold_have_no_problems_and_each_fault_is_named():
     assert outline.frame_problems(GOALS, TOPICS, MODULES, 2, 3, 4) == []
     said = outline.frame_problems(GOALS, [[1], [1, 2], [9]], MODULES, 2, 3, 4)
@@ -63,7 +85,7 @@ def test_goals_and_modules_that_hold_have_no_problems_and_each_fault_is_named():
     assert said == ["Goal 3 («Calcular os custos»): give the topics that teach it (T1 to T4)."]
     wrong = [{"title": "Requisitos", "aim": "", "goals": [1, 7]}, {"title": "Requisitos", "aim": "x", "goals": [1]}]
     said = outline.frame_problems(GOALS[:2], [[1], [2]], wrong, 3, 3, 4)
-    assert "There are 2 goals: give exactly 3." in said and "There are 2 modules: make exactly 3." in said
+    assert "Give exactly 3 goals, not 2." in said and "Make exactly 3 modules, not 2." in said
     assert "Module 1 («Requisitos»): say its aim." in said
     assert "Module 1 («Requisitos»): its goals must be numbers of the goals (1 to 2)." in said
     assert "Goal 1 is in modules 1 and 2: a goal is served by one module." in said
@@ -76,7 +98,7 @@ def test_each_incoherence_of_a_modules_slides_is_named_for_the_planner_to_correc
     slides = [_slide("content", "As sete fases", 2, refs=[1, 9]), _slide("content", "Processo e custos: visão geral", 1,
               task="", refs=[1])]  # fmt: skip
     said = outline.problems(MODULES[1], [*slides, _slide("content", "As sete fases", 2, refs=[])], 2, 4)
-    assert "There are 3 slides: give exactly 2." in said
+    assert "Give exactly 2 slides, not 3." in said
     assert "Slide 1 («As sete fases»): there are key points P1 to P4 only." in said
     assert "Slide 2 («Processo e custos: visão geral»): its goal must be one of this module's goals (2, 3)." in said
     assert ("Slide 2 («Processo e custos: visão geral») is about the module itself: the module's opening slide says its "
@@ -122,7 +144,7 @@ def test_the_storyboard_is_planned_in_steps_each_asked_again_and_the_deck_assemb
     """Measured: asked for a whole deck's slides at once, the model planned 15 or 14 for 12, three times in three; asked
     to anchor goals and slides to key point numbers out of 80, it gave them the wrong ones. The goals (with their topics)
     and modules first; then each module's slides from its own key points, their number given."""
-    points = [{"point": f"ponto {n}", "where": "w", "topic": t} for n, t in
+    points = [{"point": f"ponto n{n}", "where": "w", "topic": t} for n, t in
               [(1, "Requisitos"), (2, "Requisitos"), (3, "Fases"), (4, "Fases"), (5, "Custos"), (6, "Custos")]]  # fmt: skip
     goals = [{"goal": g, "topics": [f"T{t[0]}"]} for g, t in zip(GOALS, TOPICS, strict=True)]
     frame = {"title": "Crédito à Habitação", "goals": goals, "modules": MODULES}
@@ -142,13 +164,15 @@ def test_the_storyboard_is_planned_in_steps_each_asked_again_and_the_deck_assemb
     assert [s["refs"] for s in got["slides"] if s["role"] == "content"] == [[1], [2], [3, 4], [5, 6]]
     asked = [m for p, m in app.models.asked if p == "slides_planner"]
     assert "Give 3 goals and make 2 modules." in asked[0][0]["content"] and "T2. Fases (2 key points):" in asked[0][0]["content"]
-    assert "There are 1 modules: make exactly 2." in asked[1][2]["content"]
+    assert "Make exactly 2 modules, not 1." in asked[1][2]["content"]
     story = [m for p, m in app.models.asked if p == "slides_storyboard"]
-    assert "This module: «Requisitos»" in story[0][0]["content"] and "P2. ponto 2 (w)" in story[0][0]["content"]
-    assert "ponto 3" not in story[0][0]["content"]  # a module sees its own key points only
-    assert "serves goals 2, 3 - 2 slides." in story[1][0]["content"] and "P1. ponto 3 (w)" in story[1][0]["content"]
-    assert "Topic «Fases» - 1 slide:" in story[1][0]["content"] and "Topic «Custos» - 1 slide:" in story[1][0]["content"]
-    assert "There are 1 slides: give exactly 2." in story[2][2]["content"]
+    assert "This module: «Requisitos»" in story[0][0]["content"] and "P2. ponto n2 (w)" in story[0][0]["content"]
+    assert "ponto n3" not in story[0][0]["content"]  # a module sees its own key points only
+    assert "The goals it serves: 2, 3. Its number of slides: 2." in story[1][0]["content"]
+    assert "P1. ponto n3 (w)" in story[1][0]["content"]
+    assert "Topic «Fases» - at least 1 slide:" in story[1][0]["content"]
+    assert "Topic «Custos» - at least 1 slide:" in story[1][0]["content"]
+    assert "Give exactly 2 slides, not 1." in story[2][2]["content"]
     assert len(story[3]) == 3 and story[3][0] == story[1][0]  # its key points once, then only the last answer and its problems
 
 
@@ -225,7 +249,9 @@ def test_a_fact_said_twice_is_kept_once_in_its_fuller_wording():
     """Measured: a document's summary repeated its sections, and two slides taught the same 0,6% spread. The reranker's
     score both ways at SAME_FACT or more: the same fact; a related but different one stays."""
     same = {("Desconto de 0,6% no spread com domiciliação", "Spread bonificado de 0,6% mediante domiciliação de salário"),
-            ("Spread bonificado de 0,6% mediante domiciliação de salário", "Desconto de 0,6% no spread com domiciliação")}
+            ("Spread bonificado de 0,6% mediante domiciliação de salário", "Desconto de 0,6% no spread com domiciliação"),
+            ("Desconto de 0,6% no spread mediante domiciliação", "Spread bonificado de 0,6% mediante domiciliação de salário"),
+            ("Spread bonificado de 0,6% mediante domiciliação de salário", "Desconto de 0,6% no spread mediante domiciliação")}
 
     class Reranker:
         available = True
@@ -239,7 +265,8 @@ def test_a_fact_said_twice_is_kept_once_in_its_fuller_wording():
     points = [{"point": "Desconto de 0,6% no spread com domiciliação", "topic": "A"},
               {"point": "Taxas fixas, mistas e variáveis", "topic": "A"},
               {"point": "Spread bonificado de 0,6% mediante domiciliação de salário", "topic": "A"},
-              {"point": "Desconto de 0,6% no spread com domiciliação", "topic": "B"}]  # another topic: kept
+              {"point": "Desconto de 0,6% no spread com domiciliação", "topic": "B"},  # another document: kept
+              {"point": "Desconto de 0,6% no spread mediante domiciliação", "topic": "A · 2", "document": "A"}]  # its sections
     got = asyncio.run(outline._without_repeats(App, points))
     assert [p["point"] for p in got] == ["Spread bonificado de 0,6% mediante domiciliação de salário",
                                          "Taxas fixas, mistas e variáveis", "Desconto de 0,6% no spread com domiciliação"]
@@ -251,6 +278,40 @@ def test_a_diagram_with_fewer_steps_than_its_slides_points_is_the_list():
     slide = {"title": "Jovem", "points": ["Avaliação de risco", "Enquadramento da proposta", "Crédito Sinal Jovem", "DL 44/2024"]}
     two = {"form": "diagram", "diagram": {"nodes": ["Avaliação de risco", "Enquadramento da proposta"]}}
     assert artist.checked(two, slide)["form"] == "bullets"
+
+
+def test_a_slide_with_part_of_a_numbered_series_is_told_the_steps_it_lacks():
+    """Measured: a slide to show the seven phases given phases 1 to 4 and 7; told which it lacked, it took them 4 in 4."""
+    texts = ["O processo tem 7 fases.", "Fase 1 - Simulação.", "Fase 2: Proposta.", "Decisões possíveis na Fase 3.",
+             "Fase 3 \u2013 Decisão.", "Fase 4 Avaliação.", "Fase 5 - Enquadramento.", "Os prazos de 7 dias."]  # fmt: skip
+    partial = [_slide("content", "As fases", 1, refs=[1, 2, 3, 5, 6])]
+    assert outline.series_problems(partial, texts) == [
+        "Slide 1 («As fases») shows the steps of a series but not P7 (Fase 5): a slide that shows a series has every "
+        "step of it, in order."]
+    assert outline.series_problems([_slide("content", "As fases", 1, refs=[2, 3, 5, 6, 7])], texts) == []
+    assert outline.series_problems([_slide("content", "Início", 1, refs=[2])], texts) == []  # one step: not the series
+    assert outline.series_problems(partial, ["Fase 1 a.", "Fase 2 b."]) == []  # two steps: no series
+
+
+def test_a_placeholder_bullet_is_left_out():
+    """Measured: "Fase 5: [Nome da Fase 5]" written for a phase the slide's key points did not give."""
+    got = outline.bullets_of(["Fase 4: Avaliação", "Fase 5: [Nome da Fase 5]", "Fase 7: Arquivo", " ", "Custo $\\le$ 2%"])
+    assert got == ["Fase 4: Avaliação", "Fase 7: Arquivo", "Custo \u2264 2%"]
+
+
+def test_a_diagram_of_one_points_steps_leaving_the_others_out_is_the_list():
+    """Looked at: four steps one point names drawn, the tranches, documents and licence of the other three points
+    nowhere on the slide; a point that introduces the steps may have no step of its own."""
+    slide = {"title": "Obras", "points": ["O financiamento é desembolsado em tranches conforme as obras.",
+                                          "O desembolso segue 4 passos: Pedido, Avaliação, Processamento e Comunicação.",
+                                          "Documentação requer caderneta predial e orçamento detalhado.",
+                                          "A licença de utilização liberta a última tranche."]}  # fmt: skip
+    steps = {"form": "diagram", "diagram": {"nodes": ["Pedido", "Avaliação", "Processamento", "Comunicação"]}}
+    assert artist.checked(steps, slide)["form"] == "bullets"
+    phases = {"title": "Fases", "points": ["O processo tem 3 fases.", "Fase 1: Simulação e pedido.",
+                                           "Fase 2: Proposta.", "Fase 3: Decisão de crédito."]}  # fmt: skip
+    drawn = {"form": "diagram", "diagram": {"nodes": ["Simulação", "Pedido", "Proposta", "Decisão de crédito"]}}
+    assert artist.checked(drawn, phases)["form"] == "diagram"
 
 
 def test_a_slides_spare_key_points_are_its_goals_topics_unused_ones():
@@ -284,20 +345,23 @@ def test_a_sentence_a_document_already_gave_is_read_once():
 
 def test_a_modules_slides_follow_its_topics():
     """Measured: one slide drew on two documents - CH Jovem with works and construction - and CH Jovem's facts did not
-    fit. Its slides shared across its topics; a slide that mixes them, or a topic with another number, is named."""
+    fit. Each topic has a slide at least; a slide that mixes them, or a topic with none, is named."""
     of = {1: 0, 2: 0, 3: 1, 4: 1}
     good = [_slide("content", "Jovem", 1, refs=[1, 2]), _slide("content", "Obras", 1, refs=[3, 4])]
     assert outline.topic_problems(good, [1, 1], of, ["Jovem", "Obras"]) == []
     mixed = [_slide("content", "Jovem e Obras", 1, refs=[1, 3]), _slide("content", "Jovem", 1, refs=[2])]
     said = outline.topic_problems(mixed, [1, 1], of, ["Jovem", "Obras"])
     assert said == ["Slide 1 («Jovem e Obras») takes key points from «Jovem» and «Obras»: a slide takes them from one topic.",
-                    "Topic «Jovem» has 2 slides: give it exactly 1.", "Topic «Obras» has 0 slides: give it exactly 1."]
+                    "Topic «Obras» has 0 slides: give it at least 1."]
+    more = [_slide("content", "Jovem", 1, refs=[1]), _slide("content", "Jovem 2", 1, refs=[2]),
+            _slide("content", "Obras", 1, refs=[3, 4])]
+    assert outline.topic_problems(more, [1, 1], of, ["Jovem", "Obras"]) == []  # a topic that needs more slides takes them
     assert outline.topic_problems(mixed, None, of, ["Jovem", "Obras"]) == []  # fewer slides than topics: not shared
 
 
 def test_a_topic_two_goals_share_is_taught_once():
     """A large document may serve two goals; the second module is not shown the key points the first one used."""
-    points = [{"point": f"ponto {n}", "where": "w", "topic": "Guia"} for n in range(1, 5)]
+    points = [{"point": f"ponto n{n}", "where": "w", "topic": "Guia"} for n in range(1, 5)]
     goals = [{"goal": "Conhecer a estrutura", "topics": ["T1"]}, {"goal": "Seguir o ciclo de vida", "topics": ["T1"]},
              {"goal": "Avaliar", "topics": ["T1"]}]
     modules = [{"title": "Estrutura", "aim": "Vai conhecer.", "goals": [1]},
@@ -309,9 +373,27 @@ def test_a_topic_two_goals_share_is_taught_once():
     app = _App({"slides_planner": [{"title": "Guia", "goals": goals, "modules": modules}], "slides_storyboard": [first, second]})
     got = asyncio.run(outline.plan(app, {}, "training", 8, "«Guia», in pt.", points, "Guia", "pt", _noop))
     story = [m for p, m in app.models.asked if p == "slides_storyboard"]
-    assert "ponto 3" not in story[1][0]["content"] and "P1. ponto 4 (w)" in story[1][0]["content"]
+    assert "ponto n3" not in story[1][0]["content"] and "P1. ponto n4 (w)" in story[1][0]["content"]
     assert "do not teach their subjects again):\n- Hierarquia: Mostrar.\n- Papéis: Mostrar." in story[1][0]["content"]
     assert [s["refs"] for s in got["slides"] if s["role"] == "content"] == [[1, 2], [3], [4]]
+
+
+def test_a_topic_an_earlier_module_taught_is_not_shown_to_a_module_with_topics_of_its_own():
+    """Measured: CH Jovem in two goals of two modules; the second, shown its other key points, made a second slide on it
+    4 times in 4, not shown them 0 in 4."""
+    points = ([{"point": f"jovem n{n}", "where": "w", "topic": "Jovem"} for n in range(1, 4)]
+              + [{"point": f"obras n{n}", "where": "w", "topic": "Obras"} for n in range(1, 3)])
+    goals = [{"goal": "Conhecer o Jovem", "topics": ["T1"]}, {"goal": "Casos especiais", "topics": ["T1", "T2"]},
+             {"goal": "Acompanhar obras", "topics": ["T2"]}]
+    modules = [{"title": "Oferta", "aim": "Vai conhecer.", "goals": [1]}, {"title": "Casos", "aim": "Vai ver.", "goals": [2, 3]}]
+    first = {"slides": [{"title": "Jovem", "goal": 1, "task": "Mostrar.", "points": ["P1", "P2"]}]}
+    second = {"slides": [{"title": "Obras", "goal": 2, "task": "Mostrar.", "points": ["P1"]},
+                         {"title": "Vistorias", "goal": 3, "task": "Mostrar.", "points": ["P2"]}]}
+    app = _App({"slides_planner": [{"title": "CH", "goals": goals, "modules": modules}], "slides_storyboard": [first, second]})
+    got = asyncio.run(outline.plan(app, {}, "training", 8, "«CH», in pt.", points, "CH", "pt", _noop))
+    story = [m for p, m in app.models.asked if p == "slides_storyboard"]
+    assert "jovem n3" not in story[1][0]["content"] and "P1. obras n1 (w)" in story[1][0]["content"]
+    assert [s["refs"] for s in got["slides"] if s["role"] == "content"] == [[1, 2], [4], [5]]
 
 
 def test_a_column_item_the_slide_does_not_say_is_the_list_and_a_long_aim_is_sent_back():
@@ -337,7 +419,7 @@ def test_latex_a_model_writes_becomes_the_symbols_a_slide_shows():
 
 def test_a_slide_about_its_module_still_there_after_the_tries_is_left_out():
     """Measured: "Objetivos da Formação: <the module's title>" kept by the best of three storyboard answers."""
-    points = [{"point": f"ponto {n}", "where": "w", "topic": "Guia"} for n in range(1, 5)]
+    points = [{"point": f"ponto n{n}", "where": "w", "topic": "Guia"} for n in range(1, 5)]
     goals = [{"goal": g, "topics": ["T1"]} for g in ("Conhecer", "Seguir", "Avaliar")]
     modules = [{"title": "Fundamentos", "aim": "Vai conhecer.", "goals": [1, 2]}, {"title": "Prática", "aim": "Vai seguir.",
                                                                                    "goals": [3]}]  # fmt: skip

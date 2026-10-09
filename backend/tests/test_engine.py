@@ -1464,6 +1464,36 @@ def test_a_generated_slides_list_is_bulleted_at_the_templates_size():
     assert read.open_deck(data).slides.get(made["slides"][0])  # it reopens
 
 
+def test_a_rounded_boxs_text_is_measured_inside_its_corners():
+    """Looked at (a generated training's diagram): "Processamento", 114.3 pt, judged to fit a node 121.4 pt wide inside
+    its insets, broken by the renderer as "Processamen" / "to": the rounded corners take 5.3 pt a side."""
+    from app.docengine import textfit
+
+    ctt = read.open_deck((REPO / "templates" / "bancoctt.pptx").read_bytes())
+    item = {"role": "content", "title": "Processo de Financiamento para Obras e Construção",
+            "points": ["O processo de desembolso segue 4 passos: Pedido, Avaliação, Processamento e Comunicação."],
+            "design": {"form": "diagram", "diagram": {"nodes": ["Pedido", "Avaliação", "Processamento", "Comunicação"],
+                                                      "direction": "right"}}}  # fmt: skip
+    s = ctt.slides.get(ops.add_outline(ctt, [item])["slides"][0])
+    node = next(sh for sh in s.shapes if sh.has_text_frame and sh.text_frame.text == "Processamento")
+    own = node.text_frame._txBody.find(qn_("a:bodyPr"))
+    sides = sum(int(own.get(k) or textfit.DEFAULT_INS[k]) for k in ("lIns", "rIns"))
+    corners = 2 * min(node.width, node.height) * 16667 / 100000 * 0.29289  # DrawingML's roundRect text rectangle
+    inside = (node.width - sides - corners) / textfit.EMU_PT
+    size = textfit.smallest_size(node)  # at its scale
+    major, minor = textfit._theme_fonts(node)
+    word = textfit._width("Processamento", (size, "+mn-lt", False, False, 0.0), major, minor)
+    assert word <= inside * textfit.WORD_ROOM, (word, inside)  # its size fitted to the text inside its corners
+    # written into its runs, as every renderer then shows it (LibreOffice drew a box's fontScale at full size when the
+    # text's height fitted), and every box of the diagram at that one size
+    boxes = [sh for sh in s.shapes if sh.has_text_frame and sh.text_frame.text in item["design"]["diagram"]["nodes"]]
+    assert len(boxes) == 4 and len({textfit.smallest_size(sh) for sh in boxes}) == 1
+    for sh in boxes:
+        fit = sh.text_frame._txBody.find(qn_("a:bodyPr")).find(qn_("a:normAutofit"))
+        assert fit is None or fit.get("fontScale") is None
+        assert all(r.find(qn_("a:rPr")).get("sz") for r in sh.text_frame._txBody.iter(qn_("a:r")))
+
+
 def test_a_word_wider_than_its_box_is_fitted_not_broken():
     """Looked at (a generated training's section dividers): "Complementos" and "Documentação" set as "Complemento" / "s"
     in "2_Separador S/Imagem"'s narrow title; the box's height held the lines, so the text was never fitted."""

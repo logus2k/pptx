@@ -25,7 +25,8 @@ TOPIC_DOCUMENTS = 8  # a topic: the documents its best passages come from, read 
 # (measured: a training on "crédito à habitação" read 3 of the 6 documents its passages came from - 75 passages, 5 parts,
 # 21 s - and the process's phases, its costs and its servicing were one passage each)
 TOPIC_PARTS = 12
-POINTS_TOKENS = 1500
+POINTS_TOKENS = 2400  # a part's key points, at most 24 (measured: up to 75 tokens a point with its "where"; at 1500,
+# three parts' answers were cut at 20 to 24 points, their last points lost)
 PLAN_TOKENS = 10000  # the goals and storyboard (titles, tasks, key point numbers), after its thinking
 WRITE_TOKENS = 6000  # one slide's bullets and notes, after its thinking
 
@@ -56,9 +57,12 @@ KINDS = {
                        "instruction such as \"Introduzir o módulo\"). Notes: one or two sentences the trainer says to open "
                        "the module.",
             "content": "3 to 5 bullets, at most 15 words each, with the rules, figures, steps and examples its key points "
-                       "give; a process or a sequence: one bullet a step, every step, in order, each as its key points "
-                       "describe it - when they only name it, its name alone, never a description of your own. Notes: what "
-                       "the trainer says, 3 to 6 sentences explaining the slide, from its key points.",
+                       "give; a process or a sequence: one bullet a step, every step, in order, however many (seven "
+                       "steps: seven bullets), each as its key points describe it - when they only name it, its name "
+                       "alone, never a description of your own. Notes: what the trainer says, 3 to 6 sentences explaining "
+                       "the slide, from its key points.",
+            # (measured on one captured request with the seven phases: grouped into 3 or 4 bullets 2 times in 5 under
+            # "3 to 5 bullets"; with "however many (seven steps: seven bullets)", one a phase 12 times in 12)
             "questions": "One question for each goal, in the goals' order, each answered by what the slides before it "
                          "say. Answer with {\"points\": [the questions], \"answers\": [the answer to each, from those "
                          "slides, in the same order]}.",
@@ -195,6 +199,18 @@ def plain(text: str) -> str:
     return " ".join(text.split())
 
 
+def bullets_of(points) -> list[str]:
+    """The Writer's bullets, each in plain text; a bullet with a placeholder in square brackets left out (measured: a
+    slide given phases 1 to 4 and 7, written "Fase 5: [Nome da Fase 5]" - a gap the Critic's revision can fill from the
+    key points no slide uses, an invented step it cannot be told from a real one)."""
+    out = []
+    for x in points or []:
+        text = plain(" ".join(str(x).split()))
+        if text and not ("[" in text and "]" in text.split("[", 1)[1]):
+            out.append(text)
+    return out
+
+
 def balanced(text: str) -> str:
     """JSON text with each closing bracket the one its opening needs, outside strings, and closers with nothing open
     dropped (measured: the Artist closed a list of points with "}" and added one more closer, "...cliente."}]}]}" - 9
@@ -256,6 +272,18 @@ def topic_of(passage: dict, by_section: bool) -> tuple[str, str]:
     return (f"{passage['document']} · {head}" if head else passage["document"]), (head or passage["document"])
 
 
+def sectioned_documents(passages: list[dict]) -> set[str]:
+    """The documents read by their top sections (topic_of): every one when the source has fewer than 3; else one that
+    holds more than half the source (measured: one guide, 439 passages of 447, was one topic - its 136 key points shown
+    to a module that served one of its goals, which planned 18 slides for 3, or slides for the other goals)."""
+    sizes: dict[str, int] = {}
+    for p in passages:
+        sizes[p["document"]] = sizes.get(p["document"], 0) + 1
+    if len(sizes) < 3:
+        return set(sizes)
+    return {d for d, n in sizes.items() if 2 * n > len(passages)}
+
+
 def topic_from(where: str, candidates: list[tuple[str, str]]) -> str:
     """The topic a key point comes from: the one of its part's topics its "where" names (the longest name that is in it:
     a lexical fact), else the part's first."""
@@ -290,9 +318,11 @@ SAME_FACT = 0.998  # the reranker's score, both ways, at which two key points sa
 
 
 async def _without_repeats(app, points: list[dict]) -> list[dict]:
-    """The key points, each fact once: a point the reranker scores as saying what an earlier point of its topic says
+    """The key points, each fact once: a point the reranker scores as saying what an earlier point of its document says
     (both ways, SAME_FACT) merged into it, the fuller wording kept (measured: a document's own summary repeated its
-    sections, and two slides taught the same 0,6% spread). Without the reranker, as they are."""
+    sections, and two slides taught the same 0,6% spread). Its document, not its topic: a document read by its sections
+    repeats itself across them (measured: the backlog's hierarchy in two sections, 0.9997 both ways, on two slides);
+    another document's same fact kept, for that document's slides. Without the reranker, as they are."""
     reranker = getattr(app, "reranker", None)
     if reranker is None or not reranker.available:
         log.info("no reranker: key points not checked for repeats")
@@ -302,7 +332,7 @@ async def _without_repeats(app, points: list[dict]) -> list[dict]:
     kept: list[dict] = []
     try:
         for p in points:
-            mine = [k for k, q in enumerate(kept) if q.get("topic") == p.get("topic")]
+            mine = [k for k, q in enumerate(kept) if q.get("document", q.get("topic")) == p.get("document", p.get("topic"))]
             if mine:
                 ahead = await asyncio.to_thread(reranker.scores, p["point"], [kept[k]["point"] for k in mine])
                 best = max(range(len(mine)), key=lambda i: ahead[i])
@@ -387,7 +417,7 @@ def frame_problems(goals: list[str], topics: list[list[int]], modules: list[dict
     no slide taught it)."""
     out = []
     if len(goals) != n_goals:
-        out.append(f"There are {len(goals)} goals: give exactly {n_goals}.")
+        out.append(f"Give exactly {n_goals} goals, not {len(goals)}.")
     # a topic may teach more than one goal (measured: one large document held most of a training's subject; tied to one
     # goal, another goal was tied to a thin document, and its slide was "follow the guidelines"); a key point is still
     # taught once: a module does not see those an earlier one used
@@ -395,7 +425,7 @@ def frame_problems(goals: list[str], topics: list[list[int]], modules: list[dict
         if not [t for t in mine if 1 <= t <= n_topics]:
             out.append(f"Goal {g} («{goal}»): give the topics that teach it (T1 to T{n_topics}).")
     if len(modules) != wanted:
-        out.append(f"There are {len(modules)} modules: make exactly {wanted}.")
+        out.append(f"Make exactly {wanted} modules, not {len(modules)}.")
     for n, m in enumerate(modules, start=1):
         if not m["aim"]:
             out.append(f"Module {n} («{m['title']}»): say its aim.")
@@ -438,7 +468,8 @@ def problems(module: dict, slides: list[dict], want: int, count: int) -> list[st
         return ["There are no slides: answer with the JSON asked for."]
     out = []
     if len(slides) != want:
-        out.append(f"There are {len(slides)} slides: give exactly {want}.")
+        # the number asked for first (measured: "There are 10 slides: give exactly 2" read as "exactly 10 slides")
+        out.append(f"Give exactly {want} slides, not {len(slides)}.")
     seen: dict[int, int] = {}
     for n, s in enumerate(slides, start=1):
         name = f"Slide {n} («{s['title']}»)"
@@ -484,8 +515,42 @@ def topic_problems(slides: list[dict], per: list[int] | None, of: dict[int, int]
             out.append(f"Slide {n} («{s['title']}») takes key points from {names}: a slide takes them from one topic.")
         count[max(set(mine), key=mine.count)] += 1
     for t, (have, want) in enumerate(zip(count, per, strict=True)):
-        if have != want:
-            out.append(f"Topic «{order[t]}» has {have} slides: give it exactly {want}.")
+        if have < want:
+            out.append(f"Topic «{order[t]}» has {have} slides: give it at least {want}.")
+    return out
+
+
+def _step_of(text: str) -> tuple[str, int] | None:
+    """A key point that is a numbered step - its first word and the number after it ("Fase 5 - ...": ("fase", 5)), a
+    lexical fact in any language - or None."""
+    words = text.split()
+    if len(words) < 2:
+        return None
+    name, number = words[0].strip(".,;:()-").casefold(), words[1].strip(".,;:()-\u2013\u2014")
+    return (name, int(number)) if name.isalpha() and number.isdigit() else None
+
+
+def series_problems(slides: list[dict], texts: list[str]) -> list[str]:
+    """A slide that shows a numbered series (3 steps or more of the module's key points: "Fase 1", "Fase 2", ...) with
+    some of its steps left out, named for the Planner (measured: a slide to show the seven phases given phases 1 to 4
+    and 7, the Writer then wrote "Fase 5: [Nome da Fase 5]"; told which steps it lacked, it took them 4 times in 4)."""
+    steps: dict[str, dict[int, int]] = {}  # a series' name -> its step numbers -> their key point numbers
+    for k, text in enumerate(texts, start=1):
+        step = _step_of(text)
+        if step:
+            steps.setdefault(step[0], {}).setdefault(step[1], k)
+    out = []
+    for n, s in enumerate(slides, start=1):
+        for series in steps.values():
+            if len(series) < 3:
+                continue
+            have = [num for num, k in series.items() if k in s["refs"]]
+            lacking = sorted(num for num in series if num not in have)
+            if len(have) >= 2 and lacking:
+                label = texts[series[lacking[0]] - 1].split()[0]
+                missing = ", ".join(f"P{series[num]} ({label} {num})" for num in lacking)
+                out.append(f"Slide {n} («{s['title']}») shows the steps of a series but not {missing}: a slide that "
+                           "shows a series has every step of it, in order.")
     return out
 
 
@@ -512,17 +577,19 @@ FRAME_TASKS = {"objectives": "Open the training with its goals.", "questions": "
 
 
 async def _asked(app, model, preset: str, first: str, check, stage: str):
-    """The Planner's answer to one request, checked (check(answer) -> (parsed, problems)) and asked again with its
-    last answer and what is wrong in it - never the earlier ones, so the request stays the size it was measured for -
-    at most PLAN_TRIES times; the answer with the fewest problems."""
+    """The Planner's answer to one request, checked (check(answer) -> (parsed, problems, sized): sized, whether it has
+    the number of goals, modules or slides asked for) and asked again with its last answer and what is wrong in it -
+    never the earlier ones, so the request stays the size it was measured for - at most PLAN_TRIES times; the answer
+    with the fewest problems among those of the right size, which the application cannot put right (measured: 18
+    slides for 3, its one problem the number, kept over 3 slides with two)."""
     messages = [{"role": "user", "content": first}]
     best = None
     for attempt in range(1, PLAN_TRIES + 1):
         text = await _ask(app, model, preset, messages, PLAN_TOKENS)
-        parsed, wrong = check(_json(text) or {})
+        parsed, wrong, sized = check(_json(text) or {})
         log.info("plan checked", extra={"step": stage, "attempt": attempt, "problemCount": len(wrong)})
-        if best is None or len(wrong) < best[0]:
-            best = (len(wrong), parsed)
+        if best is None or (not sized, len(wrong)) < best[0]:
+            best = ((not sized, len(wrong)), parsed)
         if not wrong:
             break
         again = "Correct these and answer with the whole JSON again:\n- " + "\n- ".join(wrong)
@@ -564,7 +631,7 @@ async def plan(app, model: dict, kind: str, wanted: int, intro: str, points: lis
     def frame_check(got):
         goals, gtopics, modules = _frame(got)
         wrong = frame_problems(goals, gtopics, modules, n_modules, n_goals, len(topics))
-        return (str(got.get("title") or ""), goals, gtopics, modules), wrong
+        return (str(got.get("title") or ""), goals, gtopics, modules), wrong, (len(goals), len(modules)) == (n_goals, n_modules)
 
     first = f"{intro}\nGive {n_goals} goals and make {n_modules} modules.\nThe topics:\n" + "\n".join(lines)
     deck_title, goals, gtopics, modules = await _asked(app, model, "slides_planner", first, frame_check, "frame")
@@ -583,6 +650,11 @@ async def plan(app, model: dict, kind: str, wanted: int, intro: str, points: lis
         taken = {r - 1 for slides in planned for s in slides for r in s["refs"]}  # an earlier module's key points
         order = [t for t in topics if t in names and any((p.get("topic") or title) == t and i not in taken
                                                          for i, p in enumerate(points))]  # its topics, in reading order
+        # a topic an earlier module has a slide on is that module's, unless this module has no other (measured: a topic
+        # of two goals in two modules, the second shown its other key points, made a second slide on it 4 times in 4;
+        # not shown them, 0 in 4)
+        taught = {points[i].get("topic") or title for i in taken}
+        order = [t for t in order if t not in taught] or order
         mine = [i for t in order for i, p in enumerate(points) if (p.get("topic") or title) == t and i not in taken]
         want = min(share[m - 1], len(mine))
         if not mine or not want:
@@ -592,12 +664,15 @@ async def plan(app, model: dict, kind: str, wanted: int, intro: str, points: lis
         # one each (measured: two documents in one goal, one slide drew on both - CH Jovem with works and construction
         # - and CH Jovem's key facts did not fit)
         sizes = [sum(1 for i in mine if (points[i].get("topic") or title) == t) for t in order]
-        per = shares(want, len(order), sizes) if len(order) > 1 and want >= len(order) else None
+        # each topic one slide at least; the rest where the content needs them (measured: shared exactly in proportion,
+        # a process's document had two slides - the second, its leftover details, repeated the phases under another
+        # title)
+        per = [1] * len(order) if len(order) > 1 and want >= len(order) else None
         of = {k: order.index(points[i].get("topic") or title) for k, i in enumerate(mine, start=1)}  # P number -> topic
         listed, k = [], 1
         for n, t in enumerate(order):
             if per is not None:
-                listed.append(f"Topic «{t}» - {per[n]} slide{'s' if per[n] > 1 else ''}:")
+                listed.append(f"Topic «{t}» - at least 1 slide:")
             for i in mine[k - 1 : k - 1 + sizes[n]]:
                 listed.append(f"P{k}. {points[i]['point']} ({points[i].get('where') or title})")
                 k += 1
@@ -612,12 +687,17 @@ async def plan(app, model: dict, kind: str, wanted: int, intro: str, points: lis
         ask = (f"{slides_intro}\n" + "\n".join(goal_lines)
                + ("\nThe slides of the modules before this one (do not teach their subjects again):\n" + "\n".join(before)
                   if before else "")
-               + f"\nThis module: «{module['title']}» - it serves goals {', '.join(map(str, module['goals']))} - {want} "
-               f"slides.\nIts key points:\n" + "\n".join(listed))
+               # its goals and its number of slides said apart (measured: "it serves goals 1 - 2 slides" read as goals
+               # 1 to 2 and no number: 10 slides for 2, slides for goals it does not serve)
+               + f"\nThis module: «{module['title']}». The goals it serves: {', '.join(map(str, module['goals']))}. Its "
+               f"number of slides: {want}.\nIts key points:\n" + "\n".join(listed))
 
-        def check(got, module=module, want=want, k=len(mine), per=per, of=of, order=order):
+        texts = [points[i]["point"] for i in mine]
+
+        def check(got, module=module, want=want, k=len(mine), per=per, of=of, order=order, texts=texts):
             slides = _content(got)
-            return slides, problems(module, slides, want, k) + topic_problems(slides, per, of, order)
+            wrong = problems(module, slides, want, k) + topic_problems(slides, per, of, order) + series_problems(slides, texts)
+            return slides, wrong, len(slides) == want
 
         local = _repair(await _asked(app, model, "slides_storyboard", ask, check, f"module {m}"), len(mine))
         # a slide about the module itself, still there after the tries, left out: the module's opening slide says its
@@ -694,7 +774,7 @@ async def write(app, model: dict, title: str, lang: str, kind: str, goals: list[
                 break
             if s["role"] == "questions" and asked:  # (measured: seven questions for three goals; statements, not questions)
                 ask += f"\nExactly {len(goals)} questions, each ending with \"?\": one for each goal, in the goals' order."
-        bullets = [plain(" ".join(str(x).split())) for x in got.get("points") or [] if str(x).strip()]
+        bullets = bullets_of(got.get("points"))
         notes = plain(str(got.get("notes") or "").strip())
         if s["role"] == "objectives":
             bullets = list(goals)
@@ -739,10 +819,10 @@ async def draft(app, model: dict, email: str, pid: str, source: dict, *, kind: s
     parts = await asyncio.to_thread(_parts, lines, count, PART_TOKENS, [p["document"] for p in passages])
     if len(parts) > MAX_PARTS:
         raise SourceTooLarge(f"{len(passages)} passages, {len(parts)} parts of {PART_TOKENS} tokens (at most {MAX_PARTS})")
-    by_section = len({p["document"] for p in passages}) < 3
+    sectioned = sectioned_documents(passages)
     named, at = [], 0  # each part's topics, in order
     for part in parts:
-        named.append(list(dict.fromkeys(topic_of(p, by_section) for p in passages[at : at + len(part)])))
+        named.append(list(dict.fromkeys(topic_of(p, p["document"] in sectioned) for p in passages[at : at + len(part)])))
         at += len(part)
     lang = "European Portuguese (Portugal: diapositivo, ecrã; a training is a formação)" if language == "pt" else "English"
     points = await _points(app, model, title, parts, progress, "reading", named, lang)
@@ -755,7 +835,7 @@ async def draft(app, model: dict, email: str, pid: str, source: dict, *, kind: s
     # with what is wrong in it, and the goals and module the second step is given
     prompt = max(count(llm_prompt("slides_planner")), count(llm_prompt("slides_storyboard")))
     room = app.models.window(model) - 2 * PLAN_TOKENS - prompt - count(intro) - 1536
-    rounds, every = 0, list(dict.fromkeys(topic_of(p, by_section) for p in passages))
+    rounds, every = 0, list(dict.fromkeys(topic_of(p, p["document"] in sectioned) for p in passages))
     while True:
         listed = [f"  - {x['point']}" for x in points] + [f"T{n}. {d}" for n, d in enumerate(topics_of(points, title), 1)]
         if count("\n".join(listed)) <= room or rounds >= 3 or len(points) < 2:
@@ -767,6 +847,8 @@ async def draft(app, model: dict, email: str, pid: str, source: dict, *, kind: s
         chunks = _parts(plain, count)
         points = await _points(app, model, f"key points of {title}", chunks, progress, "condensing", [every] * len(chunks), lang)
         log.info("points condensed", extra={"round": rounds, "pointCount": len(points)})
+    document_of = {topic_of(p, p["document"] in sectioned)[0]: p["document"] for p in passages}
+    points = [{**x, "document": document_of.get(x.get("topic") or "", x.get("topic"))} for x in points]
     points = await _without_repeats(app, points)
     # a content slide needs a key point of its own: a source with fewer points than content slides gets fewer slides,
     # never one point spread over several (measured: 3 points, 5 slides asked: the storyboard could not hold both rules)

@@ -68,7 +68,7 @@ PRESETS = {
     # then each slide by the Writer
     "slides_points": (
         "points.md",
-        {"max_tokens": 1500, "temperature": 0.1, "chat_template_kwargs": {"enable_thinking": False}},
+        {"max_tokens": 2400, "temperature": 0.1, "chat_template_kwargs": {"enable_thinking": False}},
     ),
     # the Planner and the Writer think before they answer (measured on the same requests, thinking off / on: a slide
     # about the module itself 6 of 6 / 1 of 6; one question a goal 0 of 5 / 5 of 5; a summary's takeaways the goals said

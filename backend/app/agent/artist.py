@@ -112,6 +112,15 @@ def checked(design: dict | None, slide: dict) -> dict:
         # said only "o processo tem 7 fases" and what happens in phase 6)
         log.info("a diagram showed steps not in the slide: the list")
         return fallback
+    if design["form"] == "diagram":
+        # every point of the slide in a step, but one that introduces them (looked at, in 4 decks of 22: a diagram of the
+        # four steps one point names, the tranches, the documents and the licence of the other three nowhere on the
+        # slide; "Epic, Feature, PBI, Task" for a slide whose DoR and DoD points were left out)
+        named = {w for node in design["diagram"]["nodes"] for w in _words(node)}
+        bare = [p for p in slide.get("points") or [] if not named & set(_words(p))]
+        if len(bare) > 1:
+            log.info("a diagram left points out: the list", extra={"count": len(bare)})
+            return fallback
     said = _figures(text)
     for text in _numbers_in(design):
         shown = _figures(_value_text(text)) if design["form"] == "chart" else _figures(text)

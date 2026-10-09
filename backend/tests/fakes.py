@@ -382,8 +382,8 @@ def _outline_answer(preset: str, content: str) -> dict:
         modules = [{"title": f"Tema {m}", "aim": f"Vai conhecer o tema {m}.", "goals": served(m)} for m in range(1, wanted + 1)]
         return {"title": "Apresentação gerada", "goals": goals, "modules": modules}
     head = next(x for x in lines if x.startswith("This module: "))
-    want = int(head.rsplit(" - ", 1)[1].split(" ")[0])
-    goals = [int(x.strip()) for x in head.split("serves goals ", 1)[1].split(" - ", 1)[0].split(",")]
+    want = int(head.split("Its number of slides: ", 1)[1].split(".", 1)[0])
+    goals = [int(x.strip()) for x in head.split("The goals it serves: ", 1)[1].split(".", 1)[0].split(",")]
     module = int(head.split("«Tema ", 1)[1].split("»", 1)[0]) if "«Tema " in head else 0
     per = 2 if count >= 2 * want else 1  # two key points a slide, as the real Planner gives (2 to 6), when there are enough
     slides = [{"title": f"Diapositivo {module}.{k + 1}", "goal": goals[k % len(goals)], "task": f"Mostrar o tema {k + 1}.",

@@ -113,7 +113,7 @@ async def _rewrite(app, model: dict, slide: dict, issues: list[dict], lang: str,
                + "\n".join(f"- {x}" for x in slide["_spare"])) if slide.get("_spare") else "")
            + f"\nWrite it again to fix that, with only what its points, its notes and those key points say. {rule}")  # fmt: skip
     got = _json(await _ask(app, model, "slides_writer", [{"role": "user", "content": ask}], 6000)) or {}
-    bullets = [outline.plain(" ".join(str(x).split())) for x in got.get("points") or [] if str(x).strip()]
+    bullets = outline.bullets_of(got.get("points"))
     if not bullets:
         return slide
     notes = str(got.get("notes") or "").strip()

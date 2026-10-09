@@ -165,6 +165,16 @@ def _body(sh) -> dict:
             pass
     nodes = [n for n in nodes if n is not None]
     out = {k: int(_first(nodes, "", k) or v) for k, v in DEFAULT_INS.items()}
+    # a rounded rectangle's text sits inside its corners: its text rectangle is inset by the corner's radius times
+    # 0.29289 on each side (DrawingML's roundRect; measured: "Processamento", 114.3 pt, in a node 121.4 pt wide inside
+    # its insets, broken by the renderer - inside its corners, 110.9 pt)
+    geom = sh._element.find(f".//{A}prstGeom")
+    if geom is not None and geom.get("prst") == "roundRect" and sh.width and sh.height:
+        gd = geom.find(f"{A}avLst/{A}gd")
+        adj = int(gd.get("fmla").split()[-1]) if gd is not None and (gd.get("fmla") or "").startswith("val ") else 16667
+        corner = int(min(sh.width, sh.height) * min(adj, 50000) / 100000 * 0.29289)
+        for k in DEFAULT_INS:
+            out[k] += corner
     out["anchor"] = _first(nodes, "", "anchor") or "t"
     out["wrap"] = _first(nodes, "", "wrap") or "square"
     out["grows"] = any(n.find(f"{A}spAutoFit") is not None for n in nodes)  # the box grows with its text
@@ -345,6 +355,37 @@ def _lines(pieces, room: float, wraps: bool, major: str, minor: str) -> tuple[in
                 word += _width(chunk, style, major, minor)
     place()
     return lines, broken
+
+
+def write_sizes(sh) -> None:
+    """The box's font scale written into its runs' sizes, the scale then 100%: what PowerPoint shows, every renderer
+    shows (measured: LibreOffice recomputes a shrink from the text's height alone - a node shrunk so "Processamento"
+    fits its width, its height holding two lines at full size, was drawn at full size and the word broken)."""
+    from lxml import etree
+
+    body = _body(sh)
+    scale = body["font_scale"]
+    if scale >= 1:
+        return
+    for p in sh.text_frame._txBody.findall(f"{A}p"):
+        ppr = p.find(f"{A}pPr")
+        level = int(ppr.get("lvl", 0)) if ppr is not None else 0
+        chain = ([ppr] if ppr is not None else []) + _chain(sh, level)
+        defaults = [c.find(f"{A}defRPr") for c in chain if c.find(f"{A}defRPr") is not None]
+        size = float(_first(defaults, "", "sz") or 1800) / 100
+        for r in [*p.findall(f"{A}r"), *p.findall(f"{A}fld")]:
+            rpr = r.find(f"{A}rPr")
+            if rpr is None:
+                rpr = etree.Element(f"{A}rPr")
+                r.insert(0, rpr)
+            own = float(rpr.get("sz")) / 100 if rpr.get("sz") else size
+            rpr.set("sz", str(round(own * scale * 100)))
+        end = p.find(f"{A}endParaRPr")
+        if end is not None:
+            end.set("sz", str(round((float(end.get("sz")) / 100 if end.get("sz") else size) * scale * 100)))
+    for fit in sh.text_frame._txBody.find(f"{A}bodyPr").findall(f"{A}normAutofit"):
+        fit.attrib.pop("fontScale", None)
+        fit.attrib.pop("lnSpcReduction", None)
 
 
 def overflows(sh, words: bool = True) -> bool | None:

@@ -788,6 +788,8 @@ def test_the_words_a_request_names_are_found_in_the_deck():
     answer = '{"intent": "x", "where": "Slide 6: body, left: HR: hr@example.com", "kind": "change", "groups": []}'
     assert router.where_text(answer) == "HR: hr@example.com" and router.where_slide(answer) == 6
     assert router.where_slide('{"where": "16"}') == 16 and router.where_slide('{"where": ""}') is None
+    # a new slide's place (measured: "just before the budget" given as the budget's number alone was added after it)
+    assert router.where_slide('{"where": "before slide 6"}') == 6 and router.where_slide('{"where": "After Slide 5"}') == 5
     paragraphs = [(6, 3, "[1]", "HR:  hr@example.com"), (6, 4, "[1]", "Your buddy"), (4, 9, "row 2, column 1", "Teams")]
     assert router.locate(paragraphs, "hr: HR@example.com") == [(6, 3, "[1]")]  # spaces and case aside
     assert router.locate(paragraphs, "teams") == [(4, 9, "row 2, column 1")]

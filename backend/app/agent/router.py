@@ -111,7 +111,9 @@ def prompt(request: str, deck: str, count: int = 0, ideas: str = "") -> str:
         f"The person's request:\n<request>{request}</request>\n\n"
         "First, intent: one sentence, in the request's language, saying what the person wants done or asks. "
         "Then where: the slide number; when part of a slide's text changes, also the one line of the deck that "
-        "changes, copied as it is; for a whole slide (add, delete, move, duplicate) the slide number alone. Then "
+        "changes, copied as it is; for a whole slide (delete, move, duplicate) the slide number alone; for a new slide, "
+        "where it goes: \"before slide N\" or \"after slide N\" (measured: \"just before the budget\" given as the "
+        "budget's number alone was added after it). Then "
         "choose the groups of tools that are needed:\n"
         f"{groups}\n\n"
         "How to tell them apart:\n"
@@ -278,6 +280,9 @@ def where_slide(text: str) -> int | None:
     except (ValueError, AttributeError):
         return None
     rest = where.strip().lower()
+    for word in ("before ", "after "):  # a new slide's place: the slide it goes next to
+        if rest.startswith(word):
+            rest = rest[len(word) :].lstrip()
     if rest.startswith("slide"):
         rest = rest[5:].lstrip()
     digits = ""

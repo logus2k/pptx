@@ -1721,6 +1721,14 @@ def fit_text(prs, slide_id: int, shape_id: int, deck_id=None) -> dict:
         while True:  # the scale written at every step: measured at it, not taken on trust
             fit.set("fontScale", str(round(scale * 100000)))
             if textfit.overflows(sh, words=words) is False:
+                if words and scale < 1:
+                    # made smaller for a word's width alone (its height fits at full size): the size written into its
+                    # runs, as every renderer then shows it (textfit.write_sizes)
+                    fit.set("fontScale", "100000")
+                    width_only = textfit.overflows(sh, words=False) is False
+                    fit.set("fontScale", str(round(scale * 100000)))
+                    if width_only:
+                        textfit.write_sizes(sh)
                 return {"slides": [s.slide_id], "scale": round(scale, 3)}
             if scale - 0.025 < floor - 1e-9:
                 break
@@ -2159,6 +2167,21 @@ def draw_diagram(
                 fit_text(prs, s.slide_id, sid_)
             except OpError:
                 pass
+    # the boxes' text at one size, the smallest any was fitted to, written into their runs (looked at: "Processamento"
+    # fitted to 15.3 pt between boxes of 18 and 17.1 pt), as a row's numbers are (_add_one)
+    from . import textfit
+
+    boxes = [get_shape(s, sid_) for sid_ in ids]
+    sizes = [textfit.smallest_size(sh) for sh in boxes]
+    if len(boxes) > 1 and all(sizes) and min(sizes) < max(sizes):
+        for sh, size in zip(boxes, sizes, strict=True):
+            if size > min(sizes):
+                body = sh.text_frame._txBody.find(qn("a:bodyPr"))
+                fit = body.find(qn("a:normAutofit"))
+                if fit is None:
+                    fit = etree.SubElement(body, qn("a:normAutofit"))
+                fit.set("fontScale", str(round(min(sizes) / size * textfit._body(sh)["font_scale"] * 100000)))
+                textfit.write_sizes(sh)
     example = _example_connector(prs, s, style)
     connectors = []
     for a, b in pairs:

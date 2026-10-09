@@ -1,6 +1,6 @@
 # Plan: images and visual elements in generated decks
 
-Status: **proposed, 2026-10-09**, approved in principle by the project owner ("I agree with all proposed actions"),
+Status: **approved 2026-10-09** (decisions in section 11) by the project owner ("I agree with all proposed actions"),
 to start once the current generation work is finished and tested. Nothing here is built yet.
 
 Source of the request: the project owner, 2026-10-09 - add images or other visual elements to slides when they add
@@ -184,14 +184,18 @@ As with the planner and the Critic: capture real calls, read them, replay, measu
 Each phase ends with `make check`, `make e2e`, `make a11y`, screenshots looked at, decisions recorded, and the
 measurements written in `docs/decisions.md`.
 
-## 11. Decisions needed from the owner
+## 11. Decisions (the owner, 2026-10-09)
 
-1. Approval for stock searches to leave the bank (and whether the bank's legal/brand team must approve), or the
-   organisation's own images only for now.
-2. Which providers, in what order, and who obtains the API keys.
-3. The default style for new projects (proposed: no images until B is approved; then sober).
-4. People in images: excluded in sober (proposed); allowed in balanced and creative?
-5. Whether an approved library exists or should be started (and who curates it).
+1. **Stock searches may leave the bank, opt-in per project** (off by default; the project's owner switches them on;
+   only a slide's subject is sent, never its figures or names).
+2. **All three providers** (Pixabay, Pexels, Unsplash), routed by the kind of image needed; **the owner obtains the
+   API keys** and puts them in `.env`.
+3. **Default style: no images until the pipeline is tested**, then reconsidered (proposed: sober).
+4. **People are allowed in every style** (the vision checks still refuse unsuitable scenes; the source of each image
+   is recorded).
+5. **No internal library now.** If the Design team already has one, it is integrated later rather than built.
+6. Image generation (IM-6) stays deferred.
+7. Order of work: the generated decks' remaining faults first, then this plan's phase A.
 
 ## 12. Risks
 
