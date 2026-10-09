@@ -1092,26 +1092,33 @@ def test_a_deck_reaches_nothing_outside_it_when_rendered():
 def test_text_alone_is_not_put_on_a_layout_made_for_a_table():
     ctt = (REPO / "templates" / "bancoctt.pptx").read_bytes()
     data, res = ops.apply(ctt, "add_slide", {"layout": "7_Tabela", "content": {"title": "Capa", "subtitle": "Outubro"}})
-    # the cover whose heading can be read: "2_Capa S/Imagem" is white on white (its red is each deck's own shapes)
-    assert res["instead_of"] == "7_Tabela" and res["layout"] == "1_Capa C/ Imagem"
-    assert read.outline(read.open_deck(data))[0]["layout"] == "1_Capa C/ Imagem"
+    # the cover with no photo place, its heading on the red the layout draws
+    assert res["instead_of"] == "7_Tabela" and res["layout"] == "2_Capa S/Imagem"
+    assert read.outline(read.open_deck(data))[0]["layout"] == "2_Capa S/Imagem"
 
 
 def test_a_generated_deck_has_a_readable_cover_and_each_slides_points_as_one_list():
     """Rendered and looked at (spec NL-12): on Banco CTT's template the cover went on "2_Capa S/Imagem", a white title on
     a white page, and each slide's points one in each of "3_Texto"'s boxes; on the default one, a list on "Vertical
-    Title and Text"."""
+    Title and Text". Then on "1_Capa C/ Imagem" without its photo, the logo's red "ctt" on the red page (the owner's
+    screenshot): the template's image-free cover now draws Banco CTT's own cover artwork (from DevAI v1.1's cover), its
+    heading on the red panel, read as such."""
     from app.docengine import layouts
 
     slides = [{"role": "content", "title": "Regime", "points": ["Primeiro ponto.", "Segundo ponto.", "Terceiro ponto."]},
               {"role": "section", "title": "Módulo", "points": ["O objetivo do módulo."]}]  # fmt: skip
     ctt = read.open_deck((REPO / "templates" / "bancoctt.pptx").read_bytes())
     W, H = ctt.slide_width, ctt.slide_height
-    assert [x.name for x in ctt.slide_layouts if not layouts.readable(x, W, H)] == ["2_Capa S/Imagem"]
+    assert [x.name for x in ctt.slide_layouts if not layouts.readable(x, W, H)] == []
+    bare = read.open_deck((REPO / "templates" / "bancoctt.pptx").read_bytes())
+    plain_cover = next(x for x in bare.slide_layouts if x.name == "2_Capa S/Imagem")
+    for sh in [sh for sh in plain_cover.shapes if not sh.is_placeholder]:
+        sh._element.getparent().remove(sh._element)
+    assert not layouts.readable(plain_cover, W, H)  # without the artwork under it: white on the white page
     made = ops.add_outline(ctt, slides, cover={"title": "Crédito Habitação Jovem", "subtitle": "Formação"})
     cover, content, section = (ctt.slides.get(i) for i in made["slides"])
-    assert cover.slide_layout.name == "1_Capa C/ Imagem"
-    assert not [ph for ph in cover.placeholders if ph.placeholder_format.type.name == "PICTURE"]  # its red shows
+    assert cover.slide_layout.name == "2_Capa S/Imagem"
+    assert len([sh for sh in cover.slide_layout.shapes if not sh.is_placeholder]) == 7  # its artwork, logo, note
     assert content.slide_layout.name == "12_Texto" and section.slide_layout.name == "2_Separador S/Imagem"
     texts = [ph.text_frame.text for ph in content.placeholders if ph.text_frame.text.strip()]
     assert texts == ["Regime", "Primeiro ponto.\nSegundo ponto.\nTerceiro ponto."]  # one list, in one box

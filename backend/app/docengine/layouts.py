@@ -210,4 +210,21 @@ def readable(layout, width: int, height: int) -> bool:
         if found is not None:
             bg = _fill(found, colours)
             break
+    # a shape of the layout drawn under the heading is its background there, the topmost one below it in the drawing
+    # order (Banco CTT's image-free cover: its red panel on the white page): a picture counts as readable, a shape by
+    # its fill's colour
+    if ph is not None:
+        cx, cy = (ph.left or 0) + (ph.width or 0) // 2, (ph.top or 0) + (ph.height or 0) // 2
+        for sh in layout.shapes:
+            if sh._element is ph._element:
+                break
+            if sh.is_placeholder or sh.width is None or sh.height is None:
+                continue
+            if sh.left <= cx <= sh.left + sh.width and sh.top <= cy <= sh.top + sh.height:
+                if sh._element.find(f".//{A}blip") is not None:
+                    bg = None
+                else:
+                    sp_pr = sh._element.find(f"{P}spPr")
+                    own = _fill(sp_pr, colours) if sp_pr is not None and sp_pr.find(f"{A}solidFill") is not None else None
+                    bg = own or bg
     return not (text and bg and text.upper() == bg.upper())
