@@ -45,7 +45,8 @@ e2e:
 	  && node m8admin.mjs 834 dark en && node m8admin.mjs 375 light en && node m8admin.mjs 375 dark pt \
 	  && node m9generate.mjs 1440 light en && node m9generate.mjs 1440 dark pt && node m9generate.mjs 834 light pt \
 	  && node m9generate.mjs 375 light pt \
-	  && node m10controls.mjs 1440 light en && node m10controls.mjs 1440 dark pt && node m10controls.mjs 834 light pt; \
+	  && node m10controls.mjs 1440 light en && node m10controls.mjs 1440 dark pt && node m10controls.mjs 834 light pt \
+	  && node m11artist.mjs 1440 light en && node m11artist.mjs 1440 dark pt && node m11artist.mjs 834 light pt; \
 	  status=$$?; docker rm -f slides-e2e >/dev/null; exit $$status
 
 a11y:

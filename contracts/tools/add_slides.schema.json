@@ -28,7 +28,8 @@
      },
      "subtitle": {
       "type": "string",
-      "maxLength": 300
+      "maxLength": 300,
+      "description": "A line that adds to the title; never the title again."
      },
      "points": {
       "type": "array",

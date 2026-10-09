@@ -464,6 +464,39 @@
      "Fonte"
     ]
    }
+  },
+  {
+   "id": "artist-ideas-in-chat",
+   "about": "The Artist at any time (the user, 2026-10-08): ideas for an uploaded deck's slide asked in the chat, told and nothing changed; the one chosen applied.",
+   "deck": {
+    "upload": "fixtures/decks/simple.pptx"
+   },
+   "turns": [
+    {
+     "say": "Dá-me ideias para apresentar o diapositivo 3 de forma mais visual",
+     "expect": {
+      "status": "done",
+      "slides": 3,
+      "changed": false,
+      "used": [
+       "ask_artist"
+      ]
+     }
+    },
+    {
+     "say": "Usa a primeira ideia",
+     "expect": {
+      "status": "done",
+      "slides": 3,
+      "changed": true,
+      "used": [
+       "redesign_slide"
+      ],
+      "no_empty_placeholders": true,
+      "no_overflow": true
+     }
+    }
+   ]
   }
  ]
 }

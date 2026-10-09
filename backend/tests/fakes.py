@@ -15,7 +15,10 @@ class FakeModels:
         self.script = list(script or [])
         self.summaries: list[str] = []
         self.points_answers: list[dict] = []  # slides_points (outline.py): queued answers, else made from the part
-        self.outline_answers: list[dict] = []  # slides_outline: queued answers, else made from the points
+        self.outline_answers: list[dict] = []  # slides_planner: queued answers, else planned from the key points
+        self.writer_asks: list[str] = []  # what slides_writer was sent, in order
+        self.critic_answers: list[dict] = []  # slides_critic: queued answers, else "good"
+        self.critic_asks: list[list] = []  # what slides_critic was sent (text and image parts)
         self.sent: list[list[dict]] = []
         self.offered: list[list[str]] = []  # the tool names offered with each call
         self._vision = vision
@@ -45,6 +48,13 @@ class FakeModels:
         return self._vision
 
     async def stream(self, model, preset, messages, tools, max_tokens=None):
+        if preset == "slides_artist":  # the Artist (agent/artist.py): a list unless a test scripted designs
+            self.artist_asked = [*getattr(self, "artist_asked", []), messages]
+            queue = getattr(self, "artist_answers", None)
+            answer = queue.pop(0) if queue else _artist_answer(messages[-1]["content"])
+            yield {"choices": [{"index": 0, "delta": {"content": json.dumps(answer, ensure_ascii=False)}, "finish_reason": None}]}
+            yield {"choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}]}
+            return
         if preset == "slides_titler":  # a title for points sent alone (tools._title_for): kept apart from the turn's calls
             self.titled = [*getattr(self, "titled", []), messages]
             queue = getattr(self, "titles", None)
@@ -77,9 +87,18 @@ class FakeModels:
             yield {"choices": [{"index": 0, "delta": {"content": json.dumps(answer)}, "finish_reason": None}]}
             yield {"choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}]}
             return
-        if preset in ("slides_points", "slides_outline"):
-            queue = self.points_answers if preset == "slides_points" else self.outline_answers
-            answer = queue.pop(0) if queue else _outline_answer(preset, messages[-1]["content"])
+        if preset == "slides_critic":
+            self.critic_asks.append(messages[-1]["content"])
+            answer = self.critic_answers.pop(0) if self.critic_answers else {"verdict": "good", "issues": []}
+            yield {"choices": [{"index": 0, "delta": {"content": json.dumps(answer, ensure_ascii=False)}, "finish_reason": None}]}
+            yield {"choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}]}
+            return
+        if preset in ("slides_points", "slides_planner", "slides_storyboard", "slides_writer"):
+            if preset == "slides_writer":
+                self.writer_asks.append(messages[-1]["content"])
+            queue = {"slides_points": self.points_answers, "slides_planner": self.outline_answers}.get(preset, [])
+            first = preset in ("slides_planner", "slides_storyboard")  # asked again: the request is the first message
+            answer = queue.pop(0) if queue else _outline_answer(preset, messages[0 if first else -1]["content"])
             yield {"choices": [{"index": 0, "delta": {"content": json.dumps(answer, ensure_ascii=False)}, "finish_reason": None}]}
             yield {"choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}]}
             return
@@ -325,8 +344,10 @@ class FakeImageGen:
 
 
 def _outline_answer(preset: str, content: str) -> dict:
-    """The fake's own answer to outline.py's two calls, from what it was sent: each "[where] text" line of a part is a
-    point (its first ten words); "Make N slides" with "- point (where)" lines is N slides of the kind named."""
+    """The fake's own answers to outline.py's calls, from what it was sent: each "[where] text" line of a part is a key
+    point (its first ten words); "Plan N slides" with "Pn. point (where)" lines is a storyboard of the kind named that
+    the application's checks accept (outline.problems); "Write slide n: role, «title»" is that slide written from the
+    lines it was given."""
     lines = content.splitlines()
     if preset == "slides_points":
         out = []
@@ -335,16 +356,52 @@ def _outline_answer(preset: str, content: str) -> dict:
                 where, text = line[1 : line.index("] ")], line[line.index("] ") + 2 :]
                 out.append({"point": " ".join(text.split()[:10]), "where": where})
         return {"points": out[:8]}
-    wanted = int(content.split("Make ", 1)[1].split(" ", 1)[0])
-    points = [x[2:].rsplit(" (", 1) for x in lines if x.startswith("- ")]
-    points = [(p[0], p[1].rstrip(")") if len(p) > 1 else "") for p in points] or [("Ponto", "")]
-    training = "A training" in content
-    roles = ["content"] * wanted
-    if training:
-        roles = ["objectives", "section"] + ["content"] * max(1, wanted - 5) + ["questions", "summary"]
-    slides = []
-    for n, role in enumerate(roles[:wanted]):
-        chosen = [points[(n * 3 + k) % len(points)] for k in range(3)]
-        slides.append({"role": role, "title": f"Diapositivo {n + 1}", "points": [c[0] for c in chosen],
-                       "notes": f"O formador explica o diapositivo {n + 1}.", "sources": sorted({c[1] for c in chosen if c[1]})})
-    return {"title": "Apresentação gerada", "slides": slides}
+    if preset == "slides_writer" and lines[0].endswith(".") and "Write this slide again" in content:  # the Critic's
+        now = lines[lines.index("Its points now:") + 1 : next(i for i, x in enumerate(lines) if x.startswith("Its notes"))]
+        return {"points": [x[2:] + " (escrito de novo)" for x in now], "notes": "O formador explica de novo."}
+    if preset == "slides_writer":
+        head = next(x for x in lines if x.startswith("Write slide "))
+        n = int(head.split()[2].rstrip(":"))
+        given = [x[2:].rsplit(" (", 1)[0] for x in lines if x.startswith("- ")]
+        if "questions" in head.split(":", 1)[1].split(",", 1)[0]:
+            given = [f"O que diz «{x.split(':', 1)[0]}»?" for x in given][:3]
+        return {"points": given or [f"Ponto do diapositivo {n}"], "notes": f"O formador explica o diapositivo {n}."}
+    count = sum(1 for x in lines if x.startswith("P") and ". " in x and x[1 : x.index(". ")].isdigit())
+    if preset == "slides_planner":
+        n_goals = int(content.split("Give ", 1)[1].split(" ", 1)[0])
+        wanted = int(content.split(" and make ", 1)[1].split(" ", 1)[0])
+        n_topics = sum(1 for x in lines if x.startswith("T") and ". " in x and x[1 : x.index(". ")].isdigit())
+        texts = ["Identificar o primeiro tema", "Explicar o segundo tema", "Aplicar o terceiro tema", "Rever o quarto tema",
+                 "Usar o quinto tema"]  # fmt: skip
+        goals = [{"goal": texts[g], "topics": [f"T{t}" for t in range(1, n_topics + 1) if (t - 1) % n_goals == g]}
+                 for g in range(n_goals)]  # fmt: skip
+
+        def served(m):  # every goal by one module
+            return [g for g in range(1, n_goals + 1) if (g - 1) % wanted == m - 1]
+
+        modules = [{"title": f"Tema {m}", "aim": f"Vai conhecer o tema {m}.", "goals": served(m)} for m in range(1, wanted + 1)]
+        return {"title": "Apresentação gerada", "goals": goals, "modules": modules}
+    head = next(x for x in lines if x.startswith("This module: "))
+    want = int(head.rsplit(" - ", 1)[1].split(" ")[0])
+    goals = [int(x.strip()) for x in head.split("serves goals ", 1)[1].split(" - ", 1)[0].split(",")]
+    module = int(head.split("«Tema ", 1)[1].split("»", 1)[0]) if "«Tema " in head else 0
+    per = 2 if count >= 2 * want else 1  # two key points a slide, as the real Planner gives (2 to 6), when there are enough
+    slides = [{"title": f"Diapositivo {module}.{k + 1}", "goal": goals[k % len(goals)], "task": f"Mostrar o tema {k + 1}.",
+               "points": [f"P{(per * k + j) % max(count, 1) + 1}" for j in range(per)]} for k in range(want)]  # fmt: skip
+    return {"slides": slides}
+
+
+def _artist_answer(ask: str) -> dict:
+    """The Artist's answer from the slide's own points (agent/artist._ask): a list; asked for other forms (ideas), two
+    columns, then a highlight - each made of the slide's words, so the application's checks hold."""
+    lines = ask.split("\n")
+    points = [x[2:] for x in lines if x.startswith("- ")]
+    avoid = next((x.split(":", 1)[1] for x in lines if x.startswith("Forms not to use:")), "")
+    if "bullets" not in avoid:
+        return {"form": "bullets", "points": points, "why": "Uma lista clara."}
+    half = max(1, len(points) // 2)
+    if "columns" not in avoid and len(points) >= 2:
+        return {"form": "columns", "why": "Dois grupos lado a lado.",
+                "columns": [{"heading": "Primeiro", "points": points[:half]}, {"heading": "Segundo", "points": points[half:]}]}
+    return {"form": "highlight", "why": "A mensagem principal.", "highlight": {"statement": (points or ["Destaque"])[0][:100]}}
+

@@ -401,7 +401,9 @@ def system_context(
             # an empty deck has no last slide (measured: told "after the last slide", the model sent after_slide_id 18,
             # the highest number in the layouts' names, 5 times in 5, and 17 once "18_Text" was removed; told the deck
             # is empty, it left the place out 5 in 5)
-            t.intent = t.intent.split(" (where: ")[0] + " (the deck is empty: the new slide is its first, slide 1)"
+            empty_note = " (the deck is empty: the new slide is its first, slide 1)"
+            if empty_note not in t.intent:  # once (measured: rebuilt each call, the note was there three times)
+                t.intent = t.intent.split(" (where: ")[0] + empty_note
         if t.changes and getattr(t, "done", None):  # the edits so far: done, not to be made again
             parts.append(
                 f"## Now\nThe person wants: {t.intent}{where}\nDone in this turn: {'; '.join(t.done)}.\nIf that is all the "
@@ -414,10 +416,15 @@ def system_context(
                 # product's conditions without searching 20 times in 20; told where facts come from, it searched 20/20
                 do = ("Do it now by calling your tools. Facts about the organisation's products, conditions, policies, "
                       "processes or figures come from the knowledge base: kb_search for them first and write from what it "
-                      f"finds; anything else, write yourself from the request (never filler). Then {SAY}.")
+                      "finds, in plain text in the passages' words (\"igual ou superior a 60%\", never LaTeX or Markdown); "
+                      "an index or agenda names the topics, a few words each, never what they say. What the request "
+                      "itself says, write from its words. A request that names no content "
+                      "(\"cria um slide\") gets the slide on its layout with nothing in it - add_slide with the layout "
+                      f"alone - never a title or points of your own. Then {SAY}.")
             else:
-                do = ("Do it now by calling your tools, writing the text yourself from the request and what you find "
-                      f"(never filler); then {SAY}.")
+                do = ("Do it now by calling your tools, writing the text from the request's words and what you find. "
+                      "A request that names no content (\"cria um slide\") gets the slide on its layout with nothing in "
+                      f"it - add_slide with the layout alone - never a title or points of your own. Then {SAY}.")
             parts.append(f"## Now\nThe person wants: {t.intent}{where}\n{do}")
         elif getattr(t, "kind", "") == "unclear":
             # without the router's intent (measured on the same call: with a long intent, ask_user 0 times in 10;

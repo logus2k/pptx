@@ -9,6 +9,7 @@ import { tts } from './tts.js';
 import { Vad } from './vad.js';
 
 const TOOL_LABELS = {
+  ask_artist: 'Asking the Artist for ideas', redesign_slide: 'Making the slide in another form',
   list_decks: 'Looking at the decks', list_templates: 'Looking at the templates', create_deck: 'Creating a deck',
   get_deck_outline: 'Reading the outline', get_slide: 'Reading a slide', render_slide: 'Looking at a slide',
   list_layouts: 'Looking at the layouts', update_text: 'Writing text', edit_paragraphs: 'Editing bullets', format_text: 'Formatting text', add_slide: 'Adding a slide',
@@ -147,7 +148,9 @@ function questionCard(q) {
 
 function planCard(p) {
   // a generated deck's plan (generate_deck): its outline opens in the generation's page, to be changed before the slides
-  const el = card('plan', html`<h3>Plan</h3><ol class="user-text">${p.steps.map((s) => html`<li>${s}</li>`)}</ol>
+  const el = card('plan', html`<h3>Plan</h3>
+    ${p.goals?.length ? html`<p class="muted">Goals</p><ol class="user-text">${p.goals.map((g) => html`<li>${g}</li>`)}</ol><p class="muted">Slides</p>` : ''}
+    <ol class="user-text">${p.steps.map((s) => html`<li>${s}</li>`)}</ol>
     <div class="row"><button type="button" class="primary" data-approve="1">Go ahead</button>
     ${p.generation_id ? html`<button type="button" class="secondary" data-outline>Edit the outline</button>` : ''}
     <button type="button" data-approve="0">Don't</button></div>`);

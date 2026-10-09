@@ -109,6 +109,13 @@ await p.keyboard.press('Enter');
 await p.waitForSelector('.jsPanel textarea', { timeout: 10000 }).then(() => audit(p, 'add-slide dialog')).catch(() => check(false, 'the add-slide dialog opened from the keyboard'));
 await p.keyboard.press('Escape');
 await p.waitForSelector('.jsPanel textarea', { state: 'detached', timeout: 5000 }).catch(() => {});
+// the Artist's ideas (artist-ideas.js), opened from the keyboard as well
+await p.locator('.strip-item[data-index="1"]').click();
+await p.locator('.editor-bar [data-action="ideas"]').focus();
+await p.keyboard.press('Enter');
+await p.waitForSelector('.artist-ideas input[name="idea"]', { timeout: 30000 }).then(() => audit(p, 'ideas dialog')).catch(() => check(false, 'the ideas dialog opened from the keyboard'));
+await p.keyboard.press('Escape');
+await p.waitForSelector('.artist-ideas', { state: 'detached', timeout: 5000 }).catch(() => {});
 if (!(await p.locator('.assistant textarea').isVisible())) {
   await p.locator('#menu-toggle').click();
   await p.locator('#menubar .menu-btn', { hasText: 'Assistente' }).click();

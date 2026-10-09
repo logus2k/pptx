@@ -137,6 +137,7 @@ export function buildDeck(view, { pid, did, onTitle, onChanged }) {
         <button type="button" data-action="undo" title="Undo the last accepted change" ${review || locked ? 'disabled' : ''}>Undo</button>
         <button type="button" data-action="redo" title="Redo" ${review || locked ? 'disabled' : ''}>Redo</button>
         <button type="button" data-action="add-slide" title="Add a slide after this one (also in the Slide menu)" ${review || locked ? 'disabled' : ''}>Add slide</button>
+        <button type="button" data-action="ideas" title="Ask the Artist for ideas for this slide (also in the Slide menu)" ${review || locked || !slide ? 'disabled' : ''}>Ideas</button>
         <button type="button" data-action="edit-text" title="Edit the selected text box (F2, or double-click it)" disabled>Edit text</button>
         <button type="button" data-action="delete-slide" ${review || !slide || locked ? 'disabled' : ''}>Delete slide</button>
         <button type="button" data-action="rename" ${off}>Rename</button>
@@ -286,7 +287,7 @@ export function buildDeck(view, { pid, did, onTitle, onChanged }) {
     const act = {
       'add-slide': ctl.addSlide, 'duplicate-slide': slide && ctl.duplicateSlide, 'change-layout': slide && ctl.changeLayout,
       'move-up': slide && (() => moveSlide(selected, selected - 1)), 'move-down': slide && (() => moveSlide(selected, selected + 1)),
-      'copy-slides': ctl.copySlides, 'change-template': ctl.changeTemplate, notes: slide && ctl.notes,
+      'copy-slides': ctl.copySlides, 'ask-artist': slide && ctl.askArtist, 'change-template': ctl.changeTemplate, notes: slide && ctl.notes,
       'insert-chart': slide && ctl.insertChart, 'insert-diagram': slide && ctl.diagram, 'insert-image': slide && ctl.insertImage,
       'edit-text': kind === 'text' && (() => editText(selectedShape().shape_id)), format: kind === 'text' && ctl.formatText,
       fit: kind === 'text' && ctl.fitText, 'alt-text': (kind === 'picture' || kind === 'chart') && ctl.altText,
@@ -382,6 +383,7 @@ export function buildDeck(view, { pid, did, onTitle, onChanged }) {
   function wire() {
     root.querySelector('[data-action="rename"]').addEventListener('click', rename);
     root.querySelector('[data-action="add-slide"]').addEventListener('click', () => command('add-slide'));
+    root.querySelector('[data-action="ideas"]').addEventListener('click', () => command('ask-artist'));
     root.querySelector('[data-action="notes"]')?.addEventListener('click', () => command('notes'));
     root.querySelector('[data-action="edit-text"]').addEventListener('click', () => editText([...selectedShapes][0]));
     root.querySelector('[data-action="delete-slide"]').addEventListener('click', deleteSlide);
@@ -491,7 +493,7 @@ export function buildDeck(view, { pid, did, onTitle, onChanged }) {
 }
 
 // the menus' commands and contexts, once: they act on the editor last shown
-const COMMANDS = ['add-slide', 'duplicate-slide', 'move-up', 'move-down', 'change-layout', 'copy-slides', 'change-template',
+const COMMANDS = ['ask-artist', 'add-slide', 'duplicate-slide', 'move-up', 'move-down', 'change-layout', 'copy-slides', 'change-template',
   'notes', 'insert-chart', 'insert-diagram', 'insert-image', 'edit-text', 'format', 'fit', 'alt-text', 'replace-image',
   'edit-chart', 'edit-table'];
 function registerMenus() {

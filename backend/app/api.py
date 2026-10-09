@@ -147,9 +147,14 @@ class ManualEdit(BaseModel):
 
 # the editing tools the editor's controls use, applied as the assistant's are (agent/tools.py), published at once as
 # a "manual" version that undo takes back
-MANUAL_TOOLS = ("add_slide", "duplicate_slide", "move_slide", "delete_slide", "change_layout", "add_chart", "edit_chart",
+MANUAL_TOOLS = ("redesign_slide", "add_slide", "duplicate_slide", "move_slide", "delete_slide", "change_layout", "add_chart",
+                "edit_chart",
                 "draw_diagram", "insert_image", "replace_image", "set_alt_text", "set_notes", "edit_table", "format_text",
                 "fit_text", "copy_slides", "change_template")  # fmt: skip
+
+
+class IdeasAsk(BaseModel):
+    wish: str = Field(default="", max_length=300)  # what the person wishes, in their words; empty: the Artist's own
 
 
 class GenerationSource(BaseModel):
@@ -184,6 +189,10 @@ class OutlineSlide(BaseModel):
     points: list[str] = Field(default_factory=list, max_length=30)
     notes: str = Field(default="", max_length=6000)
     sources: list[str] = Field(default_factory=list, max_length=20)
+    design: dict | None = None  # the Artist's proposal the person kept or chose (checked again: agent/artist.checked)
+    task: str = Field(default="", max_length=1000)  # the Planner's (agent/outline.plan): kept through the person's edits
+    goal: int = Field(default=0, ge=0, le=8)
+    review: dict | None = None  # the Critic's last word (agent/critic.py), kept through the person's edits
 
 
 class OutlineEdit(BaseModel):
@@ -375,6 +384,27 @@ def build(
             return found(generations.edit, pid, gid, user.email, body.title, [x.model_dump() for x in body.slides])
         except ValueError as e:
             raise generation_error(e) from None
+
+    @r.post("/projects/{pid}/generations/{gid}/slides/{index}/ideas")
+    async def outline_slide_ideas(
+        pid: str, gid: str, index: int, body: IdeasAsk, user: identity.User = Depends(identity.current_user)
+    ):
+        """The Artist's ideas for one slide of an outline under review: [design] (each in another form)."""
+        try:
+            return {"ideas": await afound(generations.ideas(pid, gid, user.email, index, body.wish))}
+        except ValueError as e:
+            raise generation_error(e) from None
+
+    @r.post("/projects/{pid}/decks/{did}/slides/{slide_id}/ideas")
+    async def deck_slide_ideas(
+        pid: str, did: str, slide_id: int, body: IdeasAsk, user: identity.User = Depends(identity.current_user)
+    ):
+        """The Artist's ideas for a slide of a deck (the editor's Ask the Artist): {slide, ideas: [design]}; the one the
+        person chooses is applied with POST /edits {op: "tool", tool: "redesign_slide", args: {slide_id, design}}."""
+        from .agent import artist
+
+        found(projects.get, pid, user.email, ("owner", "editor"))
+        return await afound(artist.ideas_for_deck_slide(generations.app, pid, did, slide_id, user.email, body.wish))
 
     @r.post("/projects/{pid}/generations/{gid}/build")
     async def build_generation(pid: str, gid: str, request: Request, user: identity.User = Depends(identity.current_user)):
@@ -734,6 +764,17 @@ def build(
             raise HTTPException(422, {"code": "bad", "message": f"{body.tool!r} is not an edit the editor makes."})
         executor = agent.executor
         t = Turn(pid=pid, cid="", email=email, conversation={})
+        if body.tool == "redesign_slide":  # the design the person chose among the Artist's ideas, checked again
+            from .agent import artist
+            from .docengine import layouts
+
+            sid = (body.args or {}).get("slide_id")
+            prs = read.open_deck(data)
+            s = prs.slides.get(int(sid)) if isinstance(sid, int) else None
+            if s is None or not isinstance((body.args or {}).get("design"), dict):
+                raise HTTPException(422, {"code": "bad", "message": "A redesign needs slide_id and design."})
+            slide = artist.slide_of(read.slide(prs, int(sid)), layouts.heading(s.slide_layout, prs.slide_width, prs.slide_height))
+            return {"slide_id": int(sid), "design": artist.checked(body.args["design"], slide)}
         try:
             args = executor.parse(body.tool, body.args or {})
             args.pop("deck_id", None)  # this deck: the route's

@@ -48,6 +48,10 @@ PRESETS = {
         "checker.md",
         {"max_tokens": 200, "temperature": 0, "chat_template_kwargs": {"enable_thinking": False}},
     ),
+    "slides_artist": (  # how one slide shows its content: its form (agent/artist.py)
+        "artist.md",
+        {"max_tokens": 1200, "temperature": 0.2, "chat_template_kwargs": {"enable_thinking": False}},
+    ),
     "slides_titler": (  # a slide's title when the model sent its points alone (agent/tools.py: _untitled)
         "titler.md",
         {"max_tokens": 100, "temperature": 0, "chat_template_kwargs": {"enable_thinking": False}},
@@ -60,14 +64,31 @@ PRESETS = {
         "summary.md",
         {"max_tokens": 1500, "temperature": 0.2, "top_p": 0.9, "chat_template_kwargs": {"enable_thinking": False}},
     ),
-    # a deck from a source (outline.py, spec NL-12): each part's key points, then the outline
+    # a deck from a source (outline.py, spec NL-12): each part's key points, then the Planner's goals and storyboard,
+    # then each slide by the Writer
     "slides_points": (
         "points.md",
         {"max_tokens": 1500, "temperature": 0.1, "chat_template_kwargs": {"enable_thinking": False}},
     ),
-    "slides_outline": (
-        "outline.md",
-        {"max_tokens": 6000, "temperature": 0.2, "top_p": 0.9, "chat_template_kwargs": {"enable_thinking": False}},
+    # the Planner and the Writer think before they answer (measured on the same requests, thinking off / on: a slide
+    # about the module itself 6 of 6 / 1 of 6; one question a goal 0 of 5 / 5 of 5; a summary's takeaways the goals said
+    # again 4 of 4 / facts 4 of 4); their answers then begin with <think>...</think>, which the readers leave out
+    "slides_planner": (
+        "planner.md",
+        {"max_tokens": 10000, "temperature": 0.2, "top_p": 0.9, "chat_template_kwargs": {"enable_thinking": True}},
+    ),
+    "slides_storyboard": (
+        "storyboard.md",
+        {"max_tokens": 10000, "temperature": 0.2, "top_p": 0.9, "chat_template_kwargs": {"enable_thinking": True}},
+    ),
+    # the Critic (critic.py): one rendered slide, judged as its audience sees it
+    "slides_critic": (
+        "critic.md",
+        {"max_tokens": 900, "temperature": 0.2, "top_p": 0.9, "chat_template_kwargs": {"enable_thinking": False}},
+    ),
+    "slides_writer": (
+        "writer.md",
+        {"max_tokens": 6000, "temperature": 0.2, "top_p": 0.9, "chat_template_kwargs": {"enable_thinking": True}},
     ),
 }
 

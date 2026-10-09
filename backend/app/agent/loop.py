@@ -53,7 +53,8 @@ EXPENDABLE = (
     "draw_diagram", "add_slides", "duplicate_slide", "move_slide",
 )  # fmt: skip
 # tools that only read: a turn that called only these has changed nothing
-READS = {"get_slide", "get_deck_outline", "render_slide", "list_decks", "list_layouts", "list_templates", "kb_search",
+READS = {"ask_artist",
+         "get_slide", "get_deck_outline", "render_slide", "list_decks", "list_layouts", "list_templates", "kb_search",
          "kb_get", "kb_read_document", "kb_list_images", "search_project", "search_conversations", "draft_outline"}  # fmt: skip
 UNDONE_NUDGE = (
     "(A note from the application, not from the person.) The person asked for a change and nothing has changed yet: "
@@ -99,6 +100,9 @@ def _done(name: str, raw: str | dict, result: dict) -> str:
     # in an empty deck, dropped by the executor, came back as "add_slide on slide 18" and into the reply)
     if name == "build_generation":  # the generated deck, as its result says it
         return str(result.get("note") or "the generated deck was made").split(" The person reviews")[0]
+    if result.get("written_on"):  # add_slide written on the empty slide the request is about (measured: listed as
+        # "add_slide", the closing message said "a new slide, slide 2" of a one-slide deck, 8 runs in 8)
+        return f"the content written on slide {result['written_on']} (no slide added)"
     where = f" on slide {args['slide_id']}" if isinstance(args, dict) and "slide_id" in args else ""
     new = result.get("new_slide_ids")
     return f"{name}{where}" + (f", new slide ID {', '.join(map(str, new))}" if new else "")
@@ -312,6 +316,8 @@ class Agent:
             if t.kind == "unclear":  # too vague to act on: asking is the only right step (measured: offered the core,
                 # the model asked in its reply text, which is no question the person can answer in the panel)
                 t.tool_defs = [d for d in t.tool_defs if d["function"]["name"] == "ask_user"] or t.tool_defs
+            if t.kind == "ideas" or t.idea:
+                await self._artist_step(pid, t)
             try:
                 room, answer_tokens = await asyncio.to_thread(context.budget, self.app.models, model, t.tool_defs)
             except context.ModelTooSmall:
@@ -626,7 +632,9 @@ class Agent:
         """One streamed completion: its text (streamed to the page unless `show` is false) and its tool calls."""
         text = ""
         calls: dict[int, dict] = {}
-        async for chunk in self.app.models.stream(model, "slides_assistant", messages, tools or self.tool_defs, max_tokens):
+        # an empty list is no tools (the Artist's ideas, said: loop._artist_step), not every tool
+        offered = self.tool_defs if tools is None else tools
+        async for chunk in self.app.models.stream(model, "slides_assistant", messages, offered, max_tokens):
             delta = ((chunk.get("choices") or [{}])[0].get("delta")) or {}
             if delta.get("content"):
                 text += delta["content"]
@@ -663,6 +671,44 @@ class Agent:
             self.app.conversations.write(pid, conv)
             t.conversation = conv
         await self.emit("assistant_message", stored, t.cid)
+
+    async def _artist_step(self, pid: str, t: Turn) -> None:
+        """The Artist's ideas asked for, or the one chosen applied, by the application itself, as the router read the
+        request (kind "ideas"; "idea": n), the call and its result in the conversation as if the model had made it; the
+        model then says them (measured: offered ask_artist, the model wrote ideas of its own - "Ícones e Ilustrações" -
+        and called nothing, 3 runs in 3; told "use the first idea", it rewrote the slide with fill_slide, 2 in 2)."""
+        if t.idea:
+            kept = t.conversation.get("artist_ideas") or {}
+            name, args = "redesign_slide", {"slide_id": kept.get("slide_id"), "idea": t.idea}
+            if not kept.get("slide_id"):
+                return
+        else:
+            last = next((m for m in reversed(self.app.conversations.messages(pid, t.cid)) if m["role"] == "user"), {})
+            sid = t.focus or (last.get("selection") or {}).get("slide_id")  # the slide named, else the one selected
+            if sid is None:
+                # no slide named or selected: unclear, asked in the panel (measured: "Melhora isto." read as ideas, the
+                # model asked in its reply's words, which is no question the person can answer there - squad-11)
+                t.kind = "unclear"
+                t.tool_defs = [d for d in t.tool_defs if d["function"]["name"] == "ask_user"] or [
+                    d for d in await asyncio.to_thread(self._offered, t) if d["function"]["name"] == "ask_user"]
+                return
+            name, args = "ask_artist", {"slide_id": sid, "wish": (last.get("content") or "")[:300]}
+        call_id = f"artist-{uuid.uuid4().hex[:12]}"
+        call = {"id": call_id, "type": "function", "function": {"name": name, "arguments": json.dumps(args, ensure_ascii=False)}}
+        async with storage.lock(pid):
+            conv = self.app.conversations.get(pid, t.cid, t.email)
+            self.app.conversations.append(pid, conv, {"role": "assistant", "content": "", "tool_calls": [call]})
+            self.app.conversations.write(pid, conv)
+            t.conversation = conv
+        await self.emit("tool_progress", {"tool": name}, t.cid)
+        result = await self.executor.call(t, name, args)
+        await self._tool_result(pid, t, call_id, name, result)
+        if name == "ask_artist" and result.get("ok"):
+            t.kind, t.changes = "question", False  # the ideas said, nothing changed: no editing tool offered
+            t.tool_defs = []
+        elif name == "redesign_slide" and result.get("ok"):
+            t.done.append(_done(name, args, result))
+        log.info("the Artist's step", extra={"tool": name, "ok": bool(result.get("ok"))})
 
     async def _tool_result(self, pid: str, t: Turn, call_id: str, name: str, result: dict) -> None:
         async with storage.lock(pid):
@@ -726,7 +772,14 @@ class Agent:
                         selected = f"slide {o['index'] + 1}" + (f", {'; '.join(parts)}" if parts else "")
             except (NotFound, ToolError):
                 pass
-        request = router.prompt(last["content"], router.sketch(slides, selected), len(slides))
+        from . import artist
+
+        kept = t.conversation.get("artist_ideas") or {}
+        ideas = ""
+        if kept.get("ideas") and kept.get("slide_id") in order_ids:
+            n_ = order_ids.index(kept["slide_id"]) + 1
+            ideas = f"for slide {n_}:\n" + "\n".join(f"{i}. {artist.describe(d)}" for i, d in enumerate(kept["ideas"], 1))
+        request = router.prompt(last["content"], router.sketch(slides, selected), len(slides), ideas)
         # the whole deck when it fits (measured: 392 tokens for 8 slides, 5 075 for 200); a deck too large for the
         # window keeps in full the slides the reranker finds nearest the request, and the selected one
         room = self.app.models.window(model) - llm.PRESETS["slides_router"][1]["max_tokens"] - 512
@@ -734,7 +787,7 @@ class Agent:
             passages = [{"index": s["index"], "text": "\n".join([s["title"], *s["lines"]])} for s in slides]
             top, _ = await asyncio.to_thread(search.rank, self.app.reranker, last["content"], passages, 30)
             whole = {p["index"] for p in top} | ({picked_index} if picked_index is not None else set())
-            request = router.prompt(last["content"], router.sketch(slides, selected, whole), len(slides))
+            request = router.prompt(last["content"], router.sketch(slides, selected, whole), len(slides), ideas)
             log.info("the deck is too large for the router: the nearest slides in full", extra={"whole": len(whole)})
         messages = [{"role": "user", "content": request}]
         text = ""
@@ -752,6 +805,7 @@ class Agent:
             groups = groups | {"knowledge"}
         t.changes = t.kind == "change"
         t.groups = groups
+        t.idea = router.idea_of(text) if ideas else None
         n = router.where_slide(text)
         named = router.phrase_slide(router.unquoted(last["content"]), slides) if slides else None
         if named and named[0] != n and t.kind == "change":
@@ -994,7 +1048,13 @@ class Agent:
             if pr.get("stage") in ("reading", "condensing") and pr.get("total"):
                 detail = f"Reading part {min(pr['done'] + 1, pr['total'])} of {pr['total']}"
             elif pr.get("stage") == "planning":
-                detail = "Planning the slides"
+                detail = "Planning the goals and the storyboard"
+            elif pr.get("stage") == "writing" and pr.get("total"):
+                detail = f"Writing slide {min(pr['done'] + 1, pr['total'])} of {pr['total']}"
+            elif pr.get("stage") == "reviewing" and pr.get("total"):
+                detail = f"Reviewing slide {min(pr['done'] + 1, pr['total'])} of {pr['total']}"
+            elif pr.get("stage") == "designing" and pr.get("total"):
+                detail = f"Designing slide {min(pr['done'] + 1, pr['total'])} of {pr['total']}"
             else:
                 return
             await self.emit("tool_progress", {"tool": "generate_deck", "detail": detail}, t.cid)
@@ -1012,7 +1072,7 @@ class Agent:
             raise ToolError("NOT_GENERATED", record.get("error") or "The outline could not be made.", "Tell the person why.")
         out = record["outline"]
         steps = [f"Capa: «{out['title']}»"] + [f"{s['title']}" for s in out["slides"]]
-        plan = {"steps": steps, "generation_id": record["id"],
+        plan = {"steps": steps, "generation_id": record["id"], "goals": out.get("goals") or [],
                 "then": {"name": "build_generation", "arguments": {"generation_id": record["id"]}}}  # fmt: skip
         return {"plan": plan}
 

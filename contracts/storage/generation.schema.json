@@ -206,6 +206,72 @@
          "type": "string",
          "maxLength": 500
         }
+       },
+       "design": {
+        "type": "object",
+        "description": "How the slide shows its content: the Artist's proposal (storage/design.schema.json), checked by agent/artist.py"
+       },
+       "task": {
+        "type": "string",
+        "maxLength": 1000,
+        "description": "What the slide must achieve, as the Planner set it; the Writer and the Artist work to it"
+       },
+       "goal": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 8,
+        "description": "The number of the goal the slide serves (1 = the first); 0 for objectives, sections, questions and summary"
+       },
+       "review": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+         "verdict",
+         "issues"
+        ],
+        "description": "The Critic's last word on the slide as rendered (agent/critic.py): each issue what is wrong and how to fix it",
+        "properties": {
+         "verdict": {
+          "enum": [
+           "good",
+           "revise"
+          ]
+         },
+         "issues": {
+          "type": "array",
+          "maxItems": 20,
+          "items": {
+           "type": "object",
+           "additionalProperties": false,
+           "required": [
+            "kind",
+            "what",
+            "fix"
+           ],
+           "properties": {
+            "kind": {
+             "type": "string",
+             "maxLength": 40
+            },
+            "what": {
+             "type": "string",
+             "maxLength": 1000
+            },
+            "fix": {
+             "type": "string",
+             "maxLength": 1000
+            },
+            "severity": {
+             "enum": [
+              "must",
+              "could"
+             ],
+             "description": "must: the audience would misunderstand, strain or think it unfinished; could: a suggestion"
+            }
+           }
+          }
+         }
+        }
        }
       }
      }
@@ -227,6 +293,15 @@
     },
     "read": {
      "type": "object"
+    },
+    "goals": {
+     "type": "array",
+     "maxItems": 8,
+     "items": {
+      "type": "string",
+      "maxLength": 500
+     },
+     "description": "The Planner's goals: what the audience will know or be able to do at the end (agent/outline.plan)"
     }
    }
   },

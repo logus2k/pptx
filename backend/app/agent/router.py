@@ -20,7 +20,8 @@ GROUPS: dict[str, list[str]] = {
     "notes": ["set_notes"],
     "images": ["insert_image", "replace_image", "set_alt_text", "render_slide", "kb_list_images", "generate_image"],
     "structure": ["add_slide", "duplicate_slide", "delete_slide", "move_slide", "change_layout", "add_shape",
-                  "move_resize_shape", "delete_shape", "duplicate_shape", "connect_shapes", "add_slides"],
+                  "move_resize_shape", "delete_shape", "duplicate_shape", "connect_shapes", "add_slides", "ask_artist",
+                  "redesign_slide"],
     "decks": ["create_deck", "duplicate_deck", "copy_slides", "change_template", "list_templates", "generate_deck"],
     "knowledge": ["kb_search", "kb_read_document", "search_project"],
     "memory": ["remember", "search_conversations", "update_instructions"],
@@ -43,7 +44,7 @@ DESCRIPTIONS = {
     "or fix the alt text of an image, look at what an image shows.",
     "structure": "The deck's slides and shapes: add a new slide, duplicate, delete or move slides, change a slide's "
     "layout or number of columns, add, copy, move, resize or delete a shape or text box; a diagram's boxes and the "
-    "arrows between them.",
+    "arrows between them; ideas for how a slide shows its content, or showing it in another form (the Artist).",
     "decks": "Whole decks: create a new deck or presentation, copy a deck, copy or move slides between two decks, "
     "change a deck's template or look; make a whole presentation or a training from the knowledge base or a document.",
     "knowledge": "Facts from the organisation's documents: search the knowledge base or the project's reference "
@@ -101,10 +102,12 @@ def sketch(slides: list[dict], selected: str = "", whole: set[int] | None = None
     return "\n".join(out)
 
 
-def prompt(request: str, deck: str, count: int = 0) -> str:
+def prompt(request: str, deck: str, count: int = 0, ideas: str = "") -> str:
     groups = "\n".join(f"- {k}: {v}" for k, v in DESCRIPTIONS.items())
+    # the Artist's last ideas in this conversation, so a choice of one ("the second") is read as its number (loop._route)
+    shown = (f"The Artist's last ideas in this conversation, {ideas}\n\n" if ideas else "")
     return (
-        f"The open deck{f' ({count} slides)' if count else ''}:\n{deck or '(no deck open)'}\n\n"
+        f"The open deck{f' ({count} slides)' if count else ''}:\n{deck or '(no deck open)'}\n\n" + shown +
         f"The person's request:\n<request>{request}</request>\n\n"
         "First, intent: one sentence, in the request's language, saying what the person wants done or asks. "
         "Then where: the slide number; when part of a slide's text changes, also the one line of the deck that "
@@ -124,9 +127,13 @@ def prompt(request: str, deck: str, count: int = 0) -> str:
         "written from it onto slides also needs text or structure, and notes for the source.\n"
         '- "Here" and "this" mean what the person has selected.\n'
         "- kind: change (something must change: choose its groups), question (only an answer: no groups), unclear "
-        '(too vague to know what to change, like "change it": no groups).\n'
-        'Answer with JSON only: {"intent": "...", "where": "slide N: \\"the deck\'s words\\"", '
-        '"kind": "change|question|unclear", "groups": ["..."]}'
+        '(too vague to know what to change, like "change it": no groups), ideas (asks for ideas, proposals or another '
+        'way to show a slide - "more visual", "how could this look" - without choosing one: where is that slide, no '
+        "groups).\n"
+        + ('- When the person chooses one of the Artist\'s last ideas (by its number or its words), kind: change, and '
+           '"idea": its number.\n' if ideas else "")
+        + 'Answer with JSON only: {"intent": "...", "where": "slide N: \\"the deck\'s words\\"", '
+        '"kind": "change|question|unclear|ideas", "groups": ["..."]' + (', "idea": 0}' if ideas else "}")
     )
 
 
@@ -143,7 +150,7 @@ def parse(text: str) -> tuple[set[str] | None, str, str]:
     # measured: an intent naming the deck's words got the right shape 10 times in 10, without them 5
     if where and intent and answer.get("kind") == "change":
         intent = f"{intent} (where: {where})"
-    kind = answer.get("kind") if answer.get("kind") in ("change", "question", "unclear") else "change"
+    kind = answer.get("kind") if answer.get("kind") in ("change", "question", "unclear", "ideas") else "change"
     chosen = {g for g in groups if g in ALL} if isinstance(groups, list) else None
     if kind == "change" and not chosen:
         chosen = None  # a change with no group named: every tool, rather than none
@@ -252,6 +259,15 @@ def contained(paragraphs: list[tuple[int, int, str, str]], needle: str) -> list[
         if len(t) >= 12 and t.casefold() in have:
             out.append((n, sid, place, t))
     return out
+
+
+def idea_of(text: str) -> int | None:
+    """The number of the Artist's idea the answer says the person chose ("idea": 2), or None."""
+    try:
+        idea = json.loads(text[text.find("{") : text.rfind("}") + 1]).get("idea")
+    except (ValueError, AttributeError):
+        return None
+    return idea if isinstance(idea, int) and 1 <= idea <= 5 else None
 
 
 def where_slide(text: str) -> int | None:

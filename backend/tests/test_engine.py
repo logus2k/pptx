@@ -965,8 +965,8 @@ def test_text_is_measured_run_by_run_with_kerning_letter_spacing_and_its_letters
     bold = (12.0, face, True, False, 0.0)
     words = "uma frase com algumas palavras para medir"
     room = tf._width(words, plain, face, face) + 0.5
-    assert tf._lines([("Nota: ", *bold), (words, *plain)], room + tf._width("Nota: ", bold, face, face), True, face, face) == 1
-    assert tf._lines([("Nota: " + words, *bold)], room + tf._width("Nota: ", bold, face, face), True, face, face) == 2
+    assert tf._lines([("Nota: ", *bold), (words, *plain)], room + tf._width("Nota: ", bold, face, face), True, face, face)[0] == 1
+    assert tf._lines([("Nota: " + words, *bold)], room + tf._width("Nota: ", bold, face, face), True, face, face)[0] == 2
     tight = (12.0, face, False, False, -0.5)  # letter spacing (spc) counts on every character
     assert tf._width(words, tight, face, face) == pytest.approx(tf._width(words, plain, face, face) - 0.5 * len(words))
     assert tf.width_pt("AV", face, 40) < tf.width_pt("A", face, 40) + tf.width_pt("V", face, 40) - 1  # kerned (raqm)
@@ -1444,3 +1444,38 @@ def layouts_of(prs, lay):
     from app.docengine import layouts
 
     return layouts.placeholders(lay, prs.slide_width, prs.slide_height)
+
+
+def test_a_generated_slides_list_is_bulleted_at_the_templates_size():
+    """The user (2026-10-08): "add bullets and keep the font size" for generated decks' lists (Banco CTT's body text has
+    no bullets of its own)."""
+    ctt = read.open_deck((REPO / "templates" / "bancoctt.pptx").read_bytes())
+    made = ops.add_outline(ctt, [{"role": "content", "title": "Regime", "points": ["Primeiro.", "Segundo.", "Terceiro."]}])
+    s = ctt.slides.get(made["slides"][0])
+    body = next(ph for ph in s.placeholders if ph.text_frame.text.startswith("Primeiro"))
+    paras = body.text_frame._txBody.findall(qn_("a:p"))
+    assert len(paras) == 3
+    for p in paras:
+        ppr = p.find(qn_("a:pPr"))
+        tags = [etree.QName(c).localname for c in ppr]
+        assert ppr.find(qn_("a:buChar")).get("char") == "•" and "buNone" not in tags
+        assert tags.index("buChar") < tags.index("defRPr") if "defRPr" in tags else True  # schema order
+    data = ops.save(ctt)
+    assert read.open_deck(data).slides.get(made["slides"][0])  # it reopens
+
+
+def test_a_word_wider_than_its_box_is_fitted_not_broken():
+    """Looked at (a generated training's section dividers): "Complementos" and "Documentação" set as "Complemento" / "s"
+    in "2_Separador S/Imagem"'s narrow title; the box's height held the lines, so the text was never fitted."""
+    from app.docengine import textfit
+
+    ctt = read.open_deck((REPO / "templates" / "bancoctt.pptx").read_bytes())
+    sections = [{"role": "section", "title": "Casos Específicos e Complementos", "points": ["Abordar casos."]},
+                {"role": "section", "title": "Processo de Candidatura e Documentação", "points": ["Fases."]}]  # fmt: skip
+    made = ops.add_outline(ctt, sections)
+    for sid in made["slides"]:
+        s = ctt.slides.get(sid)
+        title = next(ph for ph in s.placeholders if ph.placeholder_format.idx == 0)
+        m = textfit.measure(title)
+        assert not m["broken"] and not textfit.overflows(title)
+        assert m["font_scale"] < 1  # fitted: made smaller so its longest word fits the line

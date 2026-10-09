@@ -77,7 +77,7 @@
   "message": { "to": "the conversation", "payload": { "$ref": "#/$defs/message" } },
   "tool_progress": { "to": "the conversation", "payload": { "type": "object", "properties": { "tool": { "type": "string" } }, "required": ["tool"] } },
   "question": { "to": "the conversation", "payload": { "type": "object", "properties": { "tool_call_id": { "type": "string" }, "question": { "type": "string" }, "options": { "type": "array", "items": { "type": "string" } } }, "required": ["tool_call_id", "question"] } },
-  "plan": { "to": "the conversation", "payload": { "type": "object", "properties": { "tool_call_id": { "type": "string" }, "steps": { "type": "array", "items": { "type": "string" } } }, "required": ["tool_call_id", "steps"] } },
+  "plan": { "to": "the conversation", "payload": { "type": "object", "properties": { "tool_call_id": { "type": "string" }, "steps": { "type": "array", "items": { "type": "string" } }, "generation_id": { "type": "string", "description": "A generated deck's outline (generate_deck): opened in the generation's page to be changed" }, "goals": { "type": "array", "items": { "type": "string" }, "description": "A generated deck's goals, as the Planner set them (agent/outline.plan)" } }, "required": ["tool_call_id", "steps"] } },
   "instructions_proposed": { "to": "the conversation", "payload": { "type": "object", "properties": { "tool_call_id": { "type": "string" }, "text": { "type": "string" }, "before": { "type": "string" } }, "required": ["tool_call_id", "text"] } },
   "instructions_changed": { "to": "the conversation", "payload": { "type": "object", "properties": { "accepted": { "type": "boolean" } } } },
   "proposal_updated": { "to": "the conversation", "payload": { "$ref": "#/$defs/proposal" } },

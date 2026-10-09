@@ -13,8 +13,8 @@ import asyncio
 import logging
 
 from .. import storage
-from ..agent import outline
-from ..docengine import ops, read
+from ..agent import artist, critic, outline
+from ..docengine import files, ops, read
 from ..storage import NotFound
 
 log = logging.getLogger("slides.generations")
@@ -25,6 +25,7 @@ class Generations:
     def __init__(self, app) -> None:
         self.app = app
         self._tasks: dict[str, asyncio.Task] = {}
+        self._vision: dict[str, bool] = {}  # a model's sight, tested once (llm.Models.vision)
 
     def _path(self, pid: str, gid: str):
         if not storage.is_id(gid):
@@ -92,6 +93,21 @@ class Generations:
             )  # fmt: skip
             if not got["slides"]:
                 raise outline.SourceEmpty("the outline came back empty")
+            # each slide's form, by the Artist (agent/artist.py): checked, a list when its proposal does not hold
+            goal = artist.goal_of(req["kind"], req.get("audience") or "", req.get("focus") or "", got.get("title") or "")
+            got["slides"] = await artist.design_outline(self.app, model, got["slides"], goal, progress, got.get("goals"))
+            # each slide judged as rendered, and revised while the Critic asks (agent/critic.py); a model that cannot
+            # see skips it, said in the log
+            if model["id"] not in self._vision:
+                self._vision[model["id"]] = await asyncio.to_thread(self.app.models.vision, model)
+            if self._vision[model["id"]]:
+                blank = await asyncio.to_thread(self._blank, pid, email, req)
+                lang = "European Portuguese (Portugal)" if (req.get("language") or "pt") == "pt" else "English"
+                got["slides"] = await critic.refine(self.app, model, blank, got["slides"], got.get("goals") or [], goal,
+                                                    lang, self.app.layout.renders(pid), progress, req["kind"])  # fmt: skip
+            else:
+                log.info("the model cannot see: the slides not reviewed")
+            got["slides"] = [{k: v for k, v in s.items() if k != "_spare"} for s in got["slides"]]  # the Critic's only
             record["outline"] = got
             record["status"] = "ready"
             log.info("outline ready", extra={"slideCount": len(got["slides"]), "kind": req["kind"]})
@@ -112,6 +128,15 @@ class Generations:
         if on_progress is not None:
             await on_progress(record)
 
+    def _blank(self, pid: str, email: str, req: dict) -> bytes:
+        """The deck the slides will go on, without slides: the target deck's, or the chosen (or the project's) template."""
+        target = req.get("target") or {"kind": "new"}
+        if target["kind"] == "deck":
+            _, data = self.app.decks.version_bytes(pid, target["deck_id"], email)
+            return files.without_slides(data)
+        template = target.get("template") or self.app.projects.get(pid, email)["settings"]["default_template"]
+        return files.without_slides(self.app.templates.bytes_of(pid, template))
+
     def edit(self, pid: str, gid: str, email: str, title: str, slides: list[dict]) -> dict:
         """The person's edits to the outline before the slides are made."""
         self.app.projects.get(pid, email, roles=WRITE_ROLES)
@@ -119,9 +144,32 @@ class Generations:
         if record["status"] != "ready":
             raise ValueError("Only an outline that is ready can be changed.")
         record["outline"]["title"] = " ".join(title.split()) or record["outline"]["title"]
-        record["outline"]["slides"] = slides
+        kept = []
+        for slide in slides:  # a design sent back is checked again (agent/artist.checked); none, the slide's list
+            slide = {k: v for k, v in slide.items() if v is not None}
+            if slide.get("design"):
+                slide["design"] = artist.checked(slide["design"], slide)
+            kept.append(slide)
+        record["outline"]["slides"] = kept
         self._write(pid, record)
         return record
+
+    async def ideas(self, pid: str, gid: str, email: str, index: int, wish: str = "") -> list[dict]:
+        """The Artist's ideas for one slide of an outline under review (the outline editor's Other ideas)."""
+        project = self.app.projects.get(pid, email, roles=WRITE_ROLES)
+        record = self.get(pid, gid, email)
+        if record["status"] != "ready":
+            raise ValueError("Only an outline that is ready can be changed.")
+        slides = record["outline"]["slides"]
+        if not 0 <= index < len(slides):
+            raise NotFound("slide")
+        model = await asyncio.to_thread(self.app.models.resolve, project["settings"]["model"])
+        req = record["request"]
+        goal = artist.goal_of(req.get("kind", ""), req.get("audience") or "", req.get("focus") or "", record["outline"]["title"])
+        goals, slide = record["outline"].get("goals") or [], slides[index]
+        if 1 <= (slide.get("goal") or 0) <= len(goals):  # its task and goal, as planned (agent/outline.plan)
+            slide = {**slide, "goal_text": goals[slide["goal"] - 1]}
+        return await artist.ideas(self.app, model, slide, 3, wish, goal)
 
     def notes_of(self, record: dict, item: dict) -> str:
         """What the presenter says, then where it comes from (spec KB-3: the sources in the notes)."""

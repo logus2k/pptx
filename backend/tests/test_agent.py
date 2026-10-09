@@ -1177,19 +1177,33 @@ def test_content_asked_for_the_empty_slide_the_request_is_about_goes_on_it(serve
         chat.decide(chat.last("proposal_updated")["id"], True)
         index = {"content": {"title": "Índice", "points": ["Oferta", "Fases do processo", "Servicing"]}}  # no layout
         fake_model.routes = [{"intent": "An index", "where": "1", "kind": "change", "groups": ["structure", "text"]}]
-        fake_model.script = [{"tools": [("add_slide", {**index, "after_slide_id": 1})]}, {"text": "Escrevi o índice."}]
+        # the same call sent again is refused (measured: it went on three new slides, the index twice in the deck)
+        again = ("add_slide", {**index, "after_slide_id": 1})
+        fake_model.script = [{"tools": [again]}, {"tools": [again]}, {"text": "Escrevi o índice."}]
         chat.send("Escreve um índice")
         chat.decide(chat.last("proposal_updated")["id"], True)
         from .test_kb import tool_results
 
-        note = tool_results(fake_model, "add_slide")[-1]["note"]
-        assert "had no text yet: the content was written on it" in note
+        assert tool_results(fake_model, "add_slide")[-1]["error"]["code"] == "ALREADY_MADE"
+        # said as what happened (measured: listed as "add_slide", the reply said "a new slide, slide 2", 8 runs in 8)
+        now = [m[0]["content"] for m in fake_model.sent if m[0]["role"] == "system" and "Done in this turn" in m[0]["content"]]
+        assert "Done in this turn: the content written on slide 1 (no slide added)" in now[-1]
+        note = tool_results(fake_model, "add_slide")[-2]["note"]
+        assert "slide 1, had no text yet: the content was written on it and no slide was added" in note
         prs = read.open_deck(deck_bytes(server, pid, did))
         assert len(prs.slides) == 1 and prs.slides[0].shapes.title.text == "Índice"
         fake_model.routes = [{"intent": "A slide", "kind": "change", "groups": ["structure", "text"]}]
         fake_model.script = [{"tools": [("add_slide", {"content": {"title": "X", "points": ["a" * 1200]}})]}, {"text": "?"}]
         chat.send("acrescenta um slide")
         assert tool_results(fake_model, "add_slide")[-1]["error"]["message"].startswith("Nothing was changed")
+        # a place past the deck's end is answered with the slides that exist and the way to the end (measured: "after
+        # slide 18" in a one-slide deck, told only "the deck has slides 1 to 1", was sent again unchanged, 2 runs in 8)
+        sid = prs.slides[0].slide_id
+        fake_model.script = [{"tools": [("add_slide", {**index, "after_slide_id": 18})]}, {"text": "?"}]
+        chat.send("acrescenta um slide")
+        error = tool_results(fake_model, "add_slide")[-1]["error"]
+        assert error["code"] == "SLIDE_NOT_FOUND" and "There is no slide 18" in error["message"]
+        assert f"Slide 1, the last, is ID {sid}." in error["hint"] and "leave after_slide_id out" in error["hint"]
     finally:
         chat.close()
 

@@ -1,0 +1,207 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "storage/design.schema.json",
+ "title": "How one slide presents its content: the Artist's proposal (agent/artist.py), a form and the content shaped for it. The application chooses the template's layout for the form and checks the content (ops.add_designed).",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "form"
+ ],
+ "properties": {
+  "form": {
+   "enum": [
+    "bullets",
+    "columns",
+    "figures",
+    "highlight",
+    "table",
+    "chart",
+    "diagram"
+   ],
+   "description": "bullets: a list; columns: 2 to 4 side by side, each a heading and its points; figures: 2 to 4 key numbers, each with its label; highlight: one statement or number, large, with a line under it; table: rows of cells; chart: categories and series of numbers; diagram: steps joined by arrows"
+  },
+  "points": {
+   "type": "array",
+   "maxItems": 12,
+   "items": {
+    "type": "string",
+    "maxLength": 400
+   }
+  },
+  "columns": {
+   "type": "array",
+   "minItems": 2,
+   "maxItems": 4,
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "heading"
+    ],
+    "properties": {
+     "heading": {
+      "type": "string",
+      "maxLength": 120
+     },
+     "points": {
+      "type": "array",
+      "maxItems": 6,
+      "items": {
+       "type": "string",
+       "maxLength": 300
+      }
+     }
+    }
+   }
+  },
+  "figures": {
+   "type": "array",
+   "minItems": 2,
+   "maxItems": 4,
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "value",
+     "label"
+    ],
+    "properties": {
+     "value": {
+      "type": "string",
+      "maxLength": 24
+     },
+     "label": {
+      "type": "string",
+      "maxLength": 160
+     }
+    }
+   }
+  },
+  "highlight": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "statement"
+   ],
+   "properties": {
+    "statement": {
+     "type": "string",
+     "maxLength": 120
+    },
+    "detail": {
+     "type": "string",
+     "maxLength": 300
+    }
+   }
+  },
+  "table": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "rows"
+   ],
+   "properties": {
+    "rows": {
+     "type": "array",
+     "minItems": 2,
+     "maxItems": 8,
+     "items": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 5,
+      "items": {
+       "type": "string",
+       "maxLength": 200
+      }
+     }
+    }
+   }
+  },
+  "chart": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "kind",
+    "categories",
+    "series"
+   ],
+   "properties": {
+    "kind": {
+     "enum": [
+      "column",
+      "bar",
+      "line",
+      "pie"
+     ]
+    },
+    "categories": {
+     "type": "array",
+     "minItems": 2,
+     "maxItems": 12,
+     "items": {
+      "type": "string",
+      "maxLength": 100
+     }
+    },
+    "series": {
+     "type": "array",
+     "minItems": 1,
+     "maxItems": 4,
+     "items": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+       "name",
+       "values"
+      ],
+      "properties": {
+       "name": {
+        "type": "string",
+        "maxLength": 100
+       },
+       "values": {
+        "type": "array",
+        "items": {
+         "type": "number"
+        }
+       }
+      }
+     }
+    },
+    "number_format": {
+     "type": "string",
+     "maxLength": 40
+    }
+   }
+  },
+  "diagram": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "nodes"
+   ],
+   "properties": {
+    "nodes": {
+     "type": "array",
+     "minItems": 2,
+     "maxItems": 8,
+     "items": {
+      "type": "string",
+      "maxLength": 120
+     }
+    },
+    "direction": {
+     "enum": [
+      "right",
+      "down"
+     ]
+    }
+   }
+  },
+  "why": {
+   "type": "string",
+   "maxLength": 300,
+   "description": "In a sentence, why this form suits the slide (shown to the person)"
+  }
+ }
+}

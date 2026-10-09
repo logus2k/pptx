@@ -19,7 +19,7 @@ from pptx.opc.constants import RELATIONSHIP_TARGET_MODE as RTM
 from pptx.opc.package import Part, _Relationship
 from pptx.opc.packuri import PackURI
 from pptx.oxml.ns import nsdecls, qn
-from pptx.util import Emu, Pt
+from pptx.util import Emu, Inches, Pt
 
 from . import read
 
@@ -226,6 +226,31 @@ def _paragraph_xml(para: dict, template_p):
     if end is not None:
         p.append(copy.deepcopy(end))
     return p
+
+
+def _bulleted(text_frame) -> None:
+    """Each paragraph a bullet ("•", a hanging indent), set on the paragraph itself so a body style without bullets (Banco
+    CTT's) does not hide them; its text size as it is (the user, 2026-10-08: "add bullets and keep the font size")."""
+    for p in text_frame._txBody.findall(qn("a:p")):
+        ppr = p.find(qn("a:pPr"))
+        if ppr is None:
+            ppr = etree.SubElement(p, qn("a:pPr"))
+            p.remove(ppr)
+            p.insert(0, ppr)
+        for old in list(ppr):
+            if old.tag in (qn("a:buNone"), qn("a:buChar"), qn("a:buAutoNum"), qn("a:buFont")):
+                ppr.remove(old)
+        ppr.set("marL", "285750")
+        ppr.set("indent", "-285750")
+        font = etree.Element(qn("a:buFont"), typeface="Arial")
+        char = etree.Element(qn("a:buChar"), char="•")
+        # in the schema's order: the bullet's font and character before the tab list, the run defaults, extensions
+        after = next((c for c in ppr if c.tag in (qn("a:tabLst"), qn("a:defRPr"), qn("a:extLst"))), None)
+        if after is None:
+            ppr.extend([font, char])
+        else:
+            after.addprevious(font)
+            after.addprevious(char)
 
 
 def _set_paragraphs(text_frame, paragraphs: list[dict]) -> None:
@@ -482,6 +507,117 @@ def _cover_subtitle(prs, lay, content: dict, first: bool) -> dict:
     return out
 
 
+LIST_PT = 24  # the largest a slide's list is set (the user, 2026-10-09: small text in a corner "will not be usable"; 24 pt
+# is what a projected training slide's body is set in; looked at: 20 pt, top-aligned, still left half of each slide empty)
+COLUMN_PT = 20  # the largest a column's or card's text is set
+
+
+def _grow(boxes: list, top_pt: int) -> int | None:
+    """Generated text set as large as fits, up to top_pt, never smaller than the template sets it; one size for all the
+    boxes (columns side by side read as one). Then the height left over spread between the paragraphs, up to a line
+    each, so a short list fills its place instead of sitting at its top. The size set, or None (left as it was)."""
+    from . import textfit
+
+    if not boxes or any(textfit.measure(b) is None or textfit.measure(b)["font_scale"] < 1 for b in boxes):
+        return None  # not measurable, or already shrunk to fit: nothing to grow
+    now = max(textfit.smallest_size(b) or 0 for b in boxes)
+    if not now or now >= top_pt:
+        return None
+    saved = [copy.deepcopy(b.text_frame._txBody) for b in boxes]
+
+    def size(pt: float) -> None:
+        for b in boxes:
+            for p in b.text_frame.paragraphs:
+                for r in p.runs:
+                    r.font.size = Pt(pt)
+
+    for pt in range(int(top_pt), int(now), -1):
+        size(pt)
+        if all(textfit.overflows(b) is False for b in boxes):
+            for share in (1.5, 1.0, 0.75, 0.5, 0.25):  # the room left, between the paragraphs
+                for b in boxes:
+                    for p in b.text_frame.paragraphs[1:]:
+                        p.space_before = Pt(round(pt * share, 1))
+                if all(textfit.overflows(b) is False for b in boxes):
+                    return pt
+            for b in boxes:
+                for p in b.text_frame.paragraphs[1:]:
+                    p.space_before = None
+            return pt
+    for b, old in zip(boxes, saved, strict=True):  # no larger size fits: as it was
+        b.text_frame._txBody.getparent().replace(b.text_frame._txBody, old)
+    return None
+
+
+def _centre(box) -> None:
+    """A text that fills less than two thirds of its place, set in the middle of it rather than at its top (looked at: a
+    four-point list at its place's top, the lower half of the slide empty)."""
+    from . import textfit
+
+    m = textfit.measure(box)
+    if m is None or m["anchor"] != "t" or m["extent"] > 2 / 3 * (m["box_h"] - (m["tIns"] + m["bIns"]) / textfit.EMU_PT):
+        return
+    body = box.text_frame._txBody.find(qn("a:bodyPr"))
+    body.set("anchor", "ctr")
+
+
+def _shape_columns(prs, on: dict, items: list[dict], used: int) -> None:
+    """Columns (a heading over its text, side by side) shaped to what they hold (looked at: Banco CTT's "4_Texto", two
+    or three short lines at the top of 4.7-inch outlined boxes, the cards mostly empty; "10_Texto", three columns in
+    four places, the last quarter empty, an inch of nothing between each heading and its text):
+    - fewer columns than places in the row: the columns used share the row's whole width, the gutter kept;
+    - a body far below its heading (more than the heading's height) comes up under it;
+    - each body as tall as the tallest text among them (equal cards), never taller than the layout made it;
+    - a column of several lines is a bulleted list (the user, 2026-10-08: "add bullets and keep the font size").
+    Only columns with their heading and a body anchored at the top: a box centred on a number (an agenda) keeps its
+    place."""
+    from . import textfit
+
+    cols = []
+    for item in items[:used]:
+        head, body = on.get(item["header"]), on.get(item["body"])
+        if head is None or body is None or not head.text_frame.text.strip() or not body.text_frame.text.strip():
+            return
+        if (textfit.measure(body) or {}).get("anchor", "t") != "t":
+            return
+        cols.append((head, body))
+    if len(cols) < 2:
+        return
+
+    def put(sh, left, top, width, height):  # all four set: a placeholder's own xfrm replaces its layout's whole
+        sh.left, sh.top, sh.width, sh.height = int(left), int(top), int(width), int(height)
+
+    row = sorted((on[i["header"]] for i in items if i["header"] in on and on[i["header"]].top == cols[0][0].top),
+                 key=lambda sh: sh.left)  # fmt: skip
+    if len(row) > used and len(row) >= 2:
+        gutter = max(row[1].left - (row[0].left + row[0].width), 0)
+        span = row[-1].left + row[-1].width - row[0].left
+        width = (span - gutter * (used - 1)) / used
+        for n, (head, body) in enumerate(sorted(cols, key=lambda c: c[0].left)):
+            left = row[0].left + n * (width + gutter)
+            put(head, left, head.top, width, head.height)
+            put(body, left, body.top, width, body.height)
+    for head, body in cols:
+        below = head.top + head.height
+        if body.top - below > head.height:
+            put(body, body.left, below + head.height // 5, body.width, body.height + body.top - below - head.height // 5)
+        if len(body.text_frame.paragraphs) > 1:
+            _bulleted(body.text_frame)
+    _grow([body for _, body in cols], COLUMN_PT)  # as large as the layout's cards hold, then the cards fitted to it
+    needs = []
+    for _, body in cols:
+        m = textfit.measure(body)
+        if m is None or m["broken"]:
+            return
+        needs.append((m["extent"] + (m["tIns"] + m["bIns"]) / textfit.EMU_PT) * textfit.EMU_PT)
+    tall = max(needs) + Inches(0.15)  # a line's breath under the text, inside the card
+    for _, body in cols:  # under their headings, where the template puts them (looked at: centred lower in the slide,
+        # the cards floated away from the title)
+        if tall < body.height:
+            put(body, body.left, body.top, body.width, tall)
+
+
+
 def _place_content(prs, s, content: dict) -> list[str]:
     """A slide's content put where its layout made a place for it (layouts.slots): the title in its heading, the
     subtitle under it, each point in a text box of its own with the box's column heading and number when the layout
@@ -501,6 +637,11 @@ def _place_content(prs, s, content: dict) -> list[str]:
         return {"runs": [{"text": text, **({"bold": True} if bold else {})}]}
 
     left_out = []
+    said = lambda key: " ".join(str(content.get(key) or "").split()).casefold()  # noqa: E731
+    if said("subtitle") == said("title"):
+        # a subtitle that is the title again is left out (measured: "Índice de Crédito à Habitação" sent as both, and
+        # the slide showed it twice)
+        content = {k: v for k, v in content.items() if k != "subtitle"}
     for key in ("title", "subtitle"):
         if content.get(key):
             idx = where["heading" if key == "title" else "subtitle"]
@@ -522,21 +663,30 @@ def _place_content(prs, s, content: dict) -> list[str]:
         )
     series = 1 < len(points) <= len(items) and _alike(lay, items[: len(points)], prs.slide_width, prs.slide_height)
     if points and 1 < len(items) and len(points) <= len(items) and not content.get("as_list") and series:
+        numbers = content.get("numbers") or []  # key figures: each value in its box's number place (ops.add_designed)
         for n, (point, item) in enumerate(zip(points, items, strict=False)):
             heading, text = _point_text(point)
+            body = [para(x) for x in text.split("\n") if x.strip()] if text else []  # a column's lines, each a paragraph
             if item["header"] is not None and item["header"] in on and heading:
                 put(item["header"], [para(heading)])
-                put(item["body"], [para(text)] if text else [para(heading)])
+                if body or not numbers:  # a key figure's label once, in its header (looked at: written twice)
+                    put(item["body"], body or [para(heading)])
             else:
-                put(item["body"], [p for p in (heading and para(heading, bold=bool(text)), text and para(text)) if p])
+                put(item["body"], [p for p in (heading and para(heading, bold=bool(text)), *body) if p])
             if item["number"] is not None and item["number"] in on:
-                put(item["number"], [para(f"{n + 1:02d}")])
+                put(item["number"], [para(numbers[n] if n < len(numbers) else f"{n + 1:02d}")])
+        _shape_columns(prs, on, items, len(points))
     elif points:
         lines = []
         for point in points:
             heading, text = _point_text(point)
             lines.append(para(f"{heading}: {text}" if heading and text else heading or text))
-        put(where["large"] if where["large"] in on else items[0]["body"], lines)
+        box = where["large"] if where["large"] in on else items[0]["body"]
+        put(box, lines)
+        if content.get("as_list"):  # a generated slide's list: bulleted
+            _bulleted(on[box].text_frame)
+        _grow([on[box]], LIST_PT)  # as large as its place holds (the user, 2026-10-09: small text in a corner is unusable)
+        _centre(on[box])
     # places left empty go; a title alone keeps the layout's main text box, to be filled (measured: an empty tag kept
     # on a title-only slide showed "Click to add Text" in the preview)
     keep = set() if points or not items else {where["large"] if where["large"] in on else items[0]["body"]}  # the roomiest
@@ -552,6 +702,20 @@ def _place_content(prs, s, content: dict) -> list[str]:
             ph._element.getparent().remove(ph._element)
     from . import textfit
 
+    # two filled text places that overlap: the upper ends where the lower begins, so a long text in it is fitted above
+    # the other's (measured: a divider layout's title box reaches 0.2 inch into its subtitle's; a four-line title ran
+    # into the subtitle's first line)
+    filled = [ph for ph in s.placeholders if ph.has_text_frame and ph.text_frame.text.strip() and ph.width and ph.height]
+    for up in filled:
+        for low in filled:
+            across = min(up.left + up.width, low.left + low.width) - max(up.left, low.left)
+            if low is not up and across > 0 and up.top < low.top < up.top + up.height:
+                # only when its text reaches into the other's box: a short text keeps its place (looked at: a key
+                # figure's box, trimmed though its one line was clear of its label, sat higher than its row's others)
+                m = textfit.measure(up)
+                gap = Inches(0.1)  # (looked at: a divider's long title touching its subtitle's first line)
+                if m is not None and up.top + m["bottom"] * textfit.EMU_PT > low.top - gap:
+                    up.left, up.top, up.width, up.height = up.left, up.top, up.width, low.top - gap - up.top
     for ph in list(s.placeholders):  # what was placed is fitted to its box, as fit_text does (measured: a title of
         # three words ran past the narrow 40 pt title of "1_Texto", and the model fitted the subtitle instead)
         if ph.has_text_frame and ph.text_frame.text.strip() and textfit.overflows(ph):
@@ -559,6 +723,18 @@ def _place_content(prs, s, content: dict) -> list[str]:
                 fit_text(prs, s.slide_id, ph.shape_id)
             except OpError:
                 pass  # too long even at 14 pt: the executor's self-check reports it
+    # a row's numbers (key figures, an agenda's) at one size: the smallest any of them was fitted to (looked at: "450 000
+    # €" fitted smaller than "35" and "100%" beside it, and higher in its box)
+    numbers = [on[i["number"]] for i in items if i["number"] is not None and i["number"] in on
+               and on[i["number"]]._element.getparent() is not None and on[i["number"]].text_frame.text.strip()]  # fmt: skip
+    scales = [(textfit.measure(ph) or {}).get("font_scale", 1.0) for ph in numbers]
+    if len(numbers) > 1 and min(scales) < max(scales):
+        for ph in numbers:
+            body = ph.text_frame._txBody.find(qn("a:bodyPr"))
+            for tag in ("a:spAutoFit", "a:noAutofit", "a:normAutofit"):
+                for x in body.findall(qn(tag)):
+                    body.remove(x)
+            etree.SubElement(body, qn("a:normAutofit")).set("fontScale", str(round(min(scales) * 100000)))
     return left_out
 
 
@@ -614,11 +790,12 @@ def _ids(res) -> list[int]:
 
 
 def _overflowing(prs, sid: int) -> bool:
-    """Does a text place of the slide still run past its box (after the fitting placement does)?"""
+    """Does a text place of the slide still run past its box (after the fitting placement does)? A word wider than its
+    box is not counted: another slide would not make it narrower."""
     from . import textfit
 
     s = prs.slides.get(sid)
-    return any(ph.has_text_frame and ph.text_frame.text.strip() and textfit.overflows(ph) for ph in s.placeholders)
+    return any(ph.has_text_frame and ph.text_frame.text.strip() and textfit.overflows(ph, words=False) for ph in s.placeholders)
 
 
 def _add_one(
@@ -688,9 +865,22 @@ def _draw_figure(prs, s, kind: str, figure: dict) -> dict:
     chart_place = "CHART" in kinds
     box = None
     if holders and not (kind == "chart" and chart_place):
-        big = max(holders, key=lambda ph: ph.width * ph.height)
+        # the area all the empty text places cover together: the layout's content under its title (looked at: drawn in
+        # the largest place alone, a seven-step diagram used the slide's upper half, the places under it left empty)
+        # (the layout's places: the slide's own empty ones were removed when its title was placed)
+        from . import layouts
+
         W, H = prs.slide_width, prs.slide_height
-        box = {"x": big.left / W, "y": big.top / H, "w": big.width / W, "h": big.height / H}
+        where = layouts.slots(s.slide_layout, W, H)
+        head = next((ph for ph in s.slide_layout.placeholders if ph.placeholder_format.idx == where["heading"]), None)
+        under = head.top + head.height if head is not None else 0
+        places = [ph for ph in s.slide_layout.placeholders if ph.placeholder_format.type is not None
+                  and ph.placeholder_format.type.name in ("BODY", "OBJECT") and ph.top >= under
+                  and ph.placeholder_format.idx not in (where["heading"], where["subtitle"])] or holders  # fmt: skip
+        left, top = min(ph.left for ph in places), min(ph.top for ph in places)
+        right = max(ph.left + ph.width for ph in places)
+        bottom = max(ph.top + ph.height for ph in places)
+        box = {"x": left / W, "y": top / H, "w": (right - left) / W, "h": (bottom - top) / H}
     if kind == "chart":
         got = add_chart(prs, s.slide_id, figure["kind"], figure["categories"], figure["series"],
                         number_format=figure.get("number_format"), box=box)  # fmt: skip
@@ -886,6 +1076,143 @@ def section_layout(prs):
     return _layout_for_content(prs, {"title": "-", "subtitle": "-"})
 
 
+def _form_layout(prs, form: str, n: int = 0):
+    """The template's layout for a design's form (agent/artist.py), else None (the caller falls back): figures, a layout
+    with n boxes alike each with a number place ("17_Text"); highlight, a heading of 48 pt or more over one text box at
+    most ("1_Highlight"); table, a heading and a table place and no text box ("3_Tabela")."""
+    from . import layouts
+
+    W, H = prs.slide_width, prs.slide_height
+    found = []
+    for lay in prs.slide_layouts:
+        ps = layouts.placeholders(lay, W, H)
+        roles = {x["role"] for x in ps}
+        where = layouts.slots(lay, W, H)
+        if where["heading"] is None or roles & {"picture", "chart", "diagram", "media"}:
+            continue
+        head = next(x for x in ps if x["role"] == "heading")
+        items = where["items"]
+        if form == "figures" and "table" not in roles and len(items) >= n and all(i["number"] is not None for i in items[:n]):
+            if _alike(lay, items[:n], W, H):
+                found.append((len(items) - n, lay))
+        elif form == "highlight" and "table" not in roles and head["size"] >= 48 and len(items) <= 1:
+            # (48 pt: Banco CTT's "1_Highlight" is 60; the default template's "Section Header", 40, set it small, in capitals)
+            # its heading readable on its background, a place for the line under it first (looked at: on "2_Capa S/Imagem",
+            # 48 pt and no text box, the statement was white on white)
+            if layouts.readable(lay, W, H):
+                found.append((0 if len(items) == 1 else 1, lay))
+        elif form == "table" and "table" in roles and not items:
+            found.append((0, lay))
+    return min(found, key=lambda x: x[0])[1] if found else None
+
+
+def _draw_table(prs, s, rows: list[list[str]]) -> int:
+    """A table on the slide: in its layout's table place when it has one (the template's own table style), else under its
+    title. The first row is the header. Returns the table's shape ID."""
+    from . import layouts
+
+    rows = [[str(c) for c in r] for r in rows]
+    cols = max(len(r) for r in rows)
+    rows = [r + [""] * (cols - len(r)) for r in rows]
+    place = next((ph for ph in s.placeholders if ph.placeholder_format.type is not None
+                  and ph.placeholder_format.type.name == "TABLE"), None)  # fmt: skip
+    if place is not None:
+        frame = place.insert_table(len(rows), cols)
+    else:
+        W, H = prs.slide_width, prs.slide_height
+        head = layouts.heading(s.slide_layout, W, H)
+        top = next((ph.top + ph.height for ph in s.placeholders if ph.placeholder_format.idx == head), int(H * 0.2))
+        frame = s.shapes.add_table(len(rows), cols, int(W * 0.06), int(top + H * 0.04), int(W * 0.88), int(H * 0.08) * len(rows))
+    table = frame.table
+    for r, row in enumerate(rows):
+        for c, text in enumerate(row):
+            table.cell(r, c).text = text
+    return frame.shape_id
+
+
+def add_designed(prs, item: dict, after_slide_id: int | None = None, position: int | None = None) -> list[int]:
+    """A slide made in the form its design gives (agent/artist.py; contracts/storage/design.schema.json): {title,
+    design: {form, ...}, points?}. The application chooses the layout for the form; a form the template has no layout
+    for falls back to the nearest one (figures as columns, highlight as a title over its line, table under the title).
+    Without a design (or a bullets one), the list as one bulleted text (list_layout). Returns the slides made."""
+    title = item.get("title") or ""
+    design = item.get("design") or {"form": "bullets", "points": item.get("points") or []}
+    form = design.get("form") or "bullets"
+    place = {"after_slide_id": after_slide_id, "position": position}
+
+    def made(got) -> list[int]:
+        return got["slides"] if isinstance(got, dict) else got
+
+    if form == "columns" and design.get("columns"):
+        cols = design["columns"]
+        points = [{"heading": c.get("heading") or "", "text": "\n".join(c.get("points") or [])} for c in cols]
+        lay = _best_layout(prs, len(points)) or _layout_for_content(prs, {"title": title, "points": points})
+        return made(add_slide(prs, lay.name, **place, content={"title": title, "points": points}))
+    if form == "figures" and design.get("figures"):
+        figs = design["figures"]
+        lay = _form_layout(prs, "figures", len(figs))
+        if lay is not None:
+            content = {"title": title, "points": [{"heading": f["label"]} for f in figs], "numbers": [f["value"] for f in figs]}
+            return made(add_slide(prs, lay.name, **place, content=content))
+        points = [{"heading": f["value"], "text": f["label"]} for f in figs]  # no number places: each figure a column
+        lay = _best_layout(prs, len(points)) or _layout_for_content(prs, {"title": title, "points": points})
+        return made(add_slide(prs, lay.name, **place, content={"title": title, "points": points}))
+    if form == "highlight" and design.get("highlight"):
+        h = design["highlight"]
+        lay = _form_layout(prs, "highlight")
+        if lay is not None:
+            content = {"title": h["statement"], **({"points": [h["detail"]]} if h.get("detail") else {})}
+        else:
+            # a large title over its subtitle (looked at: the default template's "Section Header" set the statement small,
+            # its line above it)
+            lay = cover_layout(prs) or section_layout(prs)
+            content = {"title": h["statement"], **({"subtitle": h["detail"]} if h.get("detail") else {})}
+        return made(add_slide(prs, lay.name, **place, content=content))
+    if form == "table" and design.get("table"):
+        lay = _form_layout(prs, "table") or _layout_for_content(prs, {"title": title})
+        ids = made(add_slide(prs, lay.name, **place, content={"title": title}))
+        s = prs.slides.get(ids[0])
+        for ph in list(s.placeholders):  # the text place the table goes under, left empty, goes
+            if ph.has_text_frame and not ph.text_frame.text.strip():
+                ph._element.getparent().remove(ph._element)
+        _draw_table(prs, s, design["table"]["rows"])
+        return ids
+    # a chart or a diagram in the widest text area (looked at: on "8_Texto"'s narrow column a diagram's boxes broke words)
+    wide = list_layout(prs) or _layout_for_content(prs, {"title": title})
+    if form == "chart" and design.get("chart"):
+        lay = wide
+        return made(add_slide(prs, lay.name, **place, content={"title": title, "chart": design["chart"]}))
+    if form == "diagram" and design.get("diagram"):
+        d = design["diagram"]
+        figure = {"nodes": [{"text": x} for x in d["nodes"]], "direction": d.get("direction") or "right"}
+        lay = wide
+        return made(add_slide(prs, lay.name, **place, content={"title": title, "diagram": figure}))
+    points = design.get("points") or item.get("points") or []
+    content = {"title": title, **({"points": points, "as_list": True} if points else {})}
+    lay = (list_layout(prs) if points else None) or _layout_for_content(prs, content)
+    return made(add_slide(prs, lay.name, **place, content=content))
+
+
+def redesign_slide(prs, slide_id: int, design: dict, deck_id=None) -> dict:
+    """A slide made again in another form (the Artist's proposal the person chose): at its place, with its title and its
+    notes; the old slide goes. Returns {slides: the new ones, removed}."""
+    from . import layouts
+
+    s = get_slide(prs, slide_id)
+    pos = list(prs.slides).index(s)
+    head = layouts.heading(s.slide_layout, prs.slide_width, prs.slide_height)
+    title = next((ph.text_frame.text.strip() for ph in s.placeholders
+                  if ph.placeholder_format.idx == head and ph.has_text_frame), "")  # fmt: skip
+    notes = s.notes_slide.notes_text_frame.text if s.has_notes_slide else ""
+    old = s.slide_id
+    ids = add_designed(prs, {"title": title, "design": design}, position=pos)
+    delete_slide(prs, old)
+    if notes.strip():
+        for sid in ids:
+            set_notes(prs, sid, notes)
+    return {"slides": ids, "new_slide_ids": ids, "removed": [old]}
+
+
 def add_outline(prs, slides: list[dict], cover: dict | None = None, after_slide_id: int | None = None, deck_id=None) -> dict:
     """A generated deck's slides (spec NL-12; domain/generations.py): a cover ({title, subtitle}), then each slide
     ({role, title, points, notes}) on the layout its role and content fit - a "section" on the template's divider,
@@ -905,10 +1232,12 @@ def add_outline(prs, slides: list[dict], cover: dict | None = None, after_slide_
             content = {"title": item["title"], **({"subtitle": item["points"][0]} if item.get("points") else {})}
             lay = section_layout(prs)
         else:
-            content = {"title": item["title"], **({"points": item["points"], "as_list": True} if item.get("points") else {})}
-            lay = (list_layout(prs) if item.get("points") else None) or _layout_for_content(prs, content)
-        got = add_slide(prs, lay.name, after_slide_id=after, content=content)
-        ids = got["slides"] if isinstance(got, dict) else got
+            lay = None  # its design's form chooses (add_designed; agent/artist.py)
+        if lay is not None:
+            got = add_slide(prs, lay.name, after_slide_id=after, content=content)
+            ids = got["slides"] if isinstance(got, dict) else got
+        else:
+            ids = add_designed(prs, item, after_slide_id=after)
         if item.get("notes"):
             for sid in ids:  # a slide continued on the next: its notes on each
                 set_notes(prs, sid, item["notes"])
@@ -1385,14 +1714,17 @@ def fit_text(prs, slide_id: int, shape_id: int, deck_id=None) -> dict:
     fit = etree.SubElement(body, qn("a:normAutofit"))
     smallest = textfit.smallest_size(sh) or MIN_BODY_PT
     floor = min(1.0, MIN_BODY_PT / smallest) if smallest > MIN_BODY_PT else 1.0
-    scale = 1.0
-    while True:  # the scale written at every step: measured at it, not taken on trust
-        fit.set("fontScale", str(round(scale * 100000)))
-        if textfit.overflows(sh) is False:
-            return {"slides": [s.slide_id], "scale": round(scale, 3)}
-        if scale - 0.025 < floor - 1e-9:
-            break
-        scale -= 0.025
+    # a word wider than the box at every size down to the floor: its height still fitted (measured: a 210-character
+    # string with no space left the list at full size, past its box, and spread over another slide)
+    for words in (True, False):
+        scale = 1.0
+        while True:  # the scale written at every step: measured at it, not taken on trust
+            fit.set("fontScale", str(round(scale * 100000)))
+            if textfit.overflows(sh, words=words) is False:
+                return {"slides": [s.slide_id], "scale": round(scale, 3)}
+            if scale - 0.025 < floor - 1e-9:
+                break
+            scale -= 0.025
     body.remove(fit)
     # not by shrinking (the 14 pt floor): the box grown down into free space, as PowerPoint's "resize shape to fit
     # text" (measured: an 11th item in a 12 pt list, refused shrinking, and the turn ended with it 49 pt too long)
@@ -1738,6 +2070,9 @@ def _ranks(n: int, edges: list[tuple[int, int]]) -> list[int]:
     return rank
 
 
+ROW_STEPS = 4  # the most steps of a chain in one row
+
+
 def draw_diagram(
     prs, slide_id: int, nodes: list[dict], edges: list[dict] | None = None, direction: str = "right",
     like_shape_id: int | None = None, box: dict | None = None, deck_id=None,
@@ -1765,11 +2100,18 @@ def draw_diagram(
     area = _box_emu(prs, box or {"x": 0.06, "y": 0.22, "w": 0.88, "h": 0.68})
     ax, ay, aw, ah = area
     across = max(len(p) for p in per)  # boxes side by side in the busiest step
+    # a chain of more than ROW_STEPS steps, left to right, goes on in rows (looked at: seven steps in one row, boxes
+    # so narrow that "Elegibilidade" and "Avaliação" broke mid-word)
+    rows = -(-steps // ROW_STEPS) if direction != "down" and across == 1 and steps > ROW_STEPS else 1
+    cols = -(-steps // rows)
     if direction == "down":
         cell_w, cell_h = aw / across, ah / steps
+    elif rows > 1:
+        cell_w, cell_h = aw / cols, ah / rows
     else:
         cell_w, cell_h = aw / steps, ah / across
-    bw, bh = int(min(cell_w * 0.7, W * 0.22)), int(min(cell_h * 0.6, H * 0.16))
+    # (looked at: two steps of a generated slide in boxes of 22% of the slide, their text crammed, the rest empty)
+    bw, bh = int(min(cell_w * (0.8 if rows > 1 else 0.7), W * 0.28)), int(min(cell_h * 0.6, H * 0.2))
     style = _box_style(prs, s, like_shape_id)
     ids = [0] * len(nodes)
     for r, members in enumerate(per):
@@ -1777,6 +2119,11 @@ def draw_diagram(
             if direction == "down":
                 cx = ax + (k + 0.5) * aw / len(members)
                 cy = ay + (r + 0.5) * cell_h
+            elif rows > 1:  # back and forth, so each arrow goes to the box beside or under it (looked at: rows all
+                # left to right, the arrow from a row's end to the next row's start crossed the boxes between)
+                col = r % cols if (r // cols) % 2 == 0 else cols - 1 - r % cols
+                cx = ax + (col + 0.5) * cell_w
+                cy = ay + (r // cols + 0.5) * cell_h
             else:
                 cx = ax + (r + 0.5) * cell_w
                 cy = ay + (k + 0.5) * ah / len(members)
@@ -2147,6 +2494,7 @@ def edit_table(prs, slide_id: int, shape_id: int, operations: list[dict], deck_i
 
 # ── the whole: apply, save, reopen ───────────────────────────────────
 OPERATIONS = {
+    "redesign_slide": redesign_slide,
     "update_text": update_text,
     "change_template": change_template,
     "copy_slides": copy_slides,

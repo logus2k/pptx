@@ -169,6 +169,13 @@
      }
     }
    ]
+  },
+  "artist_ideas": {
+   "type": [
+    "object",
+    "null"
+   ],
+   "description": "The Artist's last ideas in this conversation (tools ask_artist / redesign_slide): {deck_id, slide_id, ideas: [design]}, for the person to choose one by its number in a later turn"
   }
  }
 }

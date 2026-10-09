@@ -140,7 +140,7 @@ export function buildUsage(view) {
       <label class="field-box"><span>From</span><input type="date" data-field="since"></label>
       <label class="field-box"><span>To</span><input type="date" data-field="until"></label>
     </div>
-    <div class="data-table-wrap"><table class="data-table admin-table usage-table">
+    <div class="data-table-wrap" tabindex="0" role="region" aria-label="Usage"><table class="data-table admin-table usage-table">
       <thead><tr><th>Period</th>${COLUMNS.map(([, label]) => html`<th class="num">${label}</th>`)}</tr></thead>
       <tbody></tbody></table></div>
     <p class="muted admin-status" aria-live="polite"></p>`);
@@ -182,7 +182,7 @@ export function buildAuditLog(view) {
       <label class="field-box"><span>To</span><input type="date" data-field="until"></label>
       <button type="button" class="secondary" data-action="csv">Download CSV</button>
     </div>
-    <div class="data-table-wrap"><table class="data-table admin-table audit-table">
+    <div class="data-table-wrap" tabindex="0" role="region" aria-label="Audit log"><table class="data-table admin-table audit-table">
       <thead><tr><th>When</th><th>Who</th><th>What</th><th>Which data</th></tr></thead>
       <tbody></tbody></table></div>
     <p class="muted admin-status" aria-live="polite"></p>

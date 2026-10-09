@@ -200,7 +200,7 @@ def measure(sh) -> dict | None:
     body = _body(sh)
     major, minor = _theme_fonts(sh)
     width = sh.width / EMU_PT - (body["lIns"] + body["rIns"]) / EMU_PT
-    y, top_ink, bottom_ink, lines_total = 0.0, None, None, 0
+    y, top_ink, bottom_ink, lines_total, broken = 0.0, None, None, 0, False
     start = end = None  # the text's line boxes, first to last non-empty line: what "resize shape to fit text" holds
     paras = sh.text_frame._txBody.findall(f"{A}p")
     for i, p in enumerate(paras):
@@ -234,7 +234,8 @@ def measure(sh) -> dict | None:
         pitch = _spacing(line_spc, big) if line_spc is not None else PITCH * big
         indent = sum(int(_first(chain, "", k) or 0) for k in ("marL",)) / EMU_PT
         room = max(width - indent, 1.0)
-        n = _lines(pieces, room, body["wrap"] != "none", major, minor)
+        n, broken_word = _lines(pieces, room, body["wrap"] != "none", major, minor)
+        broken = broken or broken_word
         y += before
         if text.strip():
             first_top = y + TOP * big
@@ -257,7 +258,8 @@ def measure(sh) -> dict | None:
     elif body["anchor"] == "b":
         shift += room_h - y
     return {
-        "lines": lines_total, "top": shift + top_ink, "bottom": shift + bottom_ink, "extent": end - start, "box_h": box_h,
+        "lines": lines_total, "broken": broken, "top": shift + top_ink, "bottom": shift + bottom_ink,
+        "extent": end - start, "box_h": box_h,
         **body,
     }  # fmt: skip
 
@@ -307,14 +309,25 @@ def _width(text: str, style, major: str, minor: str) -> float:
     return (w if w is not None else len(text) * 0.5 * size) + spc * len(text)
 
 
-def _lines(pieces, room: float, wraps: bool, major: str, minor: str) -> int:
+WORD_ROOM = 0.95  # a word fits its line with this much of it to spare (measured: "Documentação", 120.7 pt on a 121.4 pt
+# line, was broken by LibreOffice, whose widths come out a little wider than these)
+
+
+def _lines(pieces, room: float, wraps: bool, major: str, minor: str) -> tuple[int, bool]:
     """How many lines a paragraph's runs take in `room` points, wrapped between words as PowerPoint does, each part
-    of a word measured in its own run's face, size, weight and letter spacing; a line break starts a line."""
+    of a word measured in its own run's face, size, weight and letter spacing; a line break starts a line. And whether a
+    word is wider than the line: then it is broken across lines (looked at: "Complementos" set as "Complemento" / "s" in
+    a section divider's narrow title, the box's height still holding it, so the text was not fitted)."""
     lines, used, word, gap = 1, 0.0, 0.0, 0.0  # the line so far, the word being read, the space before it
+    broken = False
 
     def place():
-        nonlocal lines, used
-        if not wraps or not used or used + gap + word <= room:
+        nonlocal lines, used, broken
+        if wraps and word > room * WORD_ROOM:  # a word wider than the line: broken over as many lines as it needs
+            broken = True
+            extra = int(word // room)
+            lines, used = lines + (1 if used else 0) + extra, word - extra * room
+        elif not wraps or not used or used + gap + word <= room:
             used = used + (gap if used else 0) + word
         else:
             lines, used = lines + 1, word
@@ -331,14 +344,18 @@ def _lines(pieces, room: float, wraps: bool, major: str, minor: str) -> int:
             if chunk:
                 word += _width(chunk, style, major, minor)
     place()
-    return lines
+    return lines, broken
 
 
-def overflows(sh) -> bool | None:
-    """Do the glyphs go past the box (beyond what a person sees)? None when it cannot be measured."""
+def overflows(sh, words: bool = True) -> bool | None:
+    """Do the glyphs go past the box (beyond what a person sees)? None when it cannot be measured. `words`: a word
+    wider than the box (broken across lines) counts, as a smaller size can fix it; a list spread over slides cannot
+    (measured: a 210-character string with no space sent a list over 6 slides instead of 4)."""
     m = measure(sh)
     if m is None:
         return None
+    if m["broken"] and words:
+        return True  # a word broken across lines is past the box's width, whatever its height
     if m["grows"]:
         return False  # the box grows with its text
     if m["shrinks"] and not m["scale_set"]:  # shrink-to-fit with no scale yet (PowerPoint sets one on opening):

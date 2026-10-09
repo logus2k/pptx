@@ -1,0 +1,32 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "tools/redesign_slide",
+ "title": "redesign_slide",
+ "description": "Make a slide again in another form, keeping its title, its text and its notes: the idea the person chose from ask_artist (idea), or what they ask for (wish, the Artist proposes it). Reviewed by the person as any change.",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "slide_id"
+ ],
+ "properties": {
+  "deck_id": {
+   "type": "string",
+   "description": "Left out: the active deck."
+  },
+  "slide_id": {
+   "type": "integer",
+   "description": "The slide: its number in the deck (1 = first) or its ID."
+  },
+  "idea": {
+   "type": "integer",
+   "minimum": 1,
+   "maximum": 5,
+   "description": "The number of the idea ask_artist gave for this slide."
+  },
+  "wish": {
+   "type": "string",
+   "maxLength": 300,
+   "description": "Instead of an idea: what the person asks for (\"as a diagram\", \"two columns\")."
+  }
+ }
+}

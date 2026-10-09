@@ -4,6 +4,7 @@
 // POST /edits as {op: "tool", tool, args} and checked against the same schema (contracts/tools); each makes a version
 // that Undo takes back. Reached from the Slide, Insert and Format menus (menu.json, as Cortex's commands are).
 import { api } from '../core/api.js';
+import { chooseIdea, FORM_TEXT } from './artist-ideas.js';
 
 function pickFile(accept) {   // as project.js and admin.js
   return new Promise((resolve) => {
@@ -230,10 +231,22 @@ export function controls(ed) {
     await ed.run('format_text', { slide_id: ed.slide().id, shape_id: sh.shape_id, style }, 'Text formatted.');
   }
 
+  // the Artist's ideas for the slide (agent/artist.py): one chosen, the slide made again in that form, its title and notes
+  // kept (ops.redesign_slide)
+  async function askArtist() {
+    const s = ed.slide();
+    const chosen = await chooseIdea({
+      fetchIdeas: async (wish) => (await api(`projects/${ed.pid}/decks/${ed.did}/slides/${s.id}/ideas`, { method: 'POST', json: { wish } })).ideas,
+    });
+    if (!chosen) return;
+    const got = await ed.run('redesign_slide', { slide_id: s.id, design: chosen }, `The slide is now shown as: ${FORM_TEXT[chosen.form] || chosen.form}.`);
+    if (got?.result?.slides?.length) ed.select(got.result.slides[0]);
+  }
+
   async function fitText() {
     await ed.run('fit_text', { slide_id: ed.slide().id, shape_id: ed.shape().shape_id }, 'Text fitted to its box.');
   }
 
   return { addSlide, duplicateSlide, changeLayout, copySlides, changeTemplate, notes, insertChart: () => chart(null),
-    editChart: () => chart(ed.shape()), diagram, insertImage, replaceImage, altText, editTable, formatText, fitText, textOf };
+    editChart: () => chart(ed.shape()), diagram, askArtist, insertImage, replaceImage, altText, editTable, formatText, fitText, textOf };
 }

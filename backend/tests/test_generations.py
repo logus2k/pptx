@@ -37,16 +37,18 @@ def test_a_corporate_deck_from_a_knowledge_base_topic_with_its_sources_in_the_no
     assert r.status_code == 201, r.text
     g = _ready(server, pid, r.json()["id"])
     assert g["status"] == "ready", g
-    assert [s["role"] for s in g["outline"]["slides"]] == ["content"] * 5
+    # the topic's source holds three key points: three slides, one each, not five with points repeated
+    assert [s["role"] for s in g["outline"]["slides"]] == ["content"] * 3
+    assert len(g["outline"]["goals"]) == 3 and all(s["task"] and s["goal"] for s in g["outline"]["slides"])
     # the whole document the topic's passages come from was read (outline.py: TOPIC_DOCUMENTS), each part asked once
     asked = [m[0]["content"] for m in fake_model.sent if m and "Part 1 of" in m[0]["content"]]
     assert asked and "Ficam excluídos danos" in asked[0]
-    plan = next(m[0]["content"] for m in fake_model.sent if m and m[0]["content"].startswith("Make 5 slides"))
+    plan = next(m[0]["content"] for m in fake_model.sent if m and "and make 2 modules." in m[0]["content"])  # the Planner
     assert "A corporate presentation for clientes" in plan and "European Portuguese" in plan
     built = requests.post(f"{server}/api/projects/{pid}/generations/{g['id']}/build", headers=h(), timeout=60)
     assert built.status_code == 200, built.text
     g = built.json()
-    assert g["status"] == "built" and len(g["slide_ids"]) == 6  # the cover and five
+    assert g["status"] == "built" and len(g["slide_ids"]) == 4  # the cover and three
     prs = read.open_deck(deck_bytes(server, pid, g["deck_id"]))
     cover = read.slide(prs, g["slide_ids"][0])
     texts = [p["runs"][0]["text"] for sh in cover["shapes"] for p in sh.get("paragraphs") or [] if p.get("runs")]
@@ -74,7 +76,7 @@ def test_a_training_from_a_project_document_into_an_existing_deck_after_its_outl
     g = _ready(server, pid, gid)
     roles = [s["role"] for s in g["outline"]["slides"]]
     assert roles[0] == "objectives" and "section" in roles and roles[-2:] == ["questions", "summary"]
-    plan = next(m[0]["content"] for m in fake_model.sent if m and m[0]["content"].startswith("Make 9 slides"))
+    plan = next(m[0]["content"] for m in fake_model.sent if m and "and make 2 modules." in m[0]["content"])
     assert "A training that a trainer will deliver" in plan
     # the person edits the outline: a title changed, a slide removed
     slides = g["outline"]["slides"]
@@ -139,8 +141,10 @@ def test_asked_in_the_chat_the_outline_is_the_plan_and_approved_the_deck_is_made
     try:
         assert chat.send("Cria uma formação sobre a garantia a partir da base de conhecimento")["status"] == "waiting"
         details = [d.get("detail") for n, d in chat.events if n == "tool_progress" and d.get("tool") == "generate_deck"]
-        assert "Reading part 1 of 1" in details and "Planning the slides" in details
+        assert "Reading part 1 of 1" in details and "Planning the goals and the storyboard" in details
+        assert "Writing slide 1 of 8" in details  # each slide written from its plan (agent/outline.write)
         plan = chat.last("plan")
+        assert plan["goals"] == ["Identificar o primeiro tema", "Explicar o segundo tema", "Aplicar o terceiro tema"]
         record = requests.get(f"{server}/api/projects/{pid}/generations/{plan['generation_id']}", headers=h(), timeout=10).json()
         assert plan["steps"] == ["Capa: «Apresentação gerada»"] + [x["title"] for x in record["outline"]["slides"]]
         fake_model.script = [{"text": "Fiz a formação."}]
@@ -152,7 +156,7 @@ def test_asked_in_the_chat_the_outline_is_the_plan_and_approved_the_deck_is_made
     conv = requests.get(f"{server}/api/projects/{pid}/conversations/{cid}", headers=h(), timeout=10).json()
     assert (conv.get("conversation") or conv)["active_deck"] == g["deck_id"]
     prs = read.open_deck(deck_bytes(server, pid, g["deck_id"]))
-    assert len(prs.slides) == len(plan["steps"]) and read.outline(prs)[1]["title"] == "Diapositivo 1"
+    assert len(prs.slides) == len(plan["steps"]) and read.outline(prs)[1]["title"] == "Objetivos da formação"
     assert read.outline(prs)[0]["layout"] == "Title Slide"  # the cover's layout, its title alone (no audience given)
 
 

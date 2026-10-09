@@ -6,10 +6,12 @@
 // added) before the slides are made.
 import { api } from '../core/api.js';
 import { html, raw, setHtml } from '../core/html.js';
+import { chooseIdea, FORM_TEXT, summary } from './artist-ideas.js';
 
 const ALERT_ICON = '<svg class="banner-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 20h20zM12 10v4M12 17h.01"/></svg>';
+const DESIGNED = ['content'];  // the roles the Artist gives a form (agent/artist.py: DESIGNED_ROLES)
 const ROLE_TEXT = { content: 'Slide', objectives: 'Objectives', section: 'Module', questions: 'Questions', summary: 'Summary' };
-const STAGE_TEXT = { reading: 'Reading the source', condensing: 'Condensing the points', planning: 'Planning the slides' };
+const STAGE_TEXT = { reading: 'Reading the source', condensing: 'Condensing the points', planning: 'Planning the goals and the storyboard' };
 const SIZES = { corporate: 8, training: 14 };
 
 function nameOf(t) { return t.name?.[window.uiLanguage()] || t.name?.en || t.id; }
@@ -122,7 +124,10 @@ export function buildGenerate(view, { pid, gid = null, openDeck, onStarted }) {
     if (record.status === 'reading') {
       const p = record.progress || {};
       const pct = p.total ? Math.round((100 * p.done) / p.total) : 0;
-      const what = p.stage === 'reading' && p.total ? `Reading part ${Math.min(p.done + 1, p.total)} of ${p.total}` : (STAGE_TEXT[p.stage] || 'Reading the source');
+      const what = p.stage === 'reading' && p.total ? `Reading part ${Math.min(p.done + 1, p.total)} of ${p.total}`
+        : p.stage === 'writing' && p.total ? `Writing slide ${Math.min(p.done + 1, p.total)} of ${p.total}`
+        : p.stage === 'reviewing' && p.total ? `Reviewing slide ${Math.min(p.done + 1, p.total)} of ${p.total}`
+        : p.stage === 'designing' && p.total ? `Designing slide ${Math.min(p.done + 1, p.total)} of ${p.total}` : (STAGE_TEXT[p.stage] || 'Reading the source');
       setHtml(page, html`<h1>Generate a deck</h1>
         <p class="lead">The source is read in parts and the slides planned. This takes a few minutes; you can leave this page and come back.</p>
         <div class="card"><div class="kb-progress" role="status"><div class="kb-progress-bar"><i style="width: ${pct}%"></i></div>
@@ -153,6 +158,10 @@ export function buildGenerate(view, { pid, gid = null, openDeck, onStarted }) {
         <label class="field-box"><span>Title of the presentation</span><input type="text" data-field="title" maxlength="300" value="${record.outline.title}"></label>
         <p class="muted">Read: ${record.outline.read?.passages ?? 0} passages, ${record.outline.read?.parts ?? 0} parts.</p>
       </div>
+      ${record.outline.goals?.length ? html`<div class="card stack outline-goals">
+        <h2>Goals</h2>
+        <p class="muted">What the audience will know or be able to do at the end. Each slide below serves one of them.</p>
+        <ol>${record.outline.goals.map((g) => html`<li class="user-text">${g}</li>`)}</ol></div>` : ''}
       <ol class="outline-list"></ol>
       <div class="row" style="margin: var(--space-4) 0"><button type="button" class="secondary" data-action="add">Add a slide</button></div>
       <div class="banner error" data-error hidden>${raw(ALERT_ICON)}<div><small data-error-text></small></div></div>
@@ -176,9 +185,23 @@ export function buildGenerate(view, { pid, gid = null, openDeck, onStarted }) {
             <button type="button" data-move="-1" ${i === 0 ? 'disabled' : ''} aria-label="Move up">Up</button>
             <button type="button" data-move="1" ${i === slides.length - 1 ? 'disabled' : ''} aria-label="Move down">Down</button>
             <button type="button" data-remove ${slides.length === 1 ? 'disabled' : ''}>Remove</button></span></div>
+        ${s.task ? html`<p class="outline-task"><span class="muted">${s.goal ? `Task, for goal ${s.goal}:` : 'Task:'}</span> <span class="user-text">${s.task}</span></p>` : ''}
         <label class="field-box"><span>Title</span><input type="text" data-k="title" maxlength="300" value="${s.title}"></label>
         <label class="field-box"><span>Points, one per line</span><textarea data-k="points" rows="${Math.max(2, s.points.length)}">${s.points.join('\n')}</textarea></label>
         <label class="field-box"><span>Speaker notes</span><textarea data-k="notes" rows="2">${s.notes || ''}</textarea></label>
+        ${DESIGNED.includes(s.role) ? html`<div class="outline-design row">
+          <span class="stack"><span><b>Shown as:</b> <span class="pill">${FORM_TEXT[s.design?.form || 'bullets']}</span>
+            ${s.design && s.design.form !== 'bullets' ? html` <span class="user-text">${summary(s.design)}</span>` : ''}</span>
+            ${s.design?.why ? html`<small class="muted user-text">${s.design.why}</small>` : ''}
+            ${s.reset ? html`<small class="muted">Its points changed: shown as a list. Ask the Artist again for another form.</small>` : ''}</span>
+          <span class="spacer"></span>
+          <span class="row outline-actions"><button type="button" data-ideas>Other ideas</button>
+            ${s.design && s.design.form !== 'bullets' ? html`<button type="button" data-list>As a list</button>` : ''}</span></div>` : ''}
+        ${s.review ? html`<div class="outline-review stack">
+          ${s.review.verdict === 'good' && !s.review.issues.length ? html`<p><b>Critic:</b> <span class="muted">no issues seen on the rendered slide.</span></p>`
+            : html`<p><b>Critic:</b> <span class="muted">${s.review.verdict === 'good' ? 'suggestions for the rendered slide' : 'what is still wrong on the rendered slide, and how to fix it'}</span></p>
+              <ul>${s.review.issues.map((x) => html`<li class="user-text"><span class="pill">${x.severity === 'could' ? 'Suggestion' : 'Must fix'}</span> <b>${x.what}</b> <span class="muted">Fix:</span> ${x.fix}</li>`)}</ul>`}
+        </div>` : ''}
         ${s.sources?.length ? html`<p class="muted">Sources: <span class="notranslate">${s.sources.join('; ')}</span></p>` : ''}
       </li>`)}`);
     ol.querySelectorAll('[data-move]').forEach((b) => b.addEventListener('click', () => {
@@ -192,15 +215,44 @@ export function buildGenerate(view, { pid, gid = null, openDeck, onStarted }) {
       slides.splice(Number(b.closest('[data-i]').dataset.i), 1);
       list();
     }));
+    ol.querySelectorAll('[data-list]').forEach((b) => b.addEventListener('click', () => {
+      collect();
+      const s = slides[Number(b.closest('[data-i]').dataset.i)];
+      s.design = { form: 'bullets', points: s.points };
+      list();
+    }));
+    ol.querySelectorAll('[data-ideas]').forEach((b) => b.addEventListener('click', async () => {
+      collect();
+      const i = Number(b.closest('[data-i]').dataset.i);
+      try { await save(); } catch (e) { modalAlert(e.message, { title: 'Ideas from the Artist' }); return; }
+      const chosen = await chooseIdea({ fetchIdeas: async (wish) => (await api(`projects/${pid}/generations/${record.id}/slides/${i}/ideas`, { method: 'POST', json: { wish } })).ideas });
+      if (!chosen) return;
+      slides[i].design = chosen;
+      slides[i].reset = false;
+      list();
+    }));
   }
 
   function collect() {
     page.querySelectorAll('.outline-slide').forEach((li) => {
       const s = slides[Number(li.dataset.i)];
       s.title = li.querySelector('[data-k="title"]').value.trim() || s.title;
-      s.points = li.querySelector('[data-k="points"]').value.split('\n').map((x) => x.trim()).filter(Boolean);
+      const points = li.querySelector('[data-k="points"]').value.split('\n').map((x) => x.trim()).filter(Boolean);
+      if (points.join('\n') !== s.points.join('\n') && s.design && s.design.form !== 'bullets') {
+        s.design = { form: 'bullets', points };  // what the form showed no longer holds: a list (accuracy) until asked again
+        s.reset = true;
+      }
+      s.points = points;
       s.notes = li.querySelector('[data-k="notes"]').value.trim();
     });
+  }
+
+  // the outline as the person has it now (the Artist's ideas are asked of the saved outline)
+  async function save() {
+    const title = page.querySelector('[data-field="title"]').value.trim() || record.outline.title;
+    const sent = slides.map(({ reset, ...s }) => s);
+    record = await api(`projects/${pid}/generations/${record.id}/outline`, { method: 'PUT', json: { title, slides: sent } });
+    record.outline.slides.forEach((x, i) => { if (slides[i]) slides[i].design = x.design; });  // as the server checked them
   }
 
   async function build() {
@@ -210,8 +262,7 @@ export function buildGenerate(view, { pid, gid = null, openDeck, onStarted }) {
     button.disabled = true;
     window.menus?.toast('Making the slides…');
     try {
-      const title = page.querySelector('[data-field="title"]').value.trim() || record.outline.title;
-      await api(`projects/${pid}/generations/${record.id}/outline`, { method: 'PUT', json: { title, slides } });
+      await save();
       record = await api(`projects/${pid}/generations/${record.id}/build`, { method: 'POST' });
       done();
     } catch (e) {

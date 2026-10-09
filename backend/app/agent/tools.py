@@ -33,6 +33,7 @@ log = logging.getLogger("slides.tools")
 
 TOOLS_DIR = REPO_DIR / "contracts" / "tools"
 EDITING = (
+    "redesign_slide",
     "update_text",
     "fill_slide",
     "add_slides",
@@ -407,6 +408,7 @@ class Turn:
     result_chars: int = 12_000  # how much one tool result may hold (the loop sets it from the context budget)
     read_calls: set = field(default_factory=set)  # (tool, arguments) called this turn: a reading call is not repeated
     model: str = "application"  # the model's id (the loop sets it); "application": a call the application made
+    idea: int | None = None  # the Artist's idea the person chose, as the router read it (loop._artist_step)
     made_calls: set = field(default_factory=set)  # (tool, arguments) of the edits made this turn: never made twice
     sources_asked: bool = False  # the turn was told once that a new slide had its title alone (_unfounded)
 
@@ -546,10 +548,18 @@ class Executor:
                     out["before_slide_id"] = now[0]
                 continue
             if not 1 <= args[k] <= len(order):
-                hint = "New slides are named by their ID." if start else "Use a slide number or ID from the deck map."
+                # the slides that exist, by number and ID, and the way to the end (measured: "after slide 18" in a
+                # one-slide deck, told only "the deck has slides 1 to 1", was sent again unchanged twice, 2 runs in 8)
+                added = [s for s in now if s not in order]
+                hint = f"Slide {len(order)}, the last, is ID {order[-1]}." if order else ""
+                if added:
+                    hint += f" Slides added in this request are named by their ID: {', '.join(map(str, added))}."
+                if k == "after_slide_id":
+                    hint += " For the end of the deck, leave after_slide_id out."
                 if not now:  # measured: fill_slide on "slide 1" of an empty deck, four times
                     hint = "The deck has no slides: add_slide makes the first (with its content)."
-                raise ToolError("SLIDE_NOT_FOUND", f"The deck has slides 1 to {len(order)}.", hint)
+                said = f"There is no slide {args[k]}: the deck has slides 1 to {len(order)}. Nothing was changed."
+                raise ToolError("SLIDE_NOT_FOUND", said, hint.strip())
             sid = order[args[k] - 1]
             if sid not in now:
                 raise ToolError(
@@ -711,9 +721,13 @@ class Executor:
                     return None
                 if layouts.slots(lay, prs.slide_width, prs.slide_height)["items"]:
                     where = "search first (kb_search) and " if "kb_search" in offered and not sources_of(since) else ""
+                    # the empty slide first (measured: told only to write the points, after "Decide tu" the model
+                    # wrote a slide of invented welcome points for "Cria um slide")
                     return {"error": {"code": "TITLE_ALONE", "message": f"{args['layout']!r} has a place for text, "
-                            "and the slide has its title alone.", "hint": f"Write what the slide says: {where}give it "
-                            "its points; or, for a title alone, choose a layout with no text place."}}  # fmt: skip
+                            "and the slide has its title alone.", "hint": "If the request names no content, make the "
+                            "slide empty for the person to write: add_slide with the layout alone, no content. If it "
+                            f"names a subject: {where}give the slide its points; or, for a title alone, choose a layout "
+                            "with no text place."}}  # fmt: skip
         return None
 
     async def _cite(self, t: Turn, did: str, sid: int | None, content: dict) -> None:
@@ -892,7 +906,15 @@ class Executor:
                     fill["deck_id"] = args["deck_id"]
                 done = await self._edit(t, "fill_slide", fill)
                 if "error" not in done:
-                    done["note"] += " The slide the request is about had no text yet: the content was written on it."
+                    # the call as sent counts as made (measured: the same add_slide sent again went on three new
+                    # slides, the index twice in the deck)
+                    t.made_calls.add((name, json.dumps(args, sort_keys=True, ensure_ascii=False)))
+                    # its number said (measured: told only "written on it", the closing message said "a new slide,
+                    # slide 2" for a one-slide deck)
+                    order = [o["slide_id"] for o in read.outline(read.open_deck(self._bytes(t, self._deck_id(t, args))))]
+                    done["note"] += (f" The slide the request is about, slide {order.index(sid) + 1}, had no text yet: the"
+                                     " content was written on it and no slide was added. Say so.")
+                    done["written_on"] = order.index(sid) + 1  # for the turn's list of what was done (loop._done)
                 return done
             if name == "fill_slide" and not args.get("slide_id"):
                 # (measured: on an empty deck the model sent fill_slide with no slide, refused, and the cover was lost)
@@ -944,6 +966,8 @@ class Executor:
                 # reply said they were shortened)
                 return {"error": {"code": "SAME_TEXT", "message": "Nothing was changed: the new text is the slide's text "
                         "as it is.", "hint": "Write the changed text the request asks for."}}  # fmt: skip
+            if name == "redesign_slide":  # the idea chosen, or the wish, made into the design to apply
+                args = await self._redesign_args(t, args)
             key = (name, json.dumps(args, sort_keys=True, ensure_ascii=False))
             if name in EDITING and key in t.made_calls:
                 # (measured: told its answer said something was still to do, the model made the same fill_slide again,
@@ -1299,6 +1323,61 @@ class Executor:
     async def t_get_deck_outline(self, t: Turn, args: dict) -> dict:
         did = self._deck_id(t, args)
         return {"deck_id": did, "slides": read.outline(read.open_deck(self._bytes(t, did)))}
+
+    def _slide_in(self, t: Turn, args: dict):
+        """(deck id, the presentation as this turn sees it, the slide's ID) for a slide named by number or ID."""
+        did = self._deck_id(t, args)
+        prs = read.open_deck(self._bytes(t, did))
+        order = [o["slide_id"] for o in read.outline(prs)]
+        start = t.start_order.get(did) or order
+        sid = int(args["slide_id"])
+        if sid < 256:
+            sid = start[sid - 1] if 0 < sid <= len(start) else -1
+        if sid not in order:
+            raise ToolError("SLIDE_NOT_FOUND", f"The deck has slides 1 to {len(order)}.", "Name the slide by its number.")
+        return did, prs, sid
+
+    async def t_ask_artist(self, t: Turn, args: dict) -> dict:
+        """The Artist's ideas for a slide (agent/artist.py), kept on the conversation for the person to choose by number
+        in a later turn; nothing changes."""
+        from ..docengine import layouts
+        from . import artist
+
+        did, prs, sid = self._slide_in(t, args)
+        s = prs.slides.get(sid)
+        slide = artist.slide_of(read.slide(prs, sid), layouts.heading(s.slide_layout, prs.slide_width, prs.slide_height))
+        model = await asyncio.to_thread(self.app.models.resolve, None if t.model == "application" else t.model)
+        goal = artist.goal_of(title=self.app.decks.get(t.pid, did, t.email).get("title") or "")
+        found = await artist.ideas(self.app, model, slide, 3, str(args.get("wish") or ""), goal)
+        async with storage.lock(t.pid):
+            conv = self.app.conversations.get(t.pid, t.cid, t.email)
+            conv["artist_ideas"] = {"deck_id": did, "slide_id": sid, "ideas": found}
+            self.app.conversations.write(t.pid, conv)
+        listed = [f"{n}. {artist.describe(d)}" + (f" ({d['why']})" if d.get("why") else "") for n, d in enumerate(found, 1)]
+        return {"ok": True, "ideas": listed, "note": "Nothing was changed. Tell the person these ideas, numbered, in their "
+                "language and in words (not as JSON); apply the one they choose with redesign_slide and its number."}
+
+    async def _redesign_args(self, t: Turn, args: dict) -> dict:
+        """{slide_id, design}: the idea of that number from the last ask_artist for this slide, or the Artist's
+        proposal for the wish."""
+        from ..docengine import layouts
+        from . import artist
+
+        did, prs, sid = self._slide_in(t, args)
+        if args.get("idea"):
+            kept = (self.app.conversations.get(t.pid, t.cid, t.email).get("artist_ideas") or {})
+            ideas = kept.get("ideas") or []
+            if kept.get("deck_id") != did or kept.get("slide_id") != sid or not 1 <= int(args["idea"]) <= len(ideas):
+                raise ToolError("NO_SUCH_IDEA", "Nothing was changed: there is no such idea for this slide.",
+                                "Call ask_artist for this slide first, then give the number of the idea chosen.")  # fmt: skip
+            chosen = ideas[int(args["idea"]) - 1]
+        else:
+            s = prs.slides.get(sid)
+            slide = artist.slide_of(read.slide(prs, sid), layouts.heading(s.slide_layout, prs.slide_width, prs.slide_height))
+            model = await asyncio.to_thread(self.app.models.resolve, None if t.model == "application" else t.model)
+            goal = artist.goal_of(title=self.app.decks.get(t.pid, did, t.email).get("title") or "")
+            chosen = await artist.design(self.app, model, slide, wish=str(args.get("wish") or ""), kind=goal)
+        return {"slide_id": sid, "design": chosen, **({"deck_id": did} if args.get("deck_id") else {})}
 
     async def t_get_slide(self, t: Turn, args: dict) -> dict:
         did = self._deck_id(t, args)
